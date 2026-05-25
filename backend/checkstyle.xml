@@ -44,8 +44,12 @@
         <!-- Méthodes et variables : camelCase -->
         <module name="MethodName"/>
         <module name="LocalVariableName"/>
-        <!-- Constantes : UPPER_SNAKE_CASE -->
-        <module name="ConstantName"/>
+        <!-- Constantes : UPPER_SNAKE_CASE
+             Exception : log/logger autorisés pour les loggers Lombok @Slf4j
+             (génère `static final Logger log = ...` en camelCase) -->
+        <module name="ConstantName">
+            <property name="format" value="^(log|logger|[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)$"/>
+        </module>
         <!-- Packages : tout en minuscules -->
         <module name="PackageName">
             <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
@@ -115,7 +119,12 @@
             <property name="allowEmptyTypes" value="true"/>
             <property name="allowEmptyLoops" value="true"/>
         </module>
-        <module name="NoWhitespaceAtEndOfLine"/>
+        <!-- NoWhitespaceAtEndOfLine n'existe pas dans Checkstyle 9.3 (uniquement 10.x+) -->
+        <!-- Remplacement par RegexpSinglelineJava pour détecter les espaces en fin de ligne -->
+        <module name="RegexpSinglelineJava">
+            <property name="format" value="\s+$"/>
+            <property name="message" value="Line has trailing whitespace"/>
+        </module>
         <module name="EmptyLineSeparator">
             <property name="allowNoEmptyLineBetweenFields" value="true"/>
         </module>
