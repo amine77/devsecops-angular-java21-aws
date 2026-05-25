@@ -18,7 +18,9 @@
 # STAGE 1 : BUILD
 # Utilise le JDK complet + Maven pour compiler et packager
 # ===========================================================================
-FROM eclipse-temurin:21-jdk-alpine AS builder
+# maven:3.9-eclipse-temurin-21-alpine = JDK 21 + Maven 3.9 (Alpine)
+# eclipse-temurin:21-jdk-alpine ne contient PAS Maven → mvn: not found
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 # Répertoire de travail dans le container
 WORKDIR /build
@@ -42,8 +44,11 @@ COPY src ./src
 
 # Compiler et packager l'application
 # -DskipTests : les tests sont exécutés séparément dans le pipeline CI/CD
+# -Dcheckstyle.skip=true : Checkstyle appartient au CI (job dédié), pas au build Docker
+#   Raison : séparation des responsabilités — Docker produit un artefact,
+#   le CI vérifie la qualité. Évite aussi les conflits Guava Maven 3.9 / Checkstyle.
 # -Dspring.profiles.active=prod : profile prod pour la compilation
-RUN mvn package -B -DskipTests -Dspring.profiles.active=prod
+RUN mvn package -B -DskipTests -Dcheckstyle.skip=true -Dspring.profiles.active=prod
 
 # Extraire les layers du JAR Spring Boot (optimisation cache Docker)
 # Spring Boot Layered JAR sépare :
@@ -52,7 +57,9 @@ RUN mvn package -B -DskipTests -Dspring.profiles.active=prod
 #   - snapshot-dependencies
 #   - application (notre code — souvent modifié)
 # Chaque layer devient une couche Docker séparée = rebuild plus rapide
-RUN java -Djarmode=layertools -jar target/*.jar extract --destination extracted
+# Syntaxe Spring Boot 3.3+ : '-Djarmode=tools extract --layers --launcher'
+# (l'ancienne syntaxe 'layertools' est dépréciée depuis 3.3)
+RUN java -Djarmode=tools -jar target/*.jar extract --layers --launcher --destination extracted
 
 # ===========================================================================
 # STAGE 2 : RUNTIME

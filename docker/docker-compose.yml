@@ -1,5 +1,3 @@
-version: '3.9'
-
 # =============================================================================
 # DOCKER COMPOSE — Développement local
 # =============================================================================
@@ -30,7 +28,7 @@ services:
       POSTGRES_USER: portfolio_user
       POSTGRES_PASSWORD: portfolio_pass
     ports:
-      - "5432:5432"          # Accessible depuis l'IDE pour les outils DB
+      - "5433:5432"          # Accessible depuis l'IDE pour les outils DB (5433 pour éviter conflit)
     volumes:
       - postgres_data:/var/lib/postgresql/data  # Persistance des données
     networks:
