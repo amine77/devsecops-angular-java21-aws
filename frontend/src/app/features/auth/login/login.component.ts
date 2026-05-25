@@ -60,7 +60,7 @@ export class LoginComponent implements OnInit {
       return;
     }
     // Récupère l'URL de retour depuis les query params
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] ?? '/admin';
+    this.returnUrl = (this.route.snapshot.queryParams['returnUrl'] as string | undefined) ?? '/admin';
   }
 
   /**

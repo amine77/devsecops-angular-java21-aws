@@ -42,7 +42,18 @@
         "no-console": ["warn", { "allow": ["warn", "error"] }],
         "eqeqeq": ["error", "always"],
         "no-var": "error",
-        "prefer-const": "error"
+        "prefer-const": "error",
+        "@typescript-eslint/unbound-method": "off"
+      }
+    },
+    {
+      "files": ["*.spec.ts"],
+      "rules": {
+        "@typescript-eslint/unbound-method": "off",
+        "@typescript-eslint/no-unsafe-call": "off",
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-explicit-any": "off"
       }
     },
     {

@@ -94,3 +94,5 @@ temp/
 .Trashes
 ehthumbs.db
 Desktop.ini
+
+frontend/junit.xml

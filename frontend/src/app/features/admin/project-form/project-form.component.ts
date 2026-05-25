@@ -131,7 +131,7 @@ export class ProjectFormComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly allSkills = signal<Skill[]>([]);
-  private selectedSkillIds = signal<number[]>([]);
+  private readonly selectedSkillIds = signal<number[]>([]);
 
   protected get isEditMode(): boolean { return !!this.id; }
 

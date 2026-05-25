@@ -1,4 +1,4 @@
-import { HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 
 import { StorageService } from '@core/services/storage.service';

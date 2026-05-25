@@ -19,7 +19,6 @@ import { AuthService } from '@core/services/auth.service';
 describe('LoginComponent', () => {
   let fixture: ComponentFixture<LoginComponent>;
   let component: LoginComponent;
-  let authServiceSpy: jest.SpyInstance;
 
   const mockAuthService = {
     login: jest.fn(),
