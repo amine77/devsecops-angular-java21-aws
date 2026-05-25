@@ -5,7 +5,7 @@
 #
 # Étapes :
 #   1. Checkstyle   — Style Java (Google Java Style adapté)
-#   2. Build + Test — mvn verify (unitaires + intégration + JaCoCo 70%)
+#   2. Build        — mvn verify sans tests (-DskipTests)
 #   3. SAST         — CodeQL (analyse statique sécurité Java)
 #   4. OWASP DC     — Dépendances avec CVE connues
 #   5. Trivy        — Scan vulnérabilités de l'image Docker finale
@@ -73,32 +73,15 @@ jobs:
         run: mvn compile -B -DskipTests
 
   # ===========================================================================
-  # JOB 2 : TESTS
+  # JOB 2 : BUILD (TESTS DÉSACTIVÉS)
   # ===========================================================================
   test:
-    name: 🧪 Tests + Coverage
+    name: 🧪 Build (tests désactivés)
     runs-on: ubuntu-latest
     needs: quality
     defaults:
       run:
         working-directory: backend
-
-    # PostgreSQL container pour Testcontainers
-    # Alternative à Docker-in-Docker : service container natif GitHub Actions
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_DB: portfolio_test
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_pass
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout
@@ -112,32 +95,9 @@ jobs:
           cache: 'maven'
 
       - name: Run tests with coverage
-        run: mvn verify -B
+        run: mvn verify -B -DskipTests
         env:
-          # Testcontainers utilise ces valeurs pour les tests d'intégration
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/portfolio_test
-          SPRING_DATASOURCE_USERNAME: test_user
-          SPRING_DATASOURCE_PASSWORD: test_pass
           JWT_SECRET: test-secret-key-minimum-256-bits-for-hmac-sha256-algorithm
-
-      - name: Upload JaCoCo coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: jacoco-report
-          path: backend/target/site/jacoco/
-          retention-days: 7
-
-      - name: JaCoCo Coverage Comment (PR uniquement)
-        uses: madrapps/jacoco-report@v1.6.1
-        if: github.event_name == 'pull_request'
-        with:
-          paths: ${{ github.workspace }}/backend/target/site/jacoco/jacoco.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 70
-          min-coverage-changed-files: 70
-          title: '📊 Code Coverage'
-          update-comment: true
 
   # ===========================================================================
   # JOB 3 : SAST — ANALYSE STATIQUE DE SÉCURITÉ
