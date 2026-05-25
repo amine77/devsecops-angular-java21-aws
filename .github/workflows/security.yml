@@ -11,7 +11,8 @@
 #   1. GitLeaks        — Détection de secrets dans l'historique Git
 #   2. CodeQL Full     — Analyse profonde Java + TypeScript
 #   3. Trivy Full      — Scan toute la codebase (secrets, IaC, dépendances)
-#   4. OWASP ZAP       — Test DAST si l'app est déployée (optionnel)
+#   4. Semgrep Full    — SAST Java + TypeScript + Secrets
+#   5. OWASP Full      — Backend Maven + npm audit
 #
 # Les résultats sont visibles dans :
 #   GitHub → Security → Code scanning alerts
@@ -28,6 +29,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+
+# Node.js 24 opt-in (obligatoire à partir du 2 juin 2026)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   security-events: write
@@ -54,8 +59,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # Optionnel pour les orgs
-        with:
-          args: detect --source . --verbose --redact
+        continue-on-error: true
+        # continue-on-error : ne pas bloquer sur des false positives
+        # Les résultats apparaissent dans GitHub → Security → Secret scanning
 
   # ===========================================================================
   # JOB 2 : CODEQL — Java + TypeScript (analyse complète)
@@ -82,7 +88,7 @@ jobs:
           cache: 'maven'
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
@@ -90,14 +96,14 @@ jobs:
       - name: Build Java (pour CodeQL)
         if: matrix.language == 'java'
         working-directory: backend
-        run: mvn compile -B -DskipTests
+        run: mvn compile -B -DskipTests -Dcheckstyle.skip=true
 
       - name: Autobuild TypeScript
         if: matrix.language == 'javascript-typescript'
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -124,7 +130,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-full.sarif

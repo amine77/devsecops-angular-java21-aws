@@ -30,6 +30,10 @@ on:
       - 'backend/**'
   workflow_dispatch:
 
+# Node.js 24 opt-in (obligatoire à partir du 2 juin 2026)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # Annule les runs précédents sur la même branche (économie de minutes GitHub Actions)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -153,7 +157,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: java
           # Requêtes de sécurité étendues pour Java
@@ -169,10 +173,10 @@ jobs:
 
       - name: Build pour CodeQL
         working-directory: backend
-        run: mvn compile -B -DskipTests
+        run: mvn compile -B -DskipTests -Dcheckstyle.skip=true
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:java"
           # Les résultats apparaissent dans :
@@ -188,6 +192,9 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    permissions:
+      security-events: write
+      contents: read
 
     steps:
       - name: Checkout
@@ -229,7 +236,7 @@ jobs:
           retention-days: 7
 
       - name: Upload OWASP SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: backend/target/dependency-check-report.sarif
@@ -255,7 +262,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build image Docker backend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
@@ -278,7 +285,7 @@ jobs:
           severity: 'MEDIUM,HIGH,CRITICAL'
 
       - name: Upload Trivy SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-backend.sarif
