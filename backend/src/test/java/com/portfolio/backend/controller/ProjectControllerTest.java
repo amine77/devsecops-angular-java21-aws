@@ -8,6 +8,9 @@ import com.portfolio.backend.dto.response.ProjectResponse;
 import com.portfolio.backend.entity.ProjectStatus;
 import com.portfolio.backend.exception.GlobalExceptionHandler;
 import com.portfolio.backend.exception.ResourceNotFoundException;
+import com.portfolio.backend.security.JwtAccessDeniedHandler;
+import com.portfolio.backend.security.JwtAuthenticationEntryPoint;
+import com.portfolio.backend.security.JwtTokenProvider;
 import com.portfolio.backend.service.ProjectService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,6 +20,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -62,6 +66,21 @@ class ProjectControllerTest {
 
     @MockBean
     private ProjectService projectService;
+
+    // Mocks requis pour le chargement du contexte @WebMvcTest avec Spring Security JWT.
+    // @WebMvcTest charge SecurityConfig qui injecte JwtAuthenticationFilter (→ JwtTokenProvider)
+    // et UserDetailsService (→ UserDetailsServiceImpl → UserRepository non disponible en WebMvcTest).
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private UserDetailsService userDetailsService;
+
+    @MockBean
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+    @MockBean
+    private JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     private final ProjectResponse sampleProject = new ProjectResponse(
         1L, "Portfolio DevSecOps", "Description complète", "Résumé",

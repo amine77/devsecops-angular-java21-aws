@@ -1,5 +1,7 @@
 package com.portfolio.backend.config;
 
+import com.portfolio.backend.security.JwtAccessDeniedHandler;
+import com.portfolio.backend.security.JwtAuthenticationEntryPoint;
 import com.portfolio.backend.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -45,16 +47,22 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsService userDetailsService;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Value("${app.cors.allowed-origins:http://localhost:4200}")
     private String allowedOrigins;
 
     public SecurityConfig(
         JwtAuthenticationFilter jwtAuthenticationFilter,
-        UserDetailsService userDetailsService
+        UserDetailsService userDetailsService,
+        JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+        JwtAccessDeniedHandler jwtAccessDeniedHandler
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userDetailsService = userDetailsService;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
     }
 
     /**
@@ -85,18 +93,25 @@ public class SecurityConfig {
             // Règles d'autorisation par URL
             .authorizeHttpRequests(auth -> auth
                 // Authentification publique
-                .requestMatchers("/auth/**").permitAll()
-                // Portfolio public (GET seulement)
-                .requestMatchers(HttpMethod.GET, "/projects/**", "/skills/**").permitAll()
+                .requestMatchers("/auth", "/auth/**").permitAll()
+                // Portfolio public (GET seulement) - separate matchers for each pattern
+                .requestMatchers(HttpMethod.GET, "/projects").permitAll()
+                .requestMatchers(HttpMethod.GET, "/projects/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/skills").permitAll()
+                .requestMatchers(HttpMethod.GET, "/skills/**").permitAll()
                 // Kubernetes probes
-                .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                 // Swagger UI (utile pour les recruteurs)
                 .requestMatchers(
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**"
                 ).permitAll()
-                // Admin : ROLE_ADMIN uniquement
+                // Admin: HTTP-level protection for write operations on /projects
+                .requestMatchers(HttpMethod.POST, "/projects").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/projects/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/projects/**").hasRole("ADMIN")
+                // Admin: ROLE_ADMIN uniquement
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // Tout le reste : authentification requise
                 .anyRequest().authenticated()
