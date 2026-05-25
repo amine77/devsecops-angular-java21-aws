@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force -Path \"d:\\\\DEV\\\\projets\\\\devsecops-angular-java21-aws-25-05-2026\\\\docs\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"Dossier docs créé.\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"d:\\\\DEV\\\\projets\\\\devsecops-angular-java21-aws-25-05-2026\\\\docker\")",
+      "PowerShell(Get-ChildItem \"d:\\\\DEV\\\\projets\\\\devsecops-angular-java21-aws-25-05-2026\" -Directory | ForEach-Object { $_.Name })",
+      "Bash(docker info *)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(npm --version)",
+      "Bash(grep -E \"eslint|\\\\.ts$|\\\\.json$\")",
+      "Bash(npm install *)"
+    ],
+    "additionalDirectories": [
+      "d:\\DEV\\projets\\devsecops-angular-java21-aws-25-05-2026"
+    ]
+  }
+}

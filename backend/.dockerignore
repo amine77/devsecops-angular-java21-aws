@@ -1,0 +1,35 @@
+# =============================================================================
+# .dockerignore — Fichiers exclus du contexte de build Docker
+# =============================================================================
+# Raison : réduire le contexte envoyé au daemon Docker lors du build.
+# Sans .dockerignore, Docker envoie TOUT le répertoire → build lent.
+# =============================================================================
+
+# Dossier de build Maven (le plus lourd)
+target/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Tests (les tests sont exécutés dans le pipeline CI, pas dans l'image prod)
+src/test/
+
+# Variables d'environnement locales
+.env
+.env.local
+*.env
+
+# Logs
+*.log
+logs/

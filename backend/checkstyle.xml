@@ -1,0 +1,131 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+    CHECKSTYLE — Règles de style Java du projet Portfolio
+    Raison : un code cohérent est plus lisible et maintenable.
+    Ces règles s'appliquent à tout le code source (hors tests).
+
+    Pour exécuter manuellement :
+    mvn checkstyle:check
+-->
+<module name="Checker">
+
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- Taille maximale d'un fichier : 500 lignes -->
+    <module name="FileLength">
+        <property name="max" value="500"/>
+    </module>
+
+    <!-- Pas de tabs, seulement des espaces -->
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+
+    <module name="TreeWalker">
+
+        <!-- ============================================================
+             NOMMAGE — Conventions Java standard
+             ============================================================ -->
+        <!-- Classes : PascalCase -->
+        <module name="TypeName"/>
+        <!-- Méthodes et variables : camelCase -->
+        <module name="MethodName"/>
+        <module name="LocalVariableName"/>
+        <!-- Constantes : UPPER_SNAKE_CASE -->
+        <module name="ConstantName"/>
+        <!-- Packages : tout en minuscules -->
+        <module name="PackageName">
+            <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+        </module>
+
+        <!-- ============================================================
+             IMPORTS
+             ============================================================ -->
+        <!-- Pas d'imports wildcard (import java.util.*) -->
+        <module name="AvoidStarImport"/>
+        <!-- Pas d'imports inutilisés -->
+        <module name="UnusedImports"/>
+        <!-- Pas d'imports redondants (java.lang.*) -->
+        <module name="RedundantImport"/>
+
+        <!-- ============================================================
+             LONGUEUR
+             ============================================================ -->
+        <!-- Ligne max 120 caractères (écrans larges modernes) -->
+        <module name="LineLength">
+            <property name="max" value="120"/>
+            <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+        </module>
+        <!-- Méthode max 60 lignes : force la décomposition -->
+        <module name="MethodLength">
+            <property name="max" value="60"/>
+        </module>
+        <!-- Paramètres max 7 par méthode -->
+        <module name="ParameterNumber">
+            <property name="max" value="7"/>
+        </module>
+
+        <!-- ============================================================
+             ACCOLADES ET BLOCS
+             ============================================================ -->
+        <!-- Accolades obligatoires pour if/for/while -->
+        <module name="NeedBraces"/>
+        <!-- Style K&R : accolade ouvrante sur la même ligne -->
+        <module name="LeftCurly"/>
+        <module name="RightCurly"/>
+        <!-- Pas de blocs vides -->
+        <module name="EmptyBlock">
+            <property name="option" value="TEXT"/>
+            <property name="tokens" value="LITERAL_TRY, LITERAL_FINALLY, LITERAL_IF, LITERAL_ELSE, LITERAL_SWITCH"/>
+        </module>
+
+        <!-- ============================================================
+             BONNES PRATIQUES
+             ============================================================ -->
+        <!-- Pas de System.out.println (utiliser les logs) -->
+        <module name="Regexp">
+            <property name="format" value="System\.out\.println"/>
+            <property name="illegalPattern" value="true"/>
+            <property name="message" value="Utiliser un logger au lieu de System.out.println"/>
+        </module>
+        <!-- Pas de printStackTrace -->
+        <module name="RegexpSinglelineJava">
+            <property name="format" value="\.printStackTrace\(\)"/>
+            <property name="message" value="Utiliser un logger au lieu de printStackTrace()"/>
+        </module>
+        <!-- Pas de TODO sans auteur -->
+        <module name="TodoComment">
+            <property name="format" value="TODO:"/>
+        </module>
+
+        <!-- ============================================================
+             ESPACES ET FORMAT
+             ============================================================ -->
+        <module name="WhitespaceAround">
+            <property name="allowEmptyConstructors" value="true"/>
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+            <property name="allowEmptyLoops" value="true"/>
+        </module>
+        <module name="NoWhitespaceAtEndOfLine"/>
+        <module name="EmptyLineSeparator">
+            <property name="allowNoEmptyLineBetweenFields" value="true"/>
+        </module>
+
+        <!-- ============================================================
+             MODIFICATEURS
+             ============================================================ -->
+        <!-- Ordre standard des modificateurs Java -->
+        <module name="ModifierOrder"/>
+        <!-- Pas de modificateurs redondants dans les interfaces -->
+        <module name="RedundantModifier"/>
+
+    </module>
+
+</module>

@@ -1,0 +1,342 @@
+# =============================================================================
+# Makefile — Commandes du projet DevSecOps Portfolio
+# =============================================================================
+# Centralise toutes les commandes en raccourcis mémorisables.
+#
+# PRÉREQUIS : GNU Make installé
+#   Windows : choco install make  (Chocolatey)
+#             ou winget install GnuWin32.Make
+#   Linux/Mac : make est natif
+#
+# UTILISATION :
+#   make help         → affiche cette aide
+#   make build        → build les 2 images Docker
+#   make up           → lance tout l'environnement
+#   make down         → arrête et supprime les conteneurs
+#   make logs         → affiche les logs en live
+#   make test         → lance tous les tests
+#   make clean        → supprime les conteneurs, volumes et images
+#
+# CONVENTION :
+#   .PHONY déclare les targets qui ne sont pas des fichiers.
+#   Sans .PHONY, Make chercherait un fichier nommé "build", "up", etc.
+# =============================================================================
+
+# Couleurs pour une sortie lisible dans le terminal
+CYAN    := \033[0;36m
+GREEN   := \033[0;32m
+YELLOW  := \033[0;33m
+RED     := \033[0;31m
+RESET   := \033[0m
+BOLD    := \033[1m
+
+# Variables configurables via l'environnement
+COMPOSE_FILE     ?= docker/docker-compose.yml
+COMPOSE_OVERRIDE ?= docker/docker-compose.override.yml
+AWS_ACCOUNT_ID   ?= $(shell aws sts get-caller-identity --query Account --output text 2>/dev/null)
+AWS_REGION       ?= eu-west-3
+ECR_REGISTRY     := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
+IMAGE_TAG        ?= latest
+
+.PHONY: help build build-backend build-frontend up up-prod down logs logs-backend logs-frontend \
+        test test-backend test-frontend lint lint-backend lint-frontend \
+        push-ecr push-backend push-frontend \
+        clean clean-containers clean-volumes clean-images \
+        db-connect shell-backend shell-frontend \
+        trivy-scan security-check \
+        status health
+
+# =============================================================================
+# AIDE — cible par défaut
+# =============================================================================
+help: ## Affiche cette aide
+	@echo ""
+	@echo "$(BOLD)$(CYAN)╔══════════════════════════════════════════════════╗$(RESET)"
+	@echo "$(BOLD)$(CYAN)║   DevSecOps Portfolio — Makefile Commands        ║$(RESET)"
+	@echo "$(BOLD)$(CYAN)╚══════════════════════════════════════════════════╝$(RESET)"
+	@echo ""
+	@echo "$(BOLD)🐳 DOCKER :$(RESET)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E '(build|up|down|logs|clean|status|health)' \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-22s$(RESET) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(BOLD)🧪 TESTS :$(RESET)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E '(test|lint)' \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-22s$(RESET) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(BOLD)🚀 ECR / DÉPLOIEMENT :$(RESET)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E '(push|ecr)' \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-22s$(RESET) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(BOLD)🔒 SÉCURITÉ :$(RESET)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E '(trivy|security|shell|db)' \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-22s$(RESET) %s\n", $$1, $$2}'
+	@echo ""
+
+# =============================================================================
+# BUILD — Construction des images Docker
+# =============================================================================
+build: build-backend build-frontend ## Build les 2 images Docker (backend + frontend)
+	@echo "$(GREEN)✔ Images buildées avec succès$(RESET)"
+
+build-backend: ## Build l'image Docker du backend Spring Boot
+	@echo "$(CYAN)▶ Build backend...$(RESET)"
+	docker build \
+		--tag portfolio-backend:$(IMAGE_TAG) \
+		--file backend/Dockerfile \
+		--label "build.date=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)" \
+		--label "build.version=$(IMAGE_TAG)" \
+		./backend
+	@echo "$(GREEN)✔ Backend buildé : portfolio-backend:$(IMAGE_TAG)$(RESET)"
+
+build-frontend: ## Build l'image Docker du frontend Angular + NGINX
+	@echo "$(CYAN)▶ Build frontend...$(RESET)"
+	docker build \
+		--tag portfolio-frontend:$(IMAGE_TAG) \
+		--file frontend/Dockerfile \
+		--label "build.date=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)" \
+		--label "build.version=$(IMAGE_TAG)" \
+		./frontend
+	@echo "$(GREEN)✔ Frontend buildé : portfolio-frontend:$(IMAGE_TAG)$(RESET)"
+
+# =============================================================================
+# DOCKER COMPOSE — Gestion de l'environnement
+# =============================================================================
+up: ## Lance l'environnement de développement complet (avec override)
+	@echo "$(CYAN)▶ Démarrage de l'environnement dev...$(RESET)"
+	@if [ -f "$(COMPOSE_OVERRIDE)" ]; then \
+		docker compose -f $(COMPOSE_FILE) -f $(COMPOSE_OVERRIDE) up -d; \
+	else \
+		docker compose -f $(COMPOSE_FILE) up -d; \
+	fi
+	@echo "$(GREEN)✔ Environnement démarré$(RESET)"
+	@echo ""
+	@echo "  Frontend  : http://localhost:4200"
+	@echo "  Backend   : http://localhost:8080"
+	@echo "  Swagger   : http://localhost:8080/swagger-ui.html"
+	@echo "  DB        : localhost:5432 (portfolio_dev)"
+	@echo ""
+
+up-prod: ## Lance l'environnement de simulation production
+	@echo "$(YELLOW)▶ Démarrage en mode PRODUCTION (simulation)...$(RESET)"
+	docker compose -f $(COMPOSE_FILE) -f docker/docker-compose.prod.yml up -d
+	@echo "$(GREEN)✔ Environnement prod simulé démarré$(RESET)"
+
+down: ## Arrête et supprime les conteneurs (conserve les volumes)
+	@echo "$(CYAN)▶ Arrêt des conteneurs...$(RESET)"
+	docker compose -f $(COMPOSE_FILE) down
+	@echo "$(GREEN)✔ Conteneurs arrêtés$(RESET)"
+
+restart: down up ## Redémarre l'environnement complet
+
+status: ## Affiche l'état des conteneurs
+	@echo "$(BOLD)$(CYAN)État des conteneurs :$(RESET)"
+	docker compose -f $(COMPOSE_FILE) ps
+
+health: ## Vérifie la santé des services
+	@echo "$(BOLD)$(CYAN)Health checks :$(RESET)"
+	@echo ""
+	@echo "$(CYAN)Backend :$(RESET)"
+	@curl -s http://localhost:8080/actuator/health | python -m json.tool 2>/dev/null \
+		|| curl -s http://localhost:8080/actuator/health || echo "$(RED)Backend inaccessible$(RESET)"
+	@echo ""
+	@echo "$(CYAN)Frontend :$(RESET)"
+	@curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:4200/health \
+		|| echo "$(RED)Frontend inaccessible$(RESET)"
+	@echo ""
+
+# =============================================================================
+# LOGS — Consultation des logs
+# =============================================================================
+logs: ## Affiche les logs de tous les services (Ctrl+C pour quitter)
+	docker compose -f $(COMPOSE_FILE) logs --follow --tail=100
+
+logs-backend: ## Affiche les logs du backend uniquement
+	docker compose -f $(COMPOSE_FILE) logs --follow --tail=200 backend
+
+logs-frontend: ## Affiche les logs du frontend NGINX uniquement
+	docker compose -f $(COMPOSE_FILE) logs --follow --tail=100 frontend
+
+logs-postgres: ## Affiche les logs PostgreSQL
+	docker compose -f $(COMPOSE_FILE) logs --follow --tail=100 postgres
+
+# =============================================================================
+# TESTS — Exécution des tests
+# =============================================================================
+test: test-backend test-frontend ## Lance tous les tests (backend + frontend)
+	@echo "$(GREEN)✔ Tous les tests passés$(RESET)"
+
+test-backend: ## Lance les tests Maven (unitaires + intégration + coverage)
+	@echo "$(CYAN)▶ Tests backend...$(RESET)"
+	cd backend && mvn verify -Ptest
+	@echo "$(GREEN)✔ Tests backend OK$(RESET)"
+	@echo "  Rapport : backend/target/site/jacoco/index.html"
+
+test-backend-unit: ## Lance uniquement les tests unitaires (rapide)
+	@echo "$(CYAN)▶ Tests unitaires backend...$(RESET)"
+	cd backend && mvn test -Dgroups="unit" 2>/dev/null \
+		|| cd backend && mvn test -Dtest="**/*Test" -Dit.test="none"
+
+test-backend-it: ## Lance uniquement les tests d'intégration (Testcontainers)
+	@echo "$(CYAN)▶ Tests d'intégration backend (Testcontainers)...$(RESET)"
+	cd backend && mvn verify -DskipTests=false -Dtest=none -Dit.test="**/*IT"
+
+test-frontend: ## Lance les tests Jest Angular
+	@echo "$(CYAN)▶ Tests frontend...$(RESET)"
+	cd frontend && npm test -- --watchAll=false --coverage
+	@echo "$(GREEN)✔ Tests frontend OK$(RESET)"
+	@echo "  Rapport : frontend/coverage/lcov-report/index.html"
+
+test-frontend-watch: ## Lance Jest en mode watch (développement)
+	cd frontend && npm test
+
+test-e2e: ## Lance les tests Cypress E2E (nécessite l'appli lancée)
+	@echo "$(CYAN)▶ Tests E2E Cypress...$(RESET)"
+	cd frontend && npx cypress run
+
+# =============================================================================
+# LINTING — Qualité du code
+# =============================================================================
+lint: lint-backend lint-frontend ## Lint backend + frontend
+	@echo "$(GREEN)✔ Lint OK$(RESET)"
+
+lint-backend: ## Vérifie le style Java avec Checkstyle
+	@echo "$(CYAN)▶ Checkstyle backend...$(RESET)"
+	cd backend && mvn checkstyle:check
+
+lint-frontend: ## Lint TypeScript/Angular avec ESLint
+	@echo "$(CYAN)▶ ESLint frontend...$(RESET)"
+	cd frontend && npm run lint
+
+lint-frontend-fix: ## Corrige automatiquement les erreurs ESLint
+	cd frontend && npm run lint -- --fix
+
+format-check: ## Vérifie le formatage Prettier
+	cd frontend && npx prettier --check "src/**/*.{ts,html,scss}"
+
+format-fix: ## Applique le formatage Prettier
+	cd frontend && npx prettier --write "src/**/*.{ts,html,scss}"
+
+# =============================================================================
+# AMAZON ECR — Push des images
+# =============================================================================
+ecr-login: ## Authentifie Docker auprès d'Amazon ECR
+	@echo "$(CYAN)▶ Login ECR ($(AWS_REGION))...$(RESET)"
+	aws ecr get-login-password --region $(AWS_REGION) \
+		| docker login --username AWS --password-stdin $(ECR_REGISTRY)
+	@echo "$(GREEN)✔ Authentifié sur ECR$(RESET)"
+
+push-ecr: ecr-login push-backend push-frontend ## Build, tag et push les 2 images sur ECR
+	@echo "$(GREEN)✔ Images pushées sur ECR$(RESET)"
+
+push-backend: ## Tag et push l'image backend sur ECR
+	@echo "$(CYAN)▶ Push backend → ECR...$(RESET)"
+	docker tag portfolio-backend:$(IMAGE_TAG) \
+		$(ECR_REGISTRY)/portfolio-backend:$(IMAGE_TAG)
+	docker push $(ECR_REGISTRY)/portfolio-backend:$(IMAGE_TAG)
+
+push-frontend: ## Tag et push l'image frontend sur ECR
+	@echo "$(CYAN)▶ Push frontend → ECR...$(RESET)"
+	docker tag portfolio-frontend:$(IMAGE_TAG) \
+		$(ECR_REGISTRY)/portfolio-frontend:$(IMAGE_TAG)
+	docker push $(ECR_REGISTRY)/portfolio-frontend:$(IMAGE_TAG)
+
+# =============================================================================
+# SÉCURITÉ — Scan et hardening
+# =============================================================================
+trivy-scan: ## Scanne les 2 images avec Trivy (vulnérabilités)
+	@echo "$(CYAN)▶ Scan Trivy backend...$(RESET)"
+	trivy image --exit-code 1 --severity HIGH,CRITICAL portfolio-backend:$(IMAGE_TAG)
+	@echo "$(CYAN)▶ Scan Trivy frontend...$(RESET)"
+	trivy image --exit-code 1 --severity HIGH,CRITICAL portfolio-frontend:$(IMAGE_TAG)
+	@echo "$(GREEN)✔ Aucune vulnérabilité HIGH/CRITICAL$(RESET)"
+
+trivy-report: ## Génère un rapport HTML Trivy
+	@mkdir -p reports
+	trivy image --format template --template "@/contrib/html.tpl" \
+		-o reports/trivy-backend.html portfolio-backend:$(IMAGE_TAG)
+	trivy image --format template --template "@/contrib/html.tpl" \
+		-o reports/trivy-frontend.html portfolio-frontend:$(IMAGE_TAG)
+	@echo "  Rapports : reports/trivy-*.html"
+
+security-check: ## Vérifie la config sécurité Docker (docker bench)
+	@echo "$(CYAN)▶ Docker Bench Security...$(RESET)"
+	docker run --rm --net host --pid host --userns host --cap-add audit_control \
+		-e DOCKER_CONTENT_TRUST=$(DOCKER_CONTENT_TRUST) \
+		-v /etc:/etc:ro \
+		-v /lib/systemd/system:/lib/systemd/system:ro \
+		-v /usr/bin/containerd:/usr/bin/containerd:ro \
+		-v /usr/bin/runc:/usr/bin/runc:ro \
+		-v /usr/lib/systemd:/usr/lib/systemd:ro \
+		-v /var/lib:/var/lib:ro \
+		-v /var/run/docker.sock:/var/run/docker.sock:ro \
+		--label docker_bench_security \
+		docker/docker-bench-security 2>/dev/null \
+		|| echo "$(YELLOW)⚠ Docker Bench Security nécessite Linux$(RESET)"
+
+# =============================================================================
+# SHELL — Accès aux conteneurs
+# =============================================================================
+shell-backend: ## Ouvre un shell dans le conteneur backend
+	docker compose -f $(COMPOSE_FILE) exec backend sh
+
+shell-frontend: ## Ouvre un shell dans le conteneur frontend NGINX
+	docker compose -f $(COMPOSE_FILE) exec frontend sh
+
+shell-postgres: ## Ouvre psql dans le conteneur PostgreSQL
+	docker compose -f $(COMPOSE_FILE) exec postgres \
+		psql -U portfolio_user -d portfolio_dev
+
+db-connect: shell-postgres ## Alias pour se connecter à la DB
+
+# =============================================================================
+# NETTOYAGE — Libération de l'espace disque
+# =============================================================================
+clean: clean-containers clean-images ## Supprime conteneurs, volumes et images du projet
+	@echo "$(GREEN)✔ Nettoyage terminé$(RESET)"
+
+clean-containers: ## Supprime les conteneurs et volumes du projet
+	@echo "$(CYAN)▶ Suppression des conteneurs et volumes...$(RESET)"
+	docker compose -f $(COMPOSE_FILE) down --volumes --remove-orphans
+
+clean-images: ## Supprime les images Docker locales du projet
+	@echo "$(CYAN)▶ Suppression des images...$(RESET)"
+	-docker rmi portfolio-backend:$(IMAGE_TAG) 2>/dev/null
+	-docker rmi portfolio-frontend:$(IMAGE_TAG) 2>/dev/null
+	@echo "$(GREEN)✔ Images supprimées$(RESET)"
+
+clean-all: clean ## Supprime aussi les images dangling (non taguées)
+	@echo "$(CYAN)▶ Nettoyage complet Docker...$(RESET)"
+	docker system prune -f
+	@echo "$(GREEN)✔ Nettoyage système Docker OK$(RESET)"
+
+# =============================================================================
+# UTILITAIRES
+# =============================================================================
+image-sizes: ## Affiche la taille des images construites
+	@echo "$(BOLD)$(CYAN)Taille des images :$(RESET)"
+	@docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" \
+		| grep -E "(portfolio|REPOSITORY)"
+
+image-layers: ## Affiche les layers de l'image backend
+	@echo "$(BOLD)$(CYAN)Layers backend :$(RESET)"
+	docker history portfolio-backend:$(IMAGE_TAG) --human --format "table {{.Size}}\t{{.CreatedBy}}"
+
+inspect-network: ## Inspecte le réseau Docker du projet
+	docker network inspect portfolio-network
+
+mvn-deps: ## Télécharge les dépendances Maven (pour cache Docker)
+	cd backend && mvn dependency:go-offline -q
+
+npm-install: ## Installe les dépendances npm
+	cd frontend && npm ci
+
+install: mvn-deps npm-install ## Installe toutes les dépendances (Maven + npm)
+
+# Affiche un résumé de l'environnement
+info:
+	@echo "$(BOLD)Environnement :$(RESET)"
+	@echo "  Docker  : $$(docker --version)"
+	@echo "  Compose : $$(docker compose version)"
+	@java --version 2>/dev/null || echo "  Java    : non installé localement"
+	@node --version 2>/dev/null && echo "  npm     : $$(npm --version)" || echo "  Node    : non installé localement"
+	@echo "  ECR     : $(ECR_REGISTRY)"

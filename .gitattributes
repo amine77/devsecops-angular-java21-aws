@@ -1,0 +1,56 @@
+# =============================================================================
+# .gitattributes — Cohérence des fins de ligne (LF partout)
+# =============================================================================
+# Raison : les conteneurs Docker tournent sur Linux → LF obligatoire.
+# Sans ce fichier, Git sur Windows convertit LF→CRLF (core.autocrlf=true)
+# ce qui casse les scripts shell et les Dockerfiles.
+#
+# eol=lf : force Linux line endings dans le working tree
+# text : marque le fichier comme texte (Git normalise les fins de ligne)
+# -text : fichier binaire (pas de conversion)
+# =============================================================================
+
+# Tous les fichiers texte → LF
+* text=auto eol=lf
+
+# Fichiers binaires — pas de conversion
+*.ico  -text
+*.png  -text
+*.jpg  -text
+*.jpeg -text
+*.gif  -text
+*.svg  text eol=lf
+*.woff  -text
+*.woff2 -text
+*.ttf   -text
+*.eot   -text
+*.jar   -text
+*.zip   -text
+*.gz    -text
+
+# Scripts shell → LF obligatoire (sinon "bad interpreter" sur Linux)
+*.sh   text eol=lf
+*.bash text eol=lf
+
+# Dockerfiles → LF
+Dockerfile* text eol=lf
+
+# Fichiers de config → LF
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.xml  text eol=lf
+*.properties text eol=lf
+*.sql  text eol=lf
+
+# Code source
+*.java text eol=lf
+*.ts   text eol=lf
+*.js   text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.scss text eol=lf
+*.md   text eol=lf
+
+# Makefile → LF (les tabs Makefile doivent être préservés)
+Makefile text eol=lf

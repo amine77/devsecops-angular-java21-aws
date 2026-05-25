@@ -1,0 +1,119 @@
+# =============================================================================
+# docker-compose.prod.yml — Simulation de l'environnement production
+# =============================================================================
+# Ce fichier simule localement les conditions de production pour :
+#   - Valider les images avant de les pousser sur ECR
+#   - Tester le comportement avec les vraies variables d'environnement
+#   - Vérifier les resource limits comme en Kubernetes
+#
+# UTILISATION :
+#   docker compose -f docker/docker-compose.yml \
+#                  -f docker/docker-compose.prod.yml up -d
+#
+#   ou via Makefile :
+#   make up-prod
+#
+# DIFFÉRENCES vs dev :
+#   - Ports NON exposés sur localhost (sauf le port 80 du frontend)
+#   - Variables d'environnement lues depuis un fichier .env.prod
+#   - Filesystem en lecture seule pour les conteneurs applicatifs
+#   - Pas de volumes source montés
+#   - Limites mémoire plus strictes (simulation EC2 t2.micro)
+#   - Restart policy: always (comme en prod)
+#   - Profil Spring: prod
+#
+# PRÉREQUIS :
+#   Créer le fichier docker/.env.prod avec :
+#     POSTGRES_PASSWORD=votre-mot-de-passe-fort
+#     JWT_SECRET=votre-secret-jwt-minimum-256-bits
+#     (voir docker/.env.prod.example)
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # PostgreSQL — Mode production
+  # ===========================================================================
+  postgres:
+    restart: always    # Redémarre automatiquement si le conteneur crashe
+    ports: []          # Override : supprime l'exposition du port 5432
+                       # Accessible uniquement via le réseau interne Docker
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire en prod}
+    deploy:
+      resources:
+        limits:
+          memory: 256M    # RDS t3.micro a 1GB — on simule avec la limite Postgres
+
+  # ===========================================================================
+  # Backend Spring Boot — Mode production
+  # ===========================================================================
+  backend:
+    restart: always
+    ports: []           # Override : supprime l'exposition du port 8080
+                        # Accessible uniquement depuis frontend via le réseau interne
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_prod
+      SPRING_DATASOURCE_USERNAME: portfolio_user
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire en prod}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET est obligatoire en prod}
+      JWT_EXPIRATION_MS: 86400000   # 24h
+      SERVER_PORT: 8080
+      # JVM optimisée pour EC2 t2.micro (1GB RAM)
+      JAVA_OPTS: >-
+        -Xmx300m
+        -Xms128m
+        -Xss256k
+        -XX:+UseG1GC
+        -XX:MaxMetaspaceSize=128m
+        -Djava.security.egd=file:/dev/./urandom
+    # Sécurité : filesystem en lecture seule
+    # Le tmpfs permet aux fichiers temporaires Java d'exister en mémoire
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777    # Fichiers temp Java
+      - /app/tmp:size=64m           # Spring Boot temp files
+    # Désactive l'escalade de privilèges (Linux only)
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 400M    # Limite stricte — simulation EC2 t2.micro
+          cpus: "0.5"     # Limite CPU (simulation)
+        reservations:
+          memory: 128M    # Mémoire garantie au démarrage
+
+  # ===========================================================================
+  # Frontend NGINX — Mode production
+  # ===========================================================================
+  frontend:
+    restart: always
+    ports:
+      - "80:80"         # En prod, seul le port 80 est exposé (HTTPS géré par l'Ingress)
+    # Filesystem en lecture seule pour NGINX
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=64m   # Cache NGINX en mémoire
+      - /var/run:size=8m            # PID file NGINX
+      - /tmp:size=32m               # Fichiers temp
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 64M     # NGINX est très léger en prod
+          cpus: "0.25"
+        reservations:
+          memory: 32M
+
+# ===========================================================================
+# Réseau production — isolation renforcée
+# ===========================================================================
+networks:
+  portfolio-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "false"  # Isolation inter-conteneurs désactivée
+      # Les conteneurs ne peuvent se parler que via les règles explicites

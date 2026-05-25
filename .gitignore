@@ -1,0 +1,96 @@
+# =============================================================================
+# .GITIGNORE — Projet DevSecOps Portfolio
+# =============================================================================
+
+# =============================================================================
+# SÉCURITÉ — Ces fichiers ne doivent JAMAIS être committés
+# =============================================================================
+.env
+.env.local
+.env.*.local
+*.env
+terraform.tfvars          # Contient les vraies valeurs (secrets, IPs, etc.)
+*.pem                     # Clés SSH privées
+*.key                     # Clés privées
+kubeconfig                # Fichier de config Kubernetes avec tokens
+.aws/credentials          # Credentials AWS
+
+# =============================================================================
+# BACKEND — Java / Maven
+# =============================================================================
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/.mvn/repository/
+*.class
+*.jar
+!**/src/main/**/
+!**/src/test/**/
+*.war
+*.ear
+
+# IDE Java
+backend/.settings/
+backend/.classpath
+backend/.project
+backend/.factorypath
+backend/bin/
+
+# =============================================================================
+# FRONTEND — Node.js / Angular
+# =============================================================================
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+frontend/.nyc_output/
+
+# Cypress
+frontend/cypress/videos/
+frontend/cypress/screenshots/
+
+# =============================================================================
+# INFRASTRUCTURE — Terraform
+# =============================================================================
+infrastructure/terraform/.terraform/
+infrastructure/terraform/*.tfstate
+infrastructure/terraform/*.tfstate.*
+infrastructure/terraform/.terraform.lock.hcl
+infrastructure/terraform/crash.log
+
+# =============================================================================
+# DOCKER
+# =============================================================================
+# Ne pas ignorer les Dockerfiles, mais ignorer les artefacts locaux
+docker-compose.override.yml  # Overrides locaux (non partagés)
+
+# =============================================================================
+# IDEs
+# =============================================================================
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# LOGS ET TEMPORAIRES
+# =============================================================================
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# =============================================================================
+# OS
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini

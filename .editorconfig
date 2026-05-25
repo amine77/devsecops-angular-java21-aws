@@ -1,0 +1,92 @@
+# =============================================================================
+# .editorconfig — Cohérence de style entre IDEs et éditeurs
+# =============================================================================
+# Garantit que tous les contributeurs utilisent les mêmes conventions
+# d'indentation, d'encoding et de fin de ligne, quel que soit leur éditeur.
+#
+# Supporté nativement par : VSCode, IntelliJ, Eclipse, Vim, Emacs...
+# Pour VSCode : extension "EditorConfig for VS Code" recommandée.
+# =============================================================================
+
+root = true
+
+# ---------------------------------------------------------------------------
+# Règles globales — s'appliquent à tous les fichiers
+# ---------------------------------------------------------------------------
+[*]
+charset = utf-8                    # Encoding universel
+end_of_line = lf                   # Unix line endings (cohérence Git/Linux/Docker)
+insert_final_newline = true        # Bonne pratique POSIX
+trim_trailing_whitespace = true    # Pas d'espaces en fin de ligne
+indent_style = space               # Espaces (pas de tabs) — standard JS/TS/Java
+indent_size = 2                    # 2 espaces — standard JS/TS/Angular
+
+# ---------------------------------------------------------------------------
+# Java — 4 espaces (convention Oracle/Google Java Style Guide)
+# ---------------------------------------------------------------------------
+[*.java]
+indent_size = 4
+max_line_length = 120              # Aligné avec checkstyle.xml
+
+# ---------------------------------------------------------------------------
+# XML — 4 espaces (Maven pom.xml, Spring config)
+# ---------------------------------------------------------------------------
+[*.xml]
+indent_size = 4
+
+# ---------------------------------------------------------------------------
+# YAML — 2 espaces (K8s manifests, GitHub Actions, docker-compose)
+# ---------------------------------------------------------------------------
+[*.{yml,yaml}]
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# JSON — 2 espaces (package.json, tsconfig.json, angular.json)
+# ---------------------------------------------------------------------------
+[*.json]
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# TypeScript / JavaScript — 2 espaces (Angular convention)
+# ---------------------------------------------------------------------------
+[*.{ts,tsx,js,jsx}]
+indent_size = 2
+max_line_length = 120
+
+# ---------------------------------------------------------------------------
+# SCSS / CSS — 2 espaces
+# ---------------------------------------------------------------------------
+[*.{scss,css}]
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# HTML — 2 espaces (Angular templates)
+# ---------------------------------------------------------------------------
+[*.html]
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# Markdown — pas de trim sur les espaces (double espace = <br> en Markdown)
+# ---------------------------------------------------------------------------
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+# ---------------------------------------------------------------------------
+# Makefiles — DOIVENT utiliser des tabs (syntaxe obligatoire)
+# ---------------------------------------------------------------------------
+[Makefile]
+indent_style = tab
+
+# ---------------------------------------------------------------------------
+# Dockerfile — 4 espaces pour les instructions longues
+# ---------------------------------------------------------------------------
+[Dockerfile*]
+indent_size = 4
+
+# ---------------------------------------------------------------------------
+# Shell scripts — 2 espaces, LF obligatoire
+# ---------------------------------------------------------------------------
+[*.{sh,bash}]
+indent_size = 2
+end_of_line = lf

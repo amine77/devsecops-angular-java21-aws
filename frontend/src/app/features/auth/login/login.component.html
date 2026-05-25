@@ -1,0 +1,76 @@
+<div class="login-page">
+  <div class="login-card card">
+
+    <!-- Header -->
+    <div class="login-card__header">
+      <div class="login-card__logo">&lt;/&gt;</div>
+      <h1 class="login-card__title">Connexion</h1>
+      <p class="login-card__subtitle">Accès administration du portfolio</p>
+    </div>
+
+    <!-- Message d'erreur -->
+    @if (errorMessage()) {
+      <div class="alert alert-error" role="alert">
+        <span class="alert__icon">⚠️</span>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    <!-- Formulaire -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+
+      <div class="form-group">
+        <label for="email" class="form-label">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          class="form-control"
+          [class.is-invalid]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid"
+          placeholder="admin@portfolio.com"
+          autocomplete="email"
+          aria-describedby="email-error"
+        />
+        @if (emailErrors) {
+          <span id="email-error" class="form-error" role="alert">{{ emailErrors }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Mot de passe</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          class="form-control"
+          [class.is-invalid]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          aria-describedby="password-error"
+        />
+        @if (passwordErrors) {
+          <span id="password-error" class="form-error" role="alert">{{ passwordErrors }}</span>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary login-card__submit"
+        [disabled]="isLoading()"
+      >
+        @if (isLoading()) {
+          <span class="spinner spinner-sm" aria-hidden="true"></span>
+          Connexion en cours...
+        } @else {
+          Se connecter
+        }
+      </button>
+
+    </form>
+
+    <a routerLink="/portfolio" class="login-card__back">
+      ← Retour au portfolio
+    </a>
+
+  </div>
+</div>

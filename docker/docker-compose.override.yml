@@ -1,0 +1,74 @@
+# =============================================================================
+# docker-compose.override.yml — Overrides pour le développement local
+# =============================================================================
+# Ce fichier est AUTOMATIQUEMENT fusionné par Docker Compose avec
+# docker-compose.yml lorsque les deux sont dans le même répertoire.
+#
+# Quand utiliser ce fichier vs le fichier de base :
+#   docker-compose.yml        → configuration commune (prod-like)
+#   docker-compose.override   → ajouts spécifiques au DEV uniquement
+#
+# Fonctionnalités ajoutées ici :
+#   - Port debug Java 5005 exposé (remote debugging IntelliJ/VSCode)
+#   - Variables d'env de debug activées
+#   - Logs plus verbeux
+#   - Profil Spring 'dev' avec DevTools
+#
+# NOTE : Ce fichier ne doit JAMAIS aller en production.
+#        Il est dans .gitignore par défaut (mais ici on le commit
+#        car il ne contient pas de secrets — il référence des env vars)
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # Override Backend — Ajout du port de debug Java
+  # ===========================================================================
+  backend:
+    # -------------------------------------------------------------------------
+    # Port de debug Java (JDWP — Java Debug Wire Protocol)
+    # Permet à IntelliJ/VSCode de se connecter au JVM du conteneur.
+    #
+    # Configuration dans IntelliJ :
+    #   Run → Edit Configurations → Remote JVM Debug
+    #   Host: localhost, Port: 5005
+    # -------------------------------------------------------------------------
+    ports:
+      - "5005:5005"     # Java remote debug
+    environment:
+      # Active le debug JDWP sur le port 5005
+      # -agentlib:jdwp → Java Debug Wire Protocol
+      # transport=dt_socket → connexion via socket TCP
+      # server=y → le JVM écoute (mode serveur)
+      # suspend=n → NE PAS suspendre au démarrage (sinon l'app attend le debugger)
+      # address=*:5005 → écoute sur toutes les interfaces (nécessaire dans Docker)
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+        -Xmx400m
+        -Xms128m
+      # Logs SQL visibles en dev (Hibernate)
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "true"
+      # Niveau de log DEBUG pour nos packages
+      LOGGING_LEVEL_COM_PORTFOLIO: DEBUG
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
+
+  # ===========================================================================
+  # Override Postgres — Outil graphique pgAdmin pour explorer la DB
+  # ===========================================================================
+  # Décommentez ce bloc pour avoir pgAdmin en dev :
+  #
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   container_name: portfolio-pgadmin
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@portfolio.dev
+  #     PGADMIN_DEFAULT_PASSWORD: admin
+  #   ports:
+  #     - "5050:80"
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - portfolio-network
+  #   profiles:
+  #     - tools   # Lancé avec: docker compose --profile tools up

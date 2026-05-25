@@ -1,0 +1,26 @@
+import { Routes } from '@angular/router';
+import { adminGuard } from '@core/guards/auth.guard';
+
+export const adminRoutes: Routes = [
+  {
+    path: '',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    title: 'Dashboard Admin',
+  },
+  {
+    path: 'projects/new',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./project-form/project-form.component').then((m) => m.ProjectFormComponent),
+    title: 'Nouveau projet',
+  },
+  {
+    path: 'projects/:id/edit',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./project-form/project-form.component').then((m) => m.ProjectFormComponent),
+    title: 'Modifier le projet',
+  },
+];

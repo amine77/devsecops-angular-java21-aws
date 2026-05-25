@@ -1,0 +1,30 @@
+# Dossier de build (le plus lourd — régénéré dans l'image)
+dist/
+node_modules/
+
+# Configuration IDE
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# Tests (ne font pas partie de l'image de prod)
+cypress/
+coverage/
+*.spec.ts
+
+# Variables d'environnement locales
+.env
+.env.local
+*.env
+
+# Documentation
+*.md
+docs/
+
+# Logs
+*.log
+npm-debug.log*

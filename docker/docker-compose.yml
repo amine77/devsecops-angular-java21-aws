@@ -1,0 +1,114 @@
+version: '3.9'
+
+# =============================================================================
+# DOCKER COMPOSE — Développement local
+# =============================================================================
+# Lance tout l'environnement de développement en une commande :
+#   docker-compose up -d
+#
+# Services :
+#   - postgres : base de données PostgreSQL locale
+#   - backend  : Spring Boot (reload automatique avec DevTools)
+#   - frontend : Angular (ng serve avec proxy)
+#
+# Réseau :
+#   - portfolio-network : réseau bridge interne
+#   - Les services se parlent par leur nom (ex: backend → postgres:5432)
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # PostgreSQL — Base de données locale
+  # ===========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: portfolio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: portfolio_dev
+      POSTGRES_USER: portfolio_user
+      POSTGRES_PASSWORD: portfolio_pass
+    ports:
+      - "5432:5432"          # Accessible depuis l'IDE pour les outils DB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persistance des données
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio_user -d portfolio_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # Backend Spring Boot
+  # En dev : jar depuis l'image, ou build local
+  # ===========================================================================
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: portfolio-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_dev
+      SPRING_DATASOURCE_USERNAME: portfolio_user
+      SPRING_DATASOURCE_PASSWORD: portfolio_pass
+      JWT_SECRET: dev-secret-key-minimum-256-bits-for-hmac-sha256-algorithm
+      JWT_EXPIRATION_MS: 86400000
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s  # Spring Boot prend du temps à démarrer
+    deploy:
+      resources:
+        limits:
+          memory: 400M    # Limite RAM pour simuler EC2 t2.micro
+
+  # ===========================================================================
+  # Frontend Angular
+  # En dev : ng serve avec hot reload
+  # ===========================================================================
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: portfolio-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - portfolio-network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+# ===========================================================================
+# Volumes nommés — persistance des données entre les redémarrages
+# ===========================================================================
+volumes:
+  postgres_data:
+    name: portfolio_postgres_data
+
+# ===========================================================================
+# Réseau interne Docker
+# ===========================================================================
+networks:
+  portfolio-network:
+    name: portfolio-network
+    driver: bridge

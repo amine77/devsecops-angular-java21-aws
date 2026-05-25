@@ -1,0 +1,111 @@
+<!-- ========== HERO SECTION ========== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero__content">
+      <span class="hero__tag badge badge-blue">Disponible pour de nouveaux projets</span>
+      <h1 class="hero__title">
+        Fullstack <span class="hero__accent">DevSecOps</span><br />
+        Engineer
+      </h1>
+      <p class="hero__subtitle">
+        Angular · Spring Boot Java 21 · Kubernetes · AWS · Terraform
+      </p>
+      <p class="hero__description">
+        Je construis des applications cloud native, sécurisées et scalables — du code
+        propre jusqu'à l'infrastructure as code.
+      </p>
+      <div class="hero__actions">
+        <a routerLink="/portfolio/projects" class="btn btn-primary">
+          Voir mes projets
+        </a>
+        <a routerLink="/portfolio/skills" class="btn btn-outline">
+          Mes compétences
+        </a>
+      </div>
+
+      <!-- Stack technique visible immédiatement -->
+      <div class="hero__stack">
+        <span class="hero__stack-label">Stack :</span>
+        @for (tech of techStack; track tech) {
+          <span class="badge badge-blue">{{ tech }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- Code snippet décoratif -->
+    <div class="hero__code" aria-hidden="true">
+      <pre class="code-block"><code>// Infrastructure as Code
+resource "aws_instance" "app" &#123;
+  ami           = "ami-12345"
+  instance_type = "t2.micro"
+  tags = &#123;
+    Name = "portfolio-ec2"
+  &#125;
+&#125;
+
+// Kubernetes Deployment
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  replicas: 1
+  containers:
+    - name: backend
+      image: ecr.aws/portfolio:v1
+      resources:
+        limits:
+          memory: "300Mi"</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FEATURED PROJECTS ========== -->
+<section class="section featured">
+  <div class="container">
+    <h2 class="section-title">Projets en vedette</h2>
+    <p class="section-subtitle">
+      Des projets concrets démontrant mes compétences fullstack et DevOps
+    </p>
+
+    @if (isLoading()) {
+      <app-loading-spinner message="Chargement des projets..." />
+    } @else if (error()) {
+      <div class="error-state">
+        <p>{{ error() }}</p>
+        <button class="btn btn-outline" (click)="ngOnInit()">Réessayer</button>
+      </div>
+    } @else if (featuredProjects().length === 0) {
+      <div class="empty-state">
+        <p>Aucun projet en vedette pour le moment.</p>
+        <a routerLink="/portfolio/projects" class="btn btn-outline">
+          Voir tous les projets
+        </a>
+      </div>
+    } @else {
+      <div class="grid-projects">
+        @for (project of featuredProjects(); track project.id) {
+          <app-project-card [project]="project" />
+        }
+      </div>
+
+      <div class="featured__cta">
+        <a routerLink="/portfolio/projects" class="btn btn-outline">
+          Voir tous les projets →
+        </a>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- ========== STATS SECTION ========== -->
+<section class="section stats">
+  <div class="container">
+    <div class="stats__grid">
+      @for (stat of stats; track stat.label) {
+        <div class="stat-card card">
+          <div class="stat-card__value">{{ stat.value }}</div>
+          <div class="stat-card__label">{{ stat.label }}</div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

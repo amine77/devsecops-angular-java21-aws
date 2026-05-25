@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ================================================================
+         PARENT SPRING BOOT
+         Raison : gère les versions de toutes les dépendances compatibles.
+         On hérite de spring-boot-starter-parent pour ne pas gérer
+         manuellement les compatibilités (ex: Hibernate vs Spring Data).
+         ================================================================ -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.0</version>
+        <relativePath/>
+    </parent>
+
+    <!-- ================================================================
+         COORDONNÉES DU PROJET
+         Convention : groupId = nom de domaine inversé de votre org
+                      artifactId = nom technique du module
+         ================================================================ -->
+    <groupId>com.portfolio</groupId>
+    <artifactId>backend</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>portfolio-backend</name>
+    <description>Portfolio DevSecOps — Backend Spring Boot Java 21</description>
+
+    <!-- ================================================================
+         PROPRIÉTÉS GLOBALES
+         java.version : force Java 21 pour Virtual Threads (Project Loom)
+         ================================================================ -->
+    <properties>
+        <java.version>21</java.version>
+        <jjwt.version>0.12.5</jjwt.version>
+        <springdoc.version>2.5.0</springdoc.version>
+        <testcontainers.version>1.19.8</testcontainers.version>
+        <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <lombok.version>1.18.32</lombok.version>
+    </properties>
+
+    <dependencies>
+
+        <!-- ============================================================
+             SPRING WEB (Spring MVC)
+             Raison : fournit @RestController, @GetMapping, etc.
+             Inclut Tomcat embedded (pas besoin de serveur externe).
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- ============================================================
+             SPRING DATA JPA + HIBERNATE
+             Raison : ORM standard Java. Évite le SQL répétitif pour
+             les opérations CRUD. Hibernate génère le SQL automatiquement.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- ============================================================
+             SPRING SECURITY
+             Raison : framework de sécurité standard Java.
+             Gère authentification, autorisation, filtres HTTP.
+             On va l'étendre avec JWT pour une auth stateless.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- ============================================================
+             SPRING VALIDATION (Bean Validation / Jakarta Validation)
+             Raison : @NotNull, @Email, @Size sur les DTOs.
+             Valide les inputs avant qu'ils n'atteignent le Service.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- ============================================================
+             SPRING ACTUATOR
+             Raison : expose /actuator/health pour les probes Kubernetes.
+             Liveness probe : /actuator/health/liveness
+             Readiness probe : /actuator/health/readiness
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- ============================================================
+             POSTGRESQL DRIVER
+             Raison : driver JDBC pour se connecter à PostgreSQL (RDS).
+             Scope runtime : pas besoin au compile time, seulement à l'exécution.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- ============================================================
+             FLYWAY — DATABASE MIGRATIONS
+             Raison : versionning du schéma SQL (comme Git pour la DB).
+             Au démarrage, Flyway applique les scripts V1__, V2__ manquants.
+             Essentiel pour les déploiements reproductibles.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- ============================================================
+             JWT — JSON Web Tokens (JJWT library)
+             Raison : génération et validation des tokens JWT.
+             Auth stateless = pas de session serveur = idéal Kubernetes
+             (n'importe quel pod peut valider n'importe quel token).
+             ============================================================ -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- ============================================================
+             SPRINGDOC OPENAPI 3 (Swagger UI)
+             Raison : génère automatiquement la documentation API.
+             Interface interactive sur /swagger-ui.html
+             Essentiel pour démontrer l'API aux recruteurs.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
+
+        <!-- ============================================================
+             LOMBOK
+             Raison : réduit le boilerplate Java (@Getter, @Builder, etc.)
+             Attention : à utiliser avec modération. Préférer les records
+             Java 21 pour les DTOs immutables.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ============================================================
+             MAPSTRUCT — BEAN MAPPING
+             Raison : mapping Entity ↔ DTO généré à la compilation.
+             Plus performant que les mappers réflexifs (ModelMapper).
+             Null-safe, typé, rapide.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${mapstruct.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>${mapstruct.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ============================================================
+             H2 — BASE DE DONNÉES EN MÉMOIRE (dev/test uniquement)
+             Raison : tests rapides sans PostgreSQL installé localement.
+             Scope test : présent uniquement dans les tests.
+             ============================================================ -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ============================================================
+             SPRING BOOT TEST
+             Raison : @SpringBootTest, @WebMvcTest, MockMvc, etc.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ============================================================
+             SPRING SECURITY TEST
+             Raison : @WithMockUser, SecurityMockMvcRequestPostProcessors
+             pour tester les endpoints sécurisés.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ============================================================
+             TESTCONTAINERS — INTÉGRATION TESTS AVEC VRAI POSTGRESQL
+             Raison : démarre un vrai conteneur PostgreSQL durant les tests.
+             Évite les surprises de compatibilité H2 vs PostgreSQL.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- ============================================================
+                 SPRING BOOT MAVEN PLUGIN
+                 Raison : crée un JAR exécutable "fat jar" avec toutes
+                 les dépendances embarquées.
+                 java -jar backend.jar → démarre directement.
+                 exclude Lombok : pas besoin dans le JAR final.
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                    <!-- Layered JAR : optimise le cache Docker layer -->
+                    <layers>
+                        <enabled>true</enabled>
+                    </layers>
+                </configuration>
+            </plugin>
+
+            <!-- ============================================================
+                 MAVEN COMPILER PLUGIN
+                 Raison : configure les annotation processors (Lombok + MapStruct).
+                 L'ordre est important : Lombok d'abord, MapStruct ensuite
+                 (MapStruct voit les méthodes générées par Lombok).
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- ============================================================
+                 CHECKSTYLE
+                 Raison : applique les règles de style Java automatiquement.
+                 Le build échoue si le code ne respecte pas les conventions.
+                 Démontre la rigueur de code aux recruteurs.
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <configLocation>checkstyle.xml</configLocation>
+                    <consoleOutput>true</consoleOutput>
+                    <failsOnError>true</failsOnError>
+                    <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ============================================================
+                 JACOCO — CODE COVERAGE
+                 Raison : mesure la couverture de tests.
+                 Génère un rapport HTML dans target/site/jacoco/
+                 Minimum 80% de couverture imposé.
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.70</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>
