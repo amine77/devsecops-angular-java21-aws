@@ -88,6 +88,24 @@ output "ecr_frontend_url" {
 }
 
 # =============================================================================
+# CLOUDWATCH — Observabilité
+# =============================================================================
+output "cloudwatch_log_group" {
+  description = "CloudWatch Log Group name for backend logs"
+  value       = module.cloudwatch.log_group_name
+}
+
+output "cloudwatch_dashboard_url" {
+  description = "URL to view the CloudWatch dashboard"
+  value       = module.cloudwatch.dashboard_url
+}
+
+output "cloudwatch_sns_topic_arn" {
+  description = "SNS topic ARN for alert notifications"
+  value       = module.cloudwatch.sns_topic_arn
+}
+
+# =============================================================================
 # COMMANDES PRATIQUES
 # =============================================================================
 output "deploy_commands" {

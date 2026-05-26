@@ -1,0 +1,67 @@
+# =============================================================================
+# PROMETHEUS.YML — Configuration de scrape locale (dev)
+# =============================================================================
+#
+# Prometheus scrape le endpoint /actuator/prometheus du backend Spring Boot
+# toutes les 15 secondes. Les métriques sont stockées dans une TSDB locale.
+#
+# Métriques disponibles après démarrage :
+#   auth_login_success_total   — compteur connexions réussies (AppMetrics)
+#   auth_login_failure_total   — compteur échecs auth (AppMetrics)
+#   http_errors_total          — erreurs HTTP taggées par status (AppMetrics)
+#   http_server_requests_*     — métriques Spring MVC auto (Micrometer)
+#   jvm_memory_used_bytes      — usage heap/metaspace
+#   jvm_gc_pause_seconds       — latence GC
+#   hikaricp_connections_*     — pool de connexions PostgreSQL
+#
+# Requête PromQL utile — taux d'échec d'auth (alerte brute-force) :
+#   rate(auth_login_failure_total[5m]) > 0.1
+# =============================================================================
+
+global:
+  scrape_interval:     15s   # Fréquence de collecte (compromis perf/fraîcheur)
+  evaluation_interval: 15s   # Fréquence d'évaluation des règles d'alerte
+  scrape_timeout:      10s   # Timeout par cible
+
+  # Labels ajoutés à toutes les séries temporelles (identifie l'origine)
+  external_labels:
+    monitor: 'portfolio-local'
+    env: 'dev'
+
+# =============================================================================
+# RÈGLES D'ALERTE (fichiers séparés pour maintenabilité)
+# =============================================================================
+# rule_files:
+#   - "alert_rules.yml"
+
+# =============================================================================
+# JOBS DE SCRAPE
+# =============================================================================
+scrape_configs:
+
+  # --------------------------------------------------------------------------
+  # Prometheus lui-même (auto-monitoring)
+  # Permet de monitorer la santé de Prometheus depuis Grafana.
+  # --------------------------------------------------------------------------
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # --------------------------------------------------------------------------
+  # Backend Spring Boot — métriques Micrometer via /actuator/prometheus
+  # --------------------------------------------------------------------------
+  - job_name: 'portfolio-backend'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['backend:8080']    # "backend" = nom du service Docker Compose
+        labels:
+          application: 'portfolio-backend'
+          instance: 'local'
+
+    # Relabeling : conserver uniquement les métriques utiles (optimisation)
+    # En dev on garde tout, en prod on filterebbe les métriques redondantes.
+    # metric_relabel_configs:
+    #   - source_labels: [__name__]
+    #     regex: 'jvm_buffer_.*'
+    #     action: drop

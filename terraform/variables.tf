@@ -175,6 +175,20 @@ variable "db_skip_final_snapshot" {
 }
 
 # =============================================================================
+# OBSERVABILITY — CloudWatch
+# =============================================================================
+
+variable "alert_email" {
+  description = <<-EOT
+    Email address for CloudWatch alarm notifications (SNS subscription).
+    You will receive a confirmation email after terraform apply — confirm it
+    to activate alarm notifications.
+  EOT
+  type        = string
+  default     = ""
+}
+
+# =============================================================================
 # SECRETS — JWT
 # =============================================================================
 

@@ -1,0 +1,20 @@
+# =============================================================================
+# GRAFANA DASHBOARD PROVIDER — Provisioning automatique
+# =============================================================================
+# Ce fichier indique à Grafana où trouver les dashboards JSON.
+# Grafana charge automatiquement tous les .json du dossier spécifié.
+# Raison : dashboards versionnés dans Git, pas dans la DB de Grafana.
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: 'Portfolio Dashboards'
+    orgId: 1
+    type: file
+    disableDeletion: false      # Permet de supprimer depuis l'UI (utile en dev)
+    updateIntervalSeconds: 30   # Recharge les JSON modifiés toutes les 30s
+    allowUiUpdates: true        # Permet de modifier et sauvegarder depuis l'UI
+    options:
+      path: /etc/grafana/dashboards   # Monté depuis docker/grafana/dashboards/
+      foldersFromFilesStructure: true

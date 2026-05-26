@@ -128,3 +128,23 @@ module "ec2" {
   # EC2 depends_on RDS (l'app ne peut pas démarrer sans la DB)
   depends_on = [module.rds]
 }
+
+# =============================================================================
+# MODULE 6 — CLOUDWATCH (Observabilité + Alertes)
+# =============================================================================
+module "cloudwatch" {
+  source = "./modules/cloudwatch"
+
+  project_name    = var.project_name
+  aws_region      = var.aws_region
+  ec2_instance_id = module.ec2.instance_id
+  alert_email     = var.alert_email
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+
+  depends_on = [module.ec2]
+}

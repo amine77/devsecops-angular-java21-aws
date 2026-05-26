@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- =============================================================================
+     LOGBACK-SPRING.XML — Configuration du logging Spring Boot
+     =============================================================================
+
+     Deux profils :
+       - dev  → Console colorée et lisible par l'humain
+       - prod → JSON structuré parsable par CloudWatch / ELK / Datadog
+
+     Champs MDC automatiquement inclus dans chaque log (injectés par RequestCorrelationFilter) :
+       requestId  — UUID unique par requête HTTP (traçabilité end-to-end)
+       httpMethod — GET / POST / PUT / DELETE
+       httpPath   — /api/auth/login
+       userId     — email de l'utilisateur authentifié (si disponible)
+
+     Usage CloudWatch Logs Insights (exemple de requête) :
+       fields @timestamp, level, message, requestId, userId
+       | filter level = "ERROR"
+       | sort @timestamp desc
+       | limit 20
+
+     ============================================================================= -->
+<configuration>
+
+    <!-- ==========================================================================
+         PROFIL DEV — Console colorée
+         springProfile active automatiquement ce bloc si spring.profiles.active=dev
+         ========================================================================== -->
+    <springProfile name="dev">
+
+        <appender name="CONSOLE_DEV" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!-- Pattern lisible : timestamp LEVEL logger - message [requestId] -->
+                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{30}) %gray([%X{requestId:-no-request}]) - %msg%n</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_DEV"/>
+        </root>
+
+        <!-- Logs applicatifs en DEBUG en dev (nos packages uniquement) -->
+        <logger name="com.portfolio" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE_DEV"/>
+        </logger>
+
+        <!-- SQL Hibernate visible en dev via Actuator (POST /actuator/loggers) -->
+        <logger name="org.hibernate.SQL" level="WARN"/>
+        <logger name="org.springframework.security" level="WARN"/>
+
+    </springProfile>
+
+    <!-- ==========================================================================
+         PROFIL PROD — JSON structuré (CloudWatch / ELK)
+         Chaque ligne de log = un objet JSON sur une seule ligne.
+         Exemple :
+         {
+           "@timestamp": "2026-01-15T10:23:45.123Z",
+           "level": "ERROR",
+           "thread_name": "tomcat-handler-0",
+           "logger_name": "c.p.b.e.GlobalExceptionHandler",
+           "message": "Unexpected error at /api/projects",
+           "requestId": "550e8400-e29b-41d4-a716-446655440000",
+           "httpMethod": "GET",
+           "httpPath": "/api/projects",
+           "userId": "admin@portfolio.dev",
+           "stack_trace": "java.lang.RuntimeException: ..."
+         }
+         ========================================================================== -->
+    <springProfile name="prod">
+
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+
+                <!-- Inclure tous les champs MDC dans le JSON -->
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>httpMethod</includeMdcKeyName>
+                <includeMdcKeyName>httpPath</includeMdcKeyName>
+                <includeMdcKeyName>userId</includeMdcKeyName>
+
+                <!-- Renommer @timestamp → compatible AWS/ELK -->
+                <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</timestampPattern>
+                <timeZone>UTC</timeZone>
+
+                <!-- Champs additionnels : application + version -->
+                <customFields>{"app":"portfolio-backend","env":"prod"}</customFields>
+
+                <!-- Inclure la stack trace en cas d'exception -->
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerCause>10</maxDepthPerCause>
+                    <maxLength>2048</maxLength>
+                    <shortenedClassNameLength>20</shortenedClassNameLength>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+
+            </encoder>
+        </appender>
+
+        <!-- Async appender : les logs JSON ne bloquent pas le thread applicatif -->
+        <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
+            <queueSize>512</queueSize>
+            <discardingThreshold>0</discardingThreshold>  <!-- Ne jamais jeter de logs -->
+            <includeCallerData>false</includeCallerData>  <!-- Désactivé pour perf -->
+            <appender-ref ref="CONSOLE_JSON"/>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="ASYNC_JSON"/>
+        </root>
+
+        <logger name="com.portfolio" level="INFO"/>
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+
+    </springProfile>
+
+    <!-- ==========================================================================
+         PROFIL PAR DÉFAUT (ni dev ni prod) — Fallback console simple
+         ========================================================================== -->
+    <springProfile name="!dev &amp; !prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>

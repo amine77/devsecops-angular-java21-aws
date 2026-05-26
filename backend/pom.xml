@@ -98,6 +98,32 @@
         </dependency>
 
         <!-- ============================================================
+             MICROMETER — PROMETHEUS REGISTRY
+             Raison : expose /actuator/prometheus pour Prometheus/Grafana.
+             Micrometer est l'abstraction standard de métriques pour JVM.
+             Spring Boot l'intègre nativement via Actuator.
+             Auto-métriques : JVM heap, GC, threads, HikariCP pool, HTTP
+             ============================================================ -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- ============================================================
+             LOGSTASH LOGBACK ENCODER — LOGS JSON STRUCTURÉS
+             Raison : en production, les logs doivent être parsables par
+             CloudWatch Logs Insights, ELK, Datadog, etc.
+             Format : {"@timestamp":"...","level":"INFO","message":"...",
+                       "requestId":"...","userId":"..."}
+             En dev : logs colorés lisibles par l'humain (via logback-spring.xml)
+             ============================================================ -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>7.4</version>
+        </dependency>
+
+        <!-- ============================================================
              POSTGRESQL DRIVER
              Raison : driver JDBC pour se connecter à PostgreSQL (RDS).
              Scope runtime : pas besoin au compile time, seulement à l'exécution.

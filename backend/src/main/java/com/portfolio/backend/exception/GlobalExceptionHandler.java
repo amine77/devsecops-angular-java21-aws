@@ -1,6 +1,7 @@
 package com.portfolio.backend.exception;
 
 import com.portfolio.backend.dto.response.ErrorResponse;
+import com.portfolio.backend.observability.AppMetrics;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,14 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final AppMetrics metrics;
+
+    public GlobalExceptionHandler(AppMetrics metrics) {
+        this.metrics = metrics;
+    }
+
+
 
     /**
      * 404 Not Found — Ressource inexistante.
@@ -86,13 +95,18 @@ public class GlobalExceptionHandler {
 
     /**
      * 401 Unauthorized — Authentification invalide.
+     * Incrémente le compteur Prometheus auth.login.failure.
      */
     @ExceptionHandler({UnauthorizedException.class, BadCredentialsException.class})
     public ResponseEntity<ErrorResponse> handleUnauthorized(
         RuntimeException ex,
         HttpServletRequest request
     ) {
-        log.warn("Unauthorized access attempt at: {} - {}", request.getRequestURI(), ex.getMessage());
+        // requestId déjà dans le MDC → inclus automatiquement dans les logs JSON/dev
+        log.warn("Unauthorized access attempt: method={} path={}",
+            request.getMethod(), request.getRequestURI());
+        metrics.incrementLoginFailure();
+        metrics.incrementHttpError(HttpStatus.UNAUTHORIZED.value(), request.getRequestURI());
         return ResponseEntity
             .status(HttpStatus.UNAUTHORIZED)
             .body(ErrorResponse.of(

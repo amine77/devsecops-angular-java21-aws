@@ -1,0 +1,111 @@
+# =============================================================================
+# DOCKER COMPOSE OBSERVABILITY — Prometheus + Grafana (dev local)
+# =============================================================================
+#
+# Utilisation :
+#   # Démarrer la stack complète avec observabilité
+#   docker-compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#
+#   # Ou uniquement Prometheus + Grafana (si le backend tourne nativement)
+#   docker-compose -f docker-compose.observability.yml up -d
+#
+# Accès :
+#   Prometheus : http://localhost:9090
+#   Grafana    : http://localhost:3000  (admin / admin — changer en prod)
+#
+# Architecture :
+#   Prometheus scrape le backend toutes les 15s via /actuator/prometheus
+#   Grafana interroge Prometheus via la datasource provisionnée automatiquement
+#   Les dashboards sont chargés depuis docker/grafana/dashboards/*.json
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # Prometheus — Collecte et stockage des métriques
+  # ===========================================================================
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: portfolio-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'    # Conservation 7 jours (dev local)
+      - '--web.enable-lifecycle'               # Permet le rechargement à chaud : POST /-/reload
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ===========================================================================
+  # Grafana — Visualisation des métriques
+  # ===========================================================================
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: portfolio-grafana
+    restart: unless-stopped
+    environment:
+      # Credentials admin (dev uniquement — utiliser Secrets en prod)
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+
+      # Désactiver la fenêtre de bienvenue et le reporting anonyme
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+
+      # Chemins de provisioning
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - portfolio-network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/api/health | grep -q '\"database\": \"ok\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+# ===========================================================================
+# Volumes — persistance des données Prometheus et Grafana
+# ===========================================================================
+volumes:
+  prometheus_data:
+    name: portfolio_prometheus_data
+  grafana_data:
+    name: portfolio_grafana_data
+
+# ===========================================================================
+# Réseau — partage avec docker-compose.yml principal
+# ===========================================================================
+networks:
+  portfolio-network:
+    name: portfolio-network
+    external: true    # Réseau créé par docker-compose.yml principal

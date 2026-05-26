@@ -1,0 +1,21 @@
+# =============================================================================
+# GRAFANA DATASOURCE — Prometheus (provisioning automatique)
+# =============================================================================
+# Ce fichier est lu au démarrage de Grafana.
+# Il configure automatiquement la source de données Prometheus.
+# Raison : éviter la configuration manuelle via l'UI à chaque `docker-compose up`.
+# =============================================================================
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy           # Grafana → Prometheus (server-side, pas browser-side)
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false          # Empêche la modification depuis l'UI (config as code)
+    jsonData:
+      timeInterval: '15s'   # Doit correspondre à scrape_interval dans prometheus.yml
+      queryTimeout: '60s'
+      httpMethod: 'POST'     # POST est plus efficace pour les longues requêtes PromQL
