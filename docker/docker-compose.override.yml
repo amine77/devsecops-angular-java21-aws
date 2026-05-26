@@ -42,10 +42,9 @@ services:
       # server=y → le JVM écoute (mode serveur)
       # suspend=n → NE PAS suspendre au démarrage (sinon l'app attend le debugger)
       # address=*:5005 → écoute sur toutes les interfaces (nécessaire dans Docker)
-      JAVA_TOOL_OPTIONS: >-
-        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
-        -Xmx400m
-        -Xms128m
+      # NOTE : -Xmx/-Xms sont déjà définis dans le Dockerfile ENTRYPOINT (-Xmx600m -Xms256m)
+      #        Ne pas les dupliquer ici pour éviter les conflits JVM.
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
       # Logs SQL visibles en dev (Hibernate)
       SPRING_JPA_SHOW_SQL: "true"
       SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "true"

@@ -97,24 +97,34 @@ USER appuser
 EXPOSE 8080
 
 # =============================================================================
+# HEALTHCHECK — Sonde de santé Docker/Kubernetes
+#
+# wget est disponible dans eclipse-temurin:21-jre-alpine (contrairement à curl).
+# On cible /actuator/health/readiness (K8s readiness probe).
+# --start-period 90s : délai avant de commencer les checks (Spring Boot démarre lentement).
+# =============================================================================
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
+    CMD wget -q -O- http://localhost:8080/actuator/health/readiness || exit 1
+
+# =============================================================================
 # OPTIMISATION RAM POUR EC2 t2.micro (1GB total)
 #
 # Options JVM expliquées :
-# -Xmx300m     : heap maximum 300MB (réserve de la RAM pour l'OS et les autres pods)
-# -Xms128m     : heap initial 128MB (évite de réserver 300MB dès le démarrage)
+# -Xmx600m     : heap maximum 600MB (augmenté pour Java 21 + Spring Boot 3.3)
+# -Xms256m     : heap initial 256MB (allow faster startup with more memory)
 # -Xss256k     : taille stack par thread (défaut = 1MB, 256k suffit pour la plupart)
 # -XX:+UseG1GC : Garbage Collector G1 (meilleur sur petite RAM)
-# -XX:MaxMetaspaceSize=128m : limite la metaspace (classes compilées)
+# -XX:MaxMetaspaceSize=256m : limite la metaspace (classes compilées)
 # -XX:+OptimizeStringConcat : optimisation mineures string
 # -Djava.security.egd=... : entropie pour la génération de tokens (faster startup)
 # -Dspring.profiles.active=prod : active le profil prod
 # =============================================================================
 ENTRYPOINT ["java", \
-    "-Xmx300m", \
-    "-Xms128m", \
+    "-Xmx600m", \
+    "-Xms256m", \
     "-Xss256k", \
     "-XX:+UseG1GC", \
-    "-XX:MaxMetaspaceSize=128m", \
+    "-XX:MaxMetaspaceSize=256m", \
     "-XX:+OptimizeStringConcat", \
     "-Djava.security.egd=file:/dev/./urandom", \
     "org.springframework.boot.loader.launch.JarLauncher"]

@@ -49,6 +49,22 @@ services:
       dockerfile: Dockerfile
     container_name: portfolio-backend
     restart: unless-stopped
+    # Surcharge de l'ENTRYPOINT pour adapter les flags JVM à la machine locale.
+    # -Xms64m  : allocation initiale minimale (évite de réserver 256m dès le départ)
+    # -Xmx512m : max suffisant pour Spring Boot 3.3 en dev local
+    # -XX:TieredStopAtLevel=1 : compilation JIT minimale → démarrage 2x plus rapide
+    entrypoint:
+      - java
+      - "-Xmx512m"
+      - "-Xms64m"
+      - "-Xss256k"
+      - "-XX:+UseG1GC"
+      - "-XX:MaxMetaspaceSize=200m"
+      # TieredStopAtLevel=1 RETIRÉ : accélère le démarrage mais désactive le JIT C2
+      # → BCrypt strength 12 passe de 300ms à 20s sans C2. Inacceptable en runtime.
+      - "-Djava.security.egd=file:/dev/./urandom"
+      - "-Dspring.profiles.active=dev"
+      - "org.springframework.boot.loader.launch.JarLauncher"
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_dev
@@ -65,15 +81,17 @@ services:
     networks:
       - portfolio-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      # wget disponible dans Alpine (curl absent de eclipse-temurin:21-jre-alpine)
+      # -q : silencieux  -O- : sortie vers stdout  --spider : HEAD seulement
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8080/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 60s  # Spring Boot prend du temps à démarrer
+      retries: 10
+      start_period: 120s  # Spring Boot sur machine à RAM limitée
     deploy:
       resources:
         limits:
-          memory: 400M    # Limite RAM pour simuler EC2 t2.micro
+          memory: 768M   # Réduit — 512m heap + 200m metaspace + overhead JVM
 
   # ===========================================================================
   # Frontend Angular
