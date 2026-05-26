@@ -37,6 +37,8 @@ AWS_ACCOUNT_ID   ?= $(shell aws sts get-caller-identity --query Account --output
 AWS_REGION       ?= eu-west-3
 ECR_REGISTRY     := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 IMAGE_TAG        ?= latest
+TF_DIR           ?= terraform
+TF_VARS          ?= $(TF_DIR)/terraform.tfvars
 
 .PHONY: help build build-backend build-frontend up up-prod down logs logs-backend logs-frontend \
         test test-backend test-frontend lint lint-backend lint-frontend \
@@ -44,7 +46,8 @@ IMAGE_TAG        ?= latest
         clean clean-containers clean-volumes clean-images \
         db-connect shell-backend shell-frontend \
         trivy-scan security-check \
-        status health
+        status health \
+        tf-init tf-validate tf-plan tf-apply tf-destroy tf-output tf-fmt
 
 # =============================================================================
 # AIDE — cible par défaut
@@ -320,6 +323,59 @@ image-sizes: ## Affiche la taille des images construites
 image-layers: ## Affiche les layers de l'image backend
 	@echo "$(BOLD)$(CYAN)Layers backend :$(RESET)"
 	docker history portfolio-backend:$(IMAGE_TAG) --human --format "table {{.Size}}\t{{.CreatedBy}}"
+
+# =============================================================================
+# TERRAFORM — Infrastructure AWS
+# =============================================================================
+tf-init: ## terraform init — Télécharge les providers
+	@echo "$(CYAN)▶ Terraform init...$(RESET)"
+	cd $(TF_DIR) && terraform init
+	@echo "$(GREEN)✔ Providers téléchargés$(RESET)"
+
+tf-validate: ## terraform validate — Valide la syntaxe HCL
+	@echo "$(CYAN)▶ Terraform validate...$(RESET)"
+	cd $(TF_DIR) && terraform validate
+	@echo "$(GREEN)✔ Configuration valide$(RESET)"
+
+tf-fmt: ## terraform fmt — Formate les fichiers .tf
+	@echo "$(CYAN)▶ Terraform fmt...$(RESET)"
+	cd $(TF_DIR) && terraform fmt -recursive
+	@echo "$(GREEN)✔ Fichiers formatés$(RESET)"
+
+tf-plan: ## terraform plan — Aperçu des changements (sans déployer)
+	@echo "$(CYAN)▶ Terraform plan...$(RESET)"
+	@if [ ! -f "$(TF_VARS)" ]; then \
+		echo "$(RED)✘ $(TF_VARS) manquant. Copier terraform.tfvars.example$(RESET)"; \
+		exit 1; \
+	fi
+	cd $(TF_DIR) && terraform plan -var-file=$(notdir $(TF_VARS)) -out=tfplan
+	@echo "$(GREEN)✔ Plan sauvegardé dans terraform/tfplan$(RESET)"
+
+tf-apply: ## terraform apply — Déploie l'infrastructure AWS
+	@echo "$(YELLOW)▶ Terraform apply — Déploiement AWS...$(RESET)"
+	@echo "$(YELLOW)⚠ Cette commande crée des ressources AWS qui peuvent être facturées.$(RESET)"
+	@if [ ! -f "$(TF_DIR)/tfplan" ]; then \
+		$(MAKE) tf-plan; \
+	fi
+	cd $(TF_DIR) && terraform apply tfplan
+	@echo "$(GREEN)✔ Infrastructure déployée$(RESET)"
+	@$(MAKE) tf-output
+
+tf-destroy: ## terraform destroy — SUPPRIME toute l'infrastructure
+	@echo "$(RED)⚠ ATTENTION : Cette commande supprime TOUTE l'infrastructure AWS !$(RESET)"
+	@echo "$(RED)⚠ Les données RDS seront perdues si skip_final_snapshot = true$(RESET)"
+	@read -p "Confirmer la destruction ? (yes/no) : " confirm && [ "$$confirm" = "yes" ] || exit 1
+	cd $(TF_DIR) && terraform destroy -var-file=$(notdir $(TF_VARS))
+	@echo "$(GREEN)✔ Infrastructure supprimée$(RESET)"
+
+tf-output: ## Affiche les outputs Terraform (IP, URLs, commandes)
+	@echo "$(BOLD)$(CYAN)Outputs Terraform :$(RESET)"
+	cd $(TF_DIR) && terraform output
+
+tf-ssh: ## SSH vers l'EC2 via les outputs Terraform
+	@EC2_IP=$$(cd $(TF_DIR) && terraform output -raw ec2_public_ip 2>/dev/null); \
+	KEY=$$(cd $(TF_DIR) && terraform output -raw ec2_key_name 2>/dev/null || echo "portfolio-key"); \
+	ssh -i ~/.ssh/$${KEY}.pem ec2-user@$$EC2_IP
 
 inspect-network: ## Inspecte le réseau Docker du projet
 	docker network inspect portfolio-network

@@ -1,0 +1,37 @@
+# =============================================================================
+# .gitignore Terraform — NE JAMAIS committer :
+#   - Le state (contient des valeurs en clair, y compris les mots de passe)
+#   - Les fichiers .tfvars avec des vraies valeurs (secrets)
+#   - Le répertoire .terraform (dépendances binaires, lourd)
+# =============================================================================
+
+# State files
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Répertoire des providers téléchargés (binaires, non committer)
+.terraform/
+.terraform.lock.hcl   # À décommenter si tu veux le committer (recommandé pour CI)
+
+# Variables avec secrets — ne jamais committer
+*.tfvars
+!terraform.tfvars.example   # L'exemple sans secrets est OK à committer
+
+# Fichiers de plan Terraform (peuvent contenir des secrets en clair)
+*.tfplan
+*.plan
+
+# Logs
+crash.log
+crash.*.log
+
+# Override files (développement local uniquement)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config
+.terraformrc
+terraform.rc

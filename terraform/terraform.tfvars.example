@@ -1,0 +1,43 @@
+# =============================================================================
+# terraform.tfvars.example — TEMPLATE de configuration
+# =============================================================================
+# INSTRUCTIONS :
+#   1. Copier ce fichier : cp terraform.tfvars.example terraform.tfvars
+#   2. Remplir TOUTES les valeurs (surtout les secrets)
+#   3. NE JAMAIS committer terraform.tfvars (il est dans .gitignore)
+#
+# Pour les secrets en CI/CD :
+#   - GitHub Actions  → Settings → Secrets → TF_VAR_db_password etc.
+#   - GitLab CI       → Settings → CI/CD → Variables
+# =============================================================================
+
+# --- Configuration globale ---
+aws_region   = "eu-west-3"
+environment  = "dev"          # dev | staging | prod
+project_name = "portfolio"
+
+# --- Réseau ---
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["eu-west-3a", "eu-west-3b"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
+
+# --- EC2 ---
+ec2_instance_type = "t2.micro"          # Free Tier
+ec2_key_name      = "portfolio-key"     # Nom de ta clé dans AWS EC2 → Key Pairs
+allowed_ssh_cidr  = "0.0.0.0/0"        # TODO: restreindre à ton IP en prod (ex: "203.0.113.42/32")
+image_tag         = "latest"
+
+# --- RDS ---
+db_instance_class        = "db.t3.micro"  # Free Tier
+db_name                  = "portfolio_prod"
+db_allocated_storage     = 20             # GB (max Free Tier)
+db_backup_retention_days = 7
+db_skip_final_snapshot   = true           # false en production !
+
+# --- SECRETS (À REMPLIR — ne pas laisser ces valeurs) ---
+db_username = "portfolio_user"
+db_password = "CHANGE_ME_min8chars!"
+
+# Générer : openssl rand -base64 64 | tr -d '\n'
+jwt_secret  = "CHANGE_ME_min32chars_use_openssl_rand_base64_64"
