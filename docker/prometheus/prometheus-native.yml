@@ -1,0 +1,36 @@
+# =============================================================================
+# PROMETHEUS-NATIVE.YML — Config pour backend tournant sur l'hôte (Maven)
+# =============================================================================
+# Utilisé avec docker/docker-compose.dev-stack.yml
+#
+# Différence avec prometheus.yml :
+#   - backend:8080          → hôte Docker (réseau interne)
+#   - host.docker.internal  → machine hôte (backend natif sur localhost)
+#
+# Sur Windows Docker Desktop, host.docker.internal résout automatiquement
+# vers l'IP de la machine hôte.
+# =============================================================================
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  scrape_timeout:      10s
+  external_labels:
+    monitor: 'portfolio-native'
+    env: 'dev'
+
+scrape_configs:
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'portfolio-backend'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+    static_configs:
+      # host.docker.internal = IP de la machine hôte vue depuis Docker Desktop (Windows/Mac)
+      - targets: ['host.docker.internal:8080']
+        labels:
+          application: 'portfolio-backend'
+          instance: 'native-local'

@@ -99,8 +99,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/projects/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/skills").permitAll()
                 .requestMatchers(HttpMethod.GET, "/skills/**").permitAll()
-                // Kubernetes probes
+                // Kubernetes probes + Prometheus scraping (Prometheus n'envoie pas de JWT)
+                // Sécurité prod : à protéger par IP restriction (SG AWS) ou management.server.port séparé
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/prometheus").permitAll()
                 // Swagger UI (utile pour les recruteurs)
                 .requestMatchers(
                     "/swagger-ui/**",
