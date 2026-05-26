@@ -1,0 +1,246 @@
+# =============================================================================
+# DEPLOY — INFRASTRUCTURE (Terraform)
+# =============================================================================
+#
+# Ce pipeline gère les changements d'infrastructure AWS via Terraform.
+#
+# Stratégie GitOps :
+#   - Sur Pull Request → terraform plan affiché en commentaire PR
+#   - Sur push main   → terraform validate + résumé (apply = manuel intentionnel)
+#   - Manuel          → workflow_dispatch pour forcer un plan
+#
+# POURQUOI l'apply est MANUEL et non automatique :
+#   Les changements d'infrastructure (VPC, RDS, EC2) sont irréversibles et
+#   potentiellement coûteux. Un humain doit relire le plan avant d'appliquer.
+#   En comparaison, le déploiement applicatif (images Docker) est automatique
+#   car rollback est trivial (retagger l'image précédente).
+#
+#   Pour appliquer :
+#     cd terraform
+#     terraform init  # décommenter le backend S3 dans versions.tf d'abord
+#     terraform apply
+#
+# Secrets GitHub requis (Settings → Secrets → Actions) :
+#   AWS_ACCESS_KEY_ID     — Clé AWS pour terraform plan
+#   AWS_SECRET_ACCESS_KEY — Secret AWS
+#
+# =============================================================================
+
+name: 🏗 Infrastructure — Terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/deploy-infra.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+
+# Node.js 24 opt-in (obligatoire à partir du 2 juin 2026)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  TF_VERSION: "1.7.5"
+  TF_INPUT: "false"
+  TF_IN_AUTOMATION: "true"         # Désactive les prompts interactifs
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false         # Ne pas annuler un apply en cours !
+
+jobs:
+
+  # ===========================================================================
+  # JOB 1 : TERRAFORM VALIDATE + PLAN
+  # ===========================================================================
+  terraform:
+    name: 🏗 Terraform ${{ github.event_name == 'pull_request' && 'Plan (PR)' || 'Validate' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write      # Pour écrire le commentaire de plan sur la PR
+      security-events: write    # Pour Trivy IaC scan
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # AWS Credentials — nécessaires pour terraform plan (describe resources)
+      # -----------------------------------------------------------------------
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+        # Si les secrets ne sont pas configurés, le plan sera en mode "offline"
+        # (montre ce qui serait créé sans contacter AWS pour les data sources)
+        continue-on-error: true
+
+      # -----------------------------------------------------------------------
+      # Terraform setup
+      # -----------------------------------------------------------------------
+      - name: Setup Terraform ${{ env.TF_VERSION }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          # terraform_wrapper: true permet de capturer la sortie stdout pour
+          # l'afficher dans le commentaire PR
+
+      # -----------------------------------------------------------------------
+      # Init sans backend distant
+      # Raison : le backend S3 n'existe que si le bootstrap a été fait manuellement.
+      # En CI, on valide la syntaxe et produit un plan "what-if" sans state réel.
+      # Le plan montrera "28 resources to add" = état souhaité complet.
+      # -----------------------------------------------------------------------
+      - name: Terraform Init (validation mode)
+        id: init
+        working-directory: terraform
+        run: terraform init -backend=false
+
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: terraform
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: terraform
+        run: terraform validate -no-color
+
+      # -----------------------------------------------------------------------
+      # Trivy IaC Scan — Vérifie la sécurité de la configuration Terraform
+      # -----------------------------------------------------------------------
+      - name: Trivy — IaC Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: './terraform'
+          format: 'sarif'
+          output: 'trivy-iac.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'  # Informationnel : ne bloque pas le pipeline
+
+      - name: Upload Trivy IaC SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-iac.sarif
+          category: trivy-iac
+        continue-on-error: true
+
+      # -----------------------------------------------------------------------
+      # Terraform Plan — utilise des valeurs placeholder pour les secrets
+      # Le plan réel (avec vrais secrets) doit être lancé manuellement en local.
+      # -----------------------------------------------------------------------
+      - name: Terraform Plan (preview)
+        id: plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var="ec2_key_name=portfolio-key" \
+            -var="db_password=Preview_plan_only_not_real" \
+            -var="jwt_secret=preview-plan-only-not-real-secret-32chars" \
+            -no-color \
+            -lock=false \
+            2>&1 | tee /tmp/plan-output.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true  # Le plan peut échouer (ex: data sources AWS)
+
+      # -----------------------------------------------------------------------
+      # Commentaire PR — affiche le plan pour review
+      # -----------------------------------------------------------------------
+      - name: Comment PR with Terraform Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.existsSync('/tmp/plan-output.txt')
+              ? fs.readFileSync('/tmp/plan-output.txt', 'utf8')
+              : 'Plan output not available';
+
+            // Limiter à 65000 chars (limite GitHub comments)
+            const maxLen = 60000;
+            const plan = planOutput.length > maxLen
+              ? planOutput.substring(0, maxLen) + '\n\n... *(output truncated — run locally for full plan)*'
+              : planOutput;
+
+            const fmtStatus = '${{ steps.fmt.outcome }}' === 'success' ? '✅' : '⚠️';
+            const validateStatus = '${{ steps.validate.outcome }}' === 'success' ? '✅' : '❌';
+
+            const body = `## 🏗 Terraform Plan — Infrastructure Review
+
+            | Step | Status |
+            |------|--------|
+            | Format (fmt) | ${fmtStatus} ${{ steps.fmt.outcome }} |
+            | Validate | ${validateStatus} ${{ steps.validate.outcome }} |
+
+            <details>
+            <summary>📋 Plan complet (cliquer pour développer)</summary>
+
+            \`\`\`hcl
+            ${plan}
+            \`\`\`
+            </details>
+
+            > ⚠️ **Ce plan utilise des valeurs placeholder pour les secrets.**
+            > Pour appliquer : \`cd terraform && terraform apply\` en local avec ton \`terraform.tfvars\`.
+
+            *Généré par GitHub Actions — commit \`${{ github.sha }}\`*`;
+
+            // Chercher un commentaire Terraform existant pour le mettre à jour
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.data.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('🏗 Terraform Plan')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+      # -----------------------------------------------------------------------
+      # Job Summary — visible dans GitHub Actions → Summary
+      # -----------------------------------------------------------------------
+      - name: Terraform Summary
+        if: always()
+        run: |
+          echo "## 🏗 Terraform Infrastructure Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Étape | Résultat |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| fmt | ${{ steps.fmt.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| validate | ${{ steps.validate.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| plan | ${{ steps.plan.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pour déployer l'infrastructure" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "cd terraform" >> $GITHUB_STEP_SUMMARY
+          echo "cp terraform.tfvars.example terraform.tfvars  # Remplir les valeurs" >> $GITHUB_STEP_SUMMARY
+          echo "terraform init  # Décommenter le backend S3 dans versions.tf" >> $GITHUB_STEP_SUMMARY
+          echo "terraform apply" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

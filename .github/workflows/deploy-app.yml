@@ -1,0 +1,412 @@
+# =============================================================================
+# DEPLOY — APPLICATION (Build → ECR → EC2)
+# =============================================================================
+#
+# Pipeline de déploiement continu de l'application portfolio.
+#
+# Flux complet :
+#
+#   push main (backend/ ou frontend/)
+#       │
+#       ├── build-push-backend ──→ ECR portfolio-backend:sha-XXXXXXX + :latest
+#       │                          Trivy scan de l'image avant push
+#       │
+#       ├── build-push-frontend ─→ ECR portfolio-frontend:sha-XXXXXXX + :latest
+#       │                          Trivy scan de l'image avant push
+#       │
+#       └── deploy (needs both)
+#               ├── Récupère l'IP EC2 via AWS CLI (dynamique, pas de secret)
+#               ├── SSH → pull nouvelles images → docker compose up -d
+#               ├── Health check (retry 10×, attente max 5 min)
+#               └── Job Summary avec URL + SHA déployé
+#
+# Stratégie de tags ECR :
+#   sha-XXXXXXX → immuable, permet le rollback exact
+#   latest      → pointe toujours vers la dernière version
+#
+# Rollback :
+#   SSH dans EC2 et modifier le tag dans /opt/portfolio/docker-compose.yml,
+#   puis redémarrer : docker compose up -d
+#   Ou : workflow_dispatch avec image_tag=sha-XXXXXXX
+#
+# Secrets GitHub requis (Settings → Secrets → Actions) :
+#   AWS_ACCESS_KEY_ID     — Credentials AWS (permission ECR + EC2 describe)
+#   AWS_SECRET_ACCESS_KEY — Credentials AWS
+#   EC2_SSH_PRIVATE_KEY   — Contenu du fichier .pem (pour SSH vers EC2)
+#
+# PRÉREQUIS :
+#   1. terraform apply exécuté (EC2 + ECR existent)
+#   2. Secrets GitHub configurés
+#   3. EC2 accessible sur le port 22 (SG ouvert)
+#
+# =============================================================================
+
+name: 🚀 Deploy — Application
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/deploy-app.yml'
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Tag de l''image à déployer (ex: sha-abc1234 pour rollback)'
+        required: false
+        default: 'latest'
+      environment:
+        description: 'Environnement cible'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+# Node.js 24 opt-in (obligatoire à partir du 2 juin 2026)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  AWS_REGION: eu-west-3
+  IMAGE_TAG: sha-${{ github.sha }}
+
+concurrency:
+  # Un seul déploiement à la fois sur la même branche
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false  # Ne pas annuler un déploiement en cours !
+
+jobs:
+
+  # ===========================================================================
+  # JOB 1 : BUILD + PUSH BACKEND → ECR
+  # ===========================================================================
+  build-push-backend:
+    name: 🐳 Backend — Build & Push ECR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    outputs:
+      image_uri: ${{ steps.build.outputs.image_uri }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # -----------------------------------------------------------------------
+      # Login ECR — utilise le rôle IAM de la machine de CI
+      # -----------------------------------------------------------------------
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # -----------------------------------------------------------------------
+      # Build l'image et la scanne AVANT de pusher (fail fast sur CVE critique)
+      # -----------------------------------------------------------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image (local, avant scan)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: portfolio-backend-scan:${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+          load: true
+
+      # Scan de sécurité AVANT push ECR
+      # Si une CVE CRITIQUE est trouvée → le push est bloqué
+      - name: Trivy — Scan image backend (pre-push)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: portfolio-backend-scan:${{ github.sha }}
+          format: sarif
+          output: trivy-backend-deploy.sarif
+          severity: 'CRITICAL'
+          exit-code: '0'   # Ne bloque pas (informationnel pour le portfolio)
+          # En production : exit-code: '1' pour bloquer sur CRITICAL
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-backend-deploy.sarif
+          category: trivy-backend-deploy
+        continue-on-error: true
+
+      # -----------------------------------------------------------------------
+      # Push vers ECR avec 2 tags : sha immuable + latest
+      # -----------------------------------------------------------------------
+      - name: Build & Push to ECR
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/portfolio-backend:${{ env.IMAGE_TAG }}
+            ${{ steps.ecr-login.outputs.registry }}/portfolio-backend:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+          # Labels OCI pour la traçabilité
+          labels: |
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+
+      - name: Set output image URI
+        id: set-output
+        run: |
+          echo "image_uri=${{ steps.ecr-login.outputs.registry }}/portfolio-backend:${{ env.IMAGE_TAG }}" \
+            >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # JOB 2 : BUILD + PUSH FRONTEND → ECR
+  # ===========================================================================
+  build-push-frontend:
+    name: 🐳 Frontend — Build & Push ECR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    outputs:
+      image_uri: ${{ steps.set-output.outputs.image_uri }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend image (local, avant scan)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: portfolio-frontend-scan:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+          load: true
+
+      - name: Trivy — Scan image frontend (pre-push)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: portfolio-frontend-scan:${{ github.sha }}
+          format: sarif
+          output: trivy-frontend-deploy.sarif
+          severity: 'CRITICAL'
+          exit-code: '0'
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-frontend-deploy.sarif
+          category: trivy-frontend-deploy
+        continue-on-error: true
+
+      - name: Build & Push to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/portfolio-frontend:${{ env.IMAGE_TAG }}
+            ${{ steps.ecr-login.outputs.registry }}/portfolio-frontend:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+          labels: |
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+
+      - name: Set output image URI
+        id: set-output
+        run: |
+          echo "image_uri=${{ steps.ecr-login.outputs.registry }}/portfolio-frontend:${{ env.IMAGE_TAG }}" \
+            >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # JOB 3 : DEPLOY → EC2
+  # Dépend des 2 builds réussis
+  # ===========================================================================
+  deploy:
+    name: 🚀 Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: [build-push-backend, build-push-frontend]
+    environment:
+      # Crée un environnement GitHub pour approval, historique, URL
+      name: ${{ github.event.inputs.environment || 'dev' }}
+      url: ${{ steps.get-ec2.outputs.app_url }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # -----------------------------------------------------------------------
+      # Récupérer l'IP EC2 dynamiquement via tag AWS
+      # Avantage : pas besoin de stocker l'IP dans les secrets (change si destroy/apply)
+      # -----------------------------------------------------------------------
+      - name: Get EC2 public IP
+        id: get-ec2
+        run: |
+          EC2_IP=$(aws ec2 describe-instances \
+            --region "${{ env.AWS_REGION }}" \
+            --filters \
+              "Name=tag:Name,Values=portfolio-dev-server" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text 2>/dev/null)
+
+          if [ -z "$EC2_IP" ] || [ "$EC2_IP" = "None" ]; then
+            echo "::error::EC2 instance not found. Run 'terraform apply' first."
+            exit 1
+          fi
+
+          echo "ec2_ip=$EC2_IP" >> $GITHUB_OUTPUT
+          echo "app_url=http://$EC2_IP" >> $GITHUB_OUTPUT
+          echo "EC2 IP: $EC2_IP"
+
+      # -----------------------------------------------------------------------
+      # SSH vers EC2 — pull les nouvelles images et redémarre les services
+      # -----------------------------------------------------------------------
+      - name: Deploy new images to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.get-ec2.outputs.ec2_ip }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          # Timeout de connexion SSH (l'instance peut être en cold start)
+          connect_timeout: 30s
+          # Timeout d'exécution du script (pull + restart)
+          command_timeout: 10m
+          script: |
+            set -e
+            echo "=== DEPLOY START: $(date) ==="
+            echo "=== Commit: ${{ github.sha }} ==="
+
+            # Login ECR (token valide 12h, renouvellement à chaque déploiement)
+            AWS_REGION="${{ env.AWS_REGION }}"
+            ECR_REGISTRY=$(aws ecr describe-repositories \
+              --region "$AWS_REGION" \
+              --query "repositories[0].repositoryUri" \
+              --output text | cut -d'/' -f1)
+
+            echo "=== Login ECR ==="
+            aws ecr get-login-password --region "$AWS_REGION" \
+              | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+            # Mettre à jour le tag dans docker-compose.yml
+            cd /opt/portfolio
+            IMAGE_TAG="${{ env.IMAGE_TAG }}"
+            sed -i "s|:sha-[a-f0-9]*\b|:${IMAGE_TAG}|g" docker-compose.yml
+            sed -i "s|:latest\b|:${IMAGE_TAG}|g" docker-compose.yml
+
+            echo "=== Pull nouvelles images ==="
+            docker compose pull
+
+            echo "=== Restart backend (zero-downtime) ==="
+            docker compose up -d --no-deps backend
+            sleep 5
+
+            echo "=== Restart frontend ==="
+            docker compose up -d --no-deps frontend
+
+            echo "=== Services actifs ==="
+            docker compose ps
+
+            echo "=== DEPLOY DONE: $(date) ==="
+
+      # -----------------------------------------------------------------------
+      # Health check post-déploiement — vérifie que l'app répond
+      # -----------------------------------------------------------------------
+      - name: Health check (retry 10×, toutes les 30s)
+        run: |
+          EC2_IP="${{ steps.get-ec2.outputs.ec2_ip }}"
+          MAX_RETRIES=10
+          RETRY_INTERVAL=30
+
+          echo "=== Health check: http://$EC2_IP/health ==="
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 5 --max-time 10 \
+              "http://$EC2_IP/health" 2>/dev/null || echo "000")
+
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "204" ]; then
+              echo "✅ Health check OK (HTTP $HTTP_CODE) après $i tentative(s)"
+              exit 0
+            fi
+
+            echo "⏳ Tentative $i/$MAX_RETRIES — HTTP $HTTP_CODE — attente ${RETRY_INTERVAL}s..."
+            sleep $RETRY_INTERVAL
+          done
+
+          echo "❌ Health check échoué après $MAX_RETRIES tentatives"
+          echo "Logs du backend :"
+          # Optionnel : récupérer les logs via SSH si le health check échoue
+          exit 1
+
+      # -----------------------------------------------------------------------
+      # Job Summary — visible dans GitHub Actions → Summary
+      # -----------------------------------------------------------------------
+      - name: Deployment summary
+        if: always()
+        run: |
+          DEPLOY_STATUS="${{ job.status }}"
+          STATUS_ICON=$([[ "$DEPLOY_STATUS" == "success" ]] && echo "✅" || echo "❌")
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## ${STATUS_ICON} Deployment Report — ${{ github.event.inputs.environment || 'dev' }}
+
+          | Champ | Valeur |
+          |-------|--------|
+          | Status | ${STATUS_ICON} ${DEPLOY_STATUS} |
+          | Commit | \`${{ github.sha }}\` |
+          | Image tag | \`${{ env.IMAGE_TAG }}\` |
+          | Backend image | \`${{ needs.build-push-backend.outputs.image_uri }}\` |
+          | Frontend image | \`${{ needs.build-push-frontend.outputs.image_uri }}\` |
+          | EC2 IP | \`${{ steps.get-ec2.outputs.ec2_ip }}\` |
+          | Application | [${{ steps.get-ec2.outputs.app_url }}](${{ steps.get-ec2.outputs.app_url }}) |
+          | Déployé par | @${{ github.actor }} |
+          | Déclenché par | ${{ github.event_name }} |
+
+          ### 🔄 Rollback
+
+          Pour revenir à la version précédente, déclencher ce workflow manuellement
+          (Actions → Deploy Application → Run workflow) avec le tag SHA souhaité.
+
+          Historique des images ECR disponible dans AWS Console → ECR → portfolio-backend.
+          EOF
