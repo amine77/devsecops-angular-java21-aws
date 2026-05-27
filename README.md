@@ -1,18 +1,22 @@
 # Portfolio DevSecOps — Angular 18 + Spring Boot Java 21 + AWS
 
-Application full-stack démontrant une pipeline DevSecOps complète.
+Application full-stack démontrant une pipeline DevSecOps complète : du développement local
+jusqu'au déploiement AWS, avec observabilité, messaging, cache, et tests à tous les niveaux.
 
 ## Stack technique
 
 | Couche | Technologie |
 |--------|-------------|
-| Frontend | Angular 18, TypeScript, Signals |
-| Backend | Spring Boot 3.3, Java 21, Virtual Threads |
-| Base de données | PostgreSQL 15 (Flyway migrations) |
-| Sécurité | JWT (HS384), BCrypt, Spring Security |
-| Observabilité | Prometheus, Grafana, Logback JSON, MDC |
-| Infrastructure | AWS (EC2, RDS, ECR, VPC) via Terraform |
-| CI/CD | GitHub Actions (build, test, SAST, deploy) |
+| Frontend | Angular 18, TypeScript, Signals, Reactive Forms |
+| Backend | Spring Boot 3.3, Java 21, Virtual Threads (Project Loom) |
+| Base de données | PostgreSQL 15, Flyway migrations |
+| Cache | Redis 7.2 — Spring Cache `@Cacheable`, TTL 5/10 min |
+| Messaging | Apache Kafka KRaft (sans Zookeeper) — événements métier asynchrones |
+| Sécurité | JWT (HS384), BCrypt cost=12, Spring Security, OWASP Dependency Check |
+| Observabilité | Prometheus, Grafana (3 dashboards), Logback JSON + MDC, Micrometer |
+| Tests | JUnit 5 + Mockito (47 tests), Cypress E2E (20 specs), k6 load tests (3 scénarios) |
+| Infrastructure | AWS — EC2, RDS, ECR, VPC, CloudWatch via Terraform |
+| CI/CD | GitHub Actions — build, test, SAST (CodeQL), Trivy, OWASP DC, deploy |
 
 ---
 
@@ -23,13 +27,15 @@ Application full-stack démontrant une pipeline DevSecOps complète.
 - Node.js 20+ + npm
 - Docker Desktop
 
-### 1. Démarrer la stack de support (Postgres + Prometheus + Grafana)
+### 1. Démarrer la stack de support
+
+Démarre PostgreSQL, Redis, Prometheus et Grafana en une seule commande :
 
 ```powershell
 docker-compose -f docker/docker-compose.dev-stack.yml up -d
 ```
 
-### 2. Démarrer le backend Spring Boot (natif Maven)
+### 2. Démarrer le backend Spring Boot
 
 ```powershell
 # Windows PowerShell
@@ -62,8 +68,7 @@ npm start
 | Swagger UI | http://localhost:8080/swagger-ui.html | — |
 | Actuator / Prometheus | http://localhost:8080/actuator/prometheus | — |
 | Prometheus | http://localhost:9090 | — |
-| Grafana | http://localhost:3000 | `admin` / `admin1` |
-| Kafka UI | http://localhost:8090 | — |
+| Grafana | http://localhost:3000 | `admin` / `admin` |
 | Redis | localhost:6379 | — |
 
 ### Comptes de démonstration
@@ -73,103 +78,110 @@ npm start
 | Admin | `admin@portfolio.dev` | `Admin@2024!` |
 | Utilisateur | `demo@portfolio.dev` | `Admin@2024!` |
 
-### 4. Lancer les tests E2E Cypress (Phase 13)
+---
+
+## 🧪 Tests
+
+### Tests unitaires et d'intégration (backend)
+
+```powershell
+cd backend
+mvn test          # 47 tests unitaires (JUnit 5 + Mockito)
+mvn verify        # + coverage JaCoCo ≥ 70%
+```
+
+### Tests unitaires (frontend)
+
+```powershell
+cd frontend
+npm test          # Jest — composants, services, guards
+npm run test:ci   # Mode CI avec rapport JUnit XML
+```
+
+### Tests E2E Cypress (Phase 13)
 
 Prérequis : backend + frontend + PostgreSQL démarrés (étapes 1–3).
 
 ```powershell
 cd frontend
-
-# Mode headless (CI)
-npm run e2e
-
-# Mode interactif (navigateur Cypress ouvert)
-npm run e2e:open
+npm run e2e        # Mode headless (CI)
+npm run e2e:open   # Mode interactif (navigateur Cypress)
 ```
 
-Les specs testent le flux complet :
-- `01-auth.cy.ts` — redirection non-auth, validation login, login réussi, déconnexion
-- `02-admin.cy.ts` — dashboard admin, création projet, modification, archivage
+Scénarios couverts :
+- `01-auth.cy.ts` — redirection non-auth, validation formulaire, login réussi, déconnexion
+- `02-admin.cy.ts` — dashboard admin, création/modification/archivage de projets
 - `03-portfolio.cy.ts` — accès public, navbar conditionnelle
 
-### 5. Tests de charge k6 (Phase 14)
+### Tests de charge k6 (Phase 14)
 
 Prérequis : [k6 installé](https://k6.io/docs/get-started/installation/) + backend démarré.
 
 ```powershell
-# Windows : winget install k6 --source winget
+# Windows : winget install k6
 # Linux/Mac : brew install k6
 
-# Scénario principal — 100 VUs, SLA p(95) < 200ms
-make test-load
-
-# Stress test login — 50 VUs (bcrypt = lent par design)
-make test-load-auth
-
-# Flux admin CRUD — 5 VUs (login + create + read + update + delete)
-make test-load-admin
-
-# Tous les scénarios séquentiellement
-make test-load-all
+make test-load        # 100 VUs — GET /projects, SLA p(95) < 200ms
+make test-load-auth   # 50 VUs  — POST /auth/login (stress bcrypt)
+make test-load-admin  # 5 VUs   — flux CRUD admin complet
+make test-load-all    # Les 3 scénarios séquentiellement
 ```
 
-Les rapports HTML sont générés dans `k6/reports/` après chaque run.
+Rapports HTML générés dans `k6/reports/` après chaque run.
 
-**Seuils (fail si non respectés) :**
-| Scénario | Threshold |
-|----------|-----------|
-| GET /projects (100 VUs) | `p(95) < 200ms`, `error rate < 1%` |
-| POST /auth/login (50 VUs) | `p(95) < 1500ms` (bcrypt intentionnel) |
-| Admin CRUD (5 VUs) | `p(95) < 500ms` |
+| Scénario | Seuils |
+|----------|--------|
+| GET /projects — 100 VUs | `p(95) < 200ms`, `p(99) < 500ms`, `error rate < 1%` |
+| POST /auth/login — 50 VUs | `p(95) < 1500ms` (bcrypt intentionnel) |
+| Admin CRUD — 5 VUs | `p(95) < 500ms` |
 
-En CI : `Actions → "Load Tests — k6" → Run workflow` (déclenchement manuel, démarre le backend automatiquement dans le runner).
+En CI : `Actions → "Load Tests — k6" → Run workflow` (déclenchement manuel).
 
-### 6. (Optionnel) Démarrer le broker Kafka + Kafka UI
+---
+
+## 📨 Apache Kafka (Phase 10)
+
+Démarrage optionnel du broker Kafka (overlay sur la stack de support) :
 
 ```powershell
 docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml up -d
 ```
 
-Redis est inclus dans la stack de support (`docker-compose.dev-stack.yml`) et démarre automatiquement.
-Le cache est activé dès que le backend démarre avec un Redis accessible.
+Événements publiés en temps réel :
+- Topic `auth-events` — `UserLoginEvent` à chaque tentative de login
+- Topic `project-events` — `ProjectCreatedEvent` à chaque création de projet
 
-Stratégie de cache :
-- `GET /projects` (liste) — cachée 5 min, invalidée à chaque création/mise à jour/suppression
-- `GET /projects/{id}` (détail) — caché 10 min par ID, invalidé sur modification
-- `GET /projects/featured` — caché 5 min, invalidé sur toute modification
+| Service | URL |
+|---------|-----|
+| Kafka UI | http://localhost:8090 |
+| Dashboard Grafana Kafka | http://localhost:3000 (onglet "Kafka — Événements & Métriques") |
 
-Le dashboard **Grafana → "Redis Cache — Hits, Misses & Évictions"** (http://localhost:3000) affiche le hit rate en temps réel.
+---
 
-Les événements métier Kafka sont publiés en temps réel :
-- `auth-events` — `UserLoginEvent` à chaque tentative de login
-- `project-events` — `ProjectCreatedEvent` à chaque création de projet
+## ⚡ Cache Redis (Phase 11)
 
-Kafka UI accessible sur http://localhost:8090 pour visualiser les topics et messages.
+Redis démarre automatiquement avec la stack de support (port 6379).
 
-Le dashboard **Grafana → "Kafka — Événements & Métriques"** (http://localhost:3000) affiche :
-- Compteur total d'événements publiés par topic
-- Taux de publication (events/min)
-- Métriques Spring Kafka producer/consumer (latence, erreurs, lag)
+Stratégie de cache (Spring Cache + `@Cacheable`) :
+- `GET /projects` — TTL 5 min, invalidé à chaque create/update/delete
+- `GET /projects/{id}` — TTL 10 min par ID
+- `GET /projects/featured` — TTL 5 min
 
-### Arrêt
+Dashboard Grafana : `"Redis Cache — Hits, Misses & Évictions"` → hit rate, puts, évictions.
+
+---
+
+## Arrêt et reset
 
 ```powershell
-# Arrêter Docker (Postgres + Prometheus + Grafana)
+# Arrêter la stack de support
 docker-compose -f docker/docker-compose.dev-stack.yml down
 
 # Avec Kafka
 docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml down
 
-# Arrêter le backend : Ctrl+C dans le terminal Maven
-# Arrêter le frontend : Ctrl+C dans le terminal npm
-```
-
-### Reset complet (supprime les données)
-
-```powershell
+# Reset complet (supprime les données)
 docker-compose -f docker/docker-compose.dev-stack.yml down -v
-# Avec Kafka
-docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml down -v
 ```
 
 ---
@@ -178,76 +190,96 @@ docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.k
 
 ```
 .
-├── backend/                    # Spring Boot Java 21
-│   ├── src/main/java/          # Code source
-│   ├── src/main/resources/     # Config (application*.properties, logback-spring.xml)
-│   └── Dockerfile              # Multi-stage build (Maven → JRE Alpine)
+├── backend/                              # Spring Boot Java 21
+│   ├── src/main/java/com/portfolio/
+│   │   ├── config/                       # SecurityConfig, CacheConfig (Redis)
+│   │   ├── controller/                   # AuthController, ProjectController
+│   │   ├── kafka/                        # EventPublisher, AuditEventConsumer, events/
+│   │   ├── observability/                # AppMetrics (Micrometer counters)
+│   │   ├── security/                     # JWT filter, provider, handlers
+│   │   └── service/                      # AuthService, ProjectService (@Cacheable)
+│   ├── src/main/resources/
+│   │   ├── application.properties        # Config commune (Redis, Kafka, JWT, JPA)
+│   │   ├── application-dev.properties    # Surcharges dev
+│   │   ├── db/migration/                 # Scripts Flyway (V1__..., V2__...)
+│   │   └── logback-spring.xml            # JSON en prod, couleurs en dev
+│   └── Dockerfile                        # Multi-stage build (Maven → JRE Alpine)
 │
-├── frontend/                   # Angular 18
-│   ├── src/                    # Code source
-│   ├── proxy.conf.json         # Proxy /api → localhost:8080
-│   └── Dockerfile              # Build Nginx
+├── frontend/                             # Angular 18
+│   ├── src/app/
+│   │   ├── core/                         # Services, guards, interceptors
+│   │   ├── features/                     # auth/, admin/, portfolio/
+│   │   └── shared/                       # Composants, modèles, pipes
+│   ├── cypress/                          # Tests E2E (Phase 13)
+│   │   ├── e2e/
+│   │   │   ├── 01-auth.cy.ts
+│   │   │   ├── 02-admin.cy.ts
+│   │   │   └── 03-portfolio.cy.ts
+│   │   └── support/
+│   │       ├── commands.ts               # cy.loginByApi(), cy.createProjectByApi()
+│   │       └── e2e.ts
+│   ├── cypress.config.ts
+│   └── Dockerfile                        # Build Nginx
+│
+├── k6/                                   # Tests de charge (Phase 14)
+│   ├── lib/helpers.js                    # BASE_URL, getAdminToken(), authHeaders()
+│   └── scenarios/
+│       ├── 01-public-projects.js         # 100 VUs, SLA p(95)<200ms
+│       ├── 02-auth-stress.js             # 50 VUs, stress login
+│       └── 03-admin-flow.js              # 5 VUs, CRUD complet
 │
 ├── docker/
-│   ├── docker-compose.yml              # Stack complète (backend + frontend en Docker)
-│   ├── docker-compose.dev-stack.yml    # Postgres + Prometheus + Grafana (dev natif)
-│   ├── docker-compose.observability.yml # Prometheus + Grafana (avec backend Docker)
-│   ├── docker-compose.prod.yml         # Production
+│   ├── docker-compose.yml                # Stack complète (backend + frontend en Docker)
+│   ├── docker-compose.dev-stack.yml      # Postgres + Redis + Prometheus + Grafana (dev natif)
+│   ├── docker-compose.kafka.yml          # Kafka KRaft broker + Kafka UI (overlay optionnel)
+│   ├── docker-compose.observability.yml  # Prometheus + Grafana (avec backend Docker)
+│   ├── docker-compose.prod.yml           # Simulation production
 │   ├── prometheus/
-│   │   ├── prometheus.yml              # Scrape backend Docker
-│   │   └── prometheus-native.yml       # Scrape backend natif (host.docker.internal)
-│   ├── docker-compose.kafka.yml         # Kafka KRaft broker + Kafka UI (Phase 10)
-│   ├── docker-compose.redis.yml         # (inclus dans dev-stack)
+│   │   ├── prometheus.yml                # Scrape backend Docker
+│   │   └── prometheus-native.yml         # Scrape backend natif (host.docker.internal)
 │   └── grafana/
-│       ├── provisioning/               # Datasource + dashboard auto-provisionnés
+│       ├── provisioning/                 # Datasource Prometheus + provider dashboards
 │       └── dashboards/
-│           ├── portfolio.json          # Dashboard API + métriques applicatives
-│           ├── kafka.json              # Dashboard Kafka (Phase 10)
-│           └── cache.json              # Dashboard Redis Cache (Phase 11)
+│           ├── portfolio.json            # API, JVM, HikariCP, HTTP metrics
+│           ├── kafka.json                # Événements Kafka par topic (Phase 10)
+│           └── cache.json                # Redis hits/misses/évictions (Phase 11)
 │
-├── frontend/
-│   ├── cypress/
-│   │   ├── e2e/
-│   │   │   ├── 01-auth.cy.ts           # Tests auth E2E (Phase 13)
-│   │   │   ├── 02-admin.cy.ts          # Tests CRUD admin E2E (Phase 13)
-│   │   │   └── 03-portfolio.cy.ts      # Tests portfolio public E2E (Phase 13)
-│   │   └── support/
-│   │       ├── commands.ts             # cy.loginByApi(), cy.createProjectByApi()
-│   │       └── e2e.ts                  # Imports globaux
-│   └── cypress.config.ts               # Config baseUrl, env vars, timeouts
-│
-├── k6/                                 # Tests de charge (Phase 14)
-│   ├── lib/helpers.js                  # BASE_URL, getAdminToken(), authHeaders()
-│   ├── scenarios/
-│   │   ├── 01-public-projects.js       # 100 VUs, GET /projects, SLA p(95)<200ms
-│   │   ├── 02-auth-stress.js           # 50 VUs, POST /auth/login
-│   │   └── 03-admin-flow.js            # 5 VUs, flux CRUD admin complet
-│   └── reports/                        # Rapports HTML générés (gitignored)
-│
-├── terraform/                  # Infrastructure AWS
+├── terraform/                            # Infrastructure AWS
 │   ├── modules/
-│   │   ├── vpc/                # VPC + subnets + IGW
-│   │   ├── ecr/                # Registres Docker privés
-│   │   ├── security-groups/    # Règles firewall EC2/RDS
-│   │   ├── rds/                # PostgreSQL RDS
-│   │   ├── ec2/                # Serveur applicatif
-│   │   └── cloudwatch/         # Logs + métriques + alertes
+│   │   ├── vpc/                          # VPC + subnets + IGW
+│   │   ├── ecr/                          # Registres Docker privés
+│   │   ├── security-groups/              # Règles firewall EC2/RDS
+│   │   ├── rds/                          # PostgreSQL RDS Free Tier
+│   │   ├── ec2/                          # Serveur applicatif t2.micro
+│   │   └── cloudwatch/                   # Logs + métriques + alertes
 │   └── terraform.tfvars.example
 │
 ├── .github/workflows/
-│   ├── deploy-infra.yml        # Terraform validate/plan
-│   └── deploy-app.yml          # Build Docker + push ECR + deploy SSH
+│   ├── ci-backend.yml                    # Checkstyle → Tests → CodeQL → OWASP DC → Trivy
+│   ├── ci-frontend.yml                   # ESLint → Jest → Prettier → Trivy image
+│   ├── security.yml                      # Scans de sécurité hebdomadaires
+│   ├── k6-load-test.yml                  # Tests de charge (déclenchement manuel)
+│   ├── deploy-infra.yml                  # Terraform validate/plan
+│   └── deploy-app.yml                    # Build Docker + push ECR + deploy SSH
 │
-└── docs/
-    ├── PHASE7-Observability.md
-    └── ...
+├── docs/
+│   ├── PHASE1-Architecture.md
+│   ├── PHASE2-Backend.md
+│   ├── PHASE3-Frontend.md
+│   ├── PHASE4-Docker.md
+│   ├── PHASE5-Terraform.md
+│   ├── PHASE6-CICD.md
+│   ├── PHASE7-Observability.md
+│   └── FINOPS-Cost-Analysis.md
+│
+└── Makefile                              # Raccourcis : make up/down/test/test-load/...
 ```
 
 ---
 
 ## 🔒 Variables d'environnement (production)
 
-Injectées via GitHub Actions Secrets ou AWS Secrets Manager :
+Injectées via GitHub Actions Secrets :
 
 | Variable | Description |
 |----------|-------------|
@@ -255,4 +287,8 @@ Injectées via GitHub Actions Secrets ou AWS Secrets Manager :
 | `SPRING_DATASOURCE_URL` | JDBC URL RDS PostgreSQL |
 | `SPRING_DATASOURCE_USERNAME` | Utilisateur DB |
 | `SPRING_DATASOURCE_PASSWORD` | Mot de passe DB |
+| `REDIS_HOST` | Host Redis (ElastiCache ou service Docker) |
+| `REDIS_PASSWORD` | Mot de passe Redis (vide en dev) |
+| `KAFKA_BOOTSTRAP_SERVERS` | `kafka:9092` en Docker, MSK endpoint en prod |
 | `CORS_ALLOWED_ORIGINS` | Domaine frontend (ex: `https://monapp.duckdns.org`) |
+| `SERVER_PORT` | Port HTTP (défaut : 8080) |
