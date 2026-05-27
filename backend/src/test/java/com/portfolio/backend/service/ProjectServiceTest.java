@@ -5,9 +5,11 @@ import com.portfolio.backend.dto.response.ProjectResponse;
 import com.portfolio.backend.entity.Project;
 import com.portfolio.backend.entity.ProjectStatus;
 import com.portfolio.backend.exception.ResourceNotFoundException;
+import com.portfolio.backend.kafka.EventPublisher;
 import com.portfolio.backend.mapper.ProjectMapper;
 import com.portfolio.backend.repository.ProjectRepository;
 import com.portfolio.backend.repository.SkillRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,6 +18,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +60,9 @@ class ProjectServiceTest {
     @Mock
     private ProjectMapper projectMapper;
 
+    @Mock
+    private EventPublisher eventPublisher;
+
     @InjectMocks
     private ProjectService projectService;
 
@@ -63,6 +71,11 @@ class ProjectServiceTest {
 
     @BeforeEach
     void setUp() {
+        // SecurityContextHolder requis : createProject() appelle getAuthentication().getName()
+        SecurityContext ctx = SecurityContextHolder.createEmptyContext();
+        ctx.setAuthentication(new UsernamePasswordAuthenticationToken("admin@portfolio.dev", null));
+        SecurityContextHolder.setContext(ctx);
+
         testProject = Project.builder()
             .id(1L)
             .title("Portfolio DevSecOps")
@@ -78,6 +91,11 @@ class ProjectServiceTest {
             null, null, null, null,
             ProjectStatus.ACTIVE, true, 1, List.of(), null, null
         );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Nested

@@ -217,6 +217,18 @@
         </dependency>
 
         <!-- ============================================================
+             SPRING KAFKA
+             Raison : intégration Spring Boot avec Apache Kafka.
+             Fournit KafkaTemplate (producer), @KafkaListener (consumer),
+             KafkaAdmin (création de topics), sérialisation JSON via Jackson.
+             Micrometer auto-configure les métriques Kafka → /actuator/prometheus.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- ============================================================
              H2 — BASE DE DONNÉES EN MÉMOIRE (dev/test uniquement)
              Raison : tests rapides sans PostgreSQL installé localement.
              Scope test : présent uniquement dans les tests.

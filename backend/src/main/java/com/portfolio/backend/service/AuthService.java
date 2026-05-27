@@ -3,6 +3,8 @@ package com.portfolio.backend.service;
 import com.portfolio.backend.dto.request.LoginRequest;
 import com.portfolio.backend.dto.response.AuthResponse;
 import com.portfolio.backend.entity.User;
+import com.portfolio.backend.kafka.EventPublisher;
+import com.portfolio.backend.kafka.event.UserLoginEvent;
 import com.portfolio.backend.observability.AppMetrics;
 import com.portfolio.backend.security.JwtTokenProvider;
 import org.slf4j.Logger;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
  * - Générer un JWT via JwtTokenProvider
  * - Construire la réponse AuthResponse
  * - Incrémenter les métriques Prometheus (login success/failure)
+ * - Publier un événement Kafka sur {@code auth-events} (audit trail)
  * - Peupler le MDC userId pour la traçabilité des logs
  *
  * <p>Le service NE vérifie PAS le password lui-même.
@@ -36,6 +39,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final AppMetrics metrics;
+    private final EventPublisher eventPublisher;
 
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
@@ -43,11 +47,13 @@ public class AuthService {
     public AuthService(
         AuthenticationManager authenticationManager,
         JwtTokenProvider jwtTokenProvider,
-        AppMetrics metrics
+        AppMetrics metrics,
+        EventPublisher eventPublisher
     ) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
         this.metrics = metrics;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -55,8 +61,8 @@ public class AuthService {
      *
      * <p>Flux :
      * 1. AuthenticationManager vérifie email + password (BCrypt)
-     * 2. Si KO → BadCredentialsException → GlobalExceptionHandler → 401 + métrique failure
-     * 3. Si OK → génération du JWT + métrique success + MDC userId
+     * 2. Si KO → BadCredentialsException → GlobalExceptionHandler → 401 + event Kafka failure
+     * 3. Si OK → génération du JWT + métrique success + event Kafka success + MDC userId
      * 4. Construction de la réponse
      *
      * @param request les credentials (email + password)
@@ -65,31 +71,26 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         log.info("Tentative de login pour: {}", request.email());
 
-        // Délègue la vérification à Spring Security
-        // Lance BadCredentialsException si invalide → GlobalExceptionHandler → metrics.incrementLoginFailure()
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
-        // Récupère l'utilisateur authentifié
         User user = (User) authentication.getPrincipal();
 
-        // Enrichit le MDC avec l'identité de l'utilisateur
-        // Tous les logs suivants dans cette requête incluront "userId" dans le JSON structuré (prod)
         MDC.put("userId", user.getEmail());
-
-        // Incrémente la métrique Prometheus — visible dans Grafana
         metrics.incrementLoginSuccess();
 
-        // Génère le JWT
-        String token = jwtTokenProvider.generateToken(authentication);
+        // Publie l'événement d'audit sur Kafka (fire-and-forget)
+        eventPublisher.publishLoginEvent(
+            UserLoginEvent.success(user.getId(), user.getEmail(), user.getRole().name())
+        );
 
+        String token = jwtTokenProvider.generateToken(authentication);
         log.info("Login réussi pour: {}", request.email());
 
-        // Construit la réponse
         return AuthResponse.of(
             token,
-            jwtExpirationMs / 1000,  // Converti en secondes pour le frontend
+            jwtExpirationMs / 1000,
             new AuthResponse.UserInfo(
                 user.getId(),
                 user.getEmail(),

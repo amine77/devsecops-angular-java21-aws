@@ -63,6 +63,7 @@ npm start
 | Actuator / Prometheus | http://localhost:8080/actuator/prometheus | — |
 | Prometheus | http://localhost:9090 | — |
 | Grafana | http://localhost:3000 | `admin` / `admin1` |
+| Kafka UI | http://localhost:8090 | — |
 
 ### Comptes de démonstration
 
@@ -71,11 +72,31 @@ npm start
 | Admin | `admin@portfolio.dev` | `Admin@2024!` |
 | Utilisateur | `demo@portfolio.dev` | `Admin@2024!` |
 
+### 4. (Optionnel) Démarrer le broker Kafka + Kafka UI
+
+```powershell
+docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml up -d
+```
+
+Les événements métier sont alors publiés en temps réel :
+- `auth-events` — `UserLoginEvent` à chaque tentative de login
+- `project-events` — `ProjectCreatedEvent` à chaque création de projet
+
+Kafka UI accessible sur http://localhost:8090 pour visualiser les topics et messages.
+
+Le dashboard **Grafana → "Kafka — Événements & Métriques"** (http://localhost:3000) affiche :
+- Compteur total d'événements publiés par topic
+- Taux de publication (events/min)
+- Métriques Spring Kafka producer/consumer (latence, erreurs, lag)
+
 ### Arrêt
 
 ```powershell
 # Arrêter Docker (Postgres + Prometheus + Grafana)
 docker-compose -f docker/docker-compose.dev-stack.yml down
+
+# Avec Kafka
+docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml down
 
 # Arrêter le backend : Ctrl+C dans le terminal Maven
 # Arrêter le frontend : Ctrl+C dans le terminal npm
@@ -85,6 +106,8 @@ docker-compose -f docker/docker-compose.dev-stack.yml down
 
 ```powershell
 docker-compose -f docker/docker-compose.dev-stack.yml down -v
+# Avec Kafka
+docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml down -v
 ```
 
 ---
@@ -111,9 +134,12 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── prometheus/
 │   │   ├── prometheus.yml              # Scrape backend Docker
 │   │   └── prometheus-native.yml       # Scrape backend natif (host.docker.internal)
+│   ├── docker-compose.kafka.yml         # Kafka KRaft broker + Kafka UI (Phase 10)
 │   └── grafana/
 │       ├── provisioning/               # Datasource + dashboard auto-provisionnés
-│       └── dashboards/portfolio.json   # Dashboard pré-construit
+│       └── dashboards/
+│           ├── portfolio.json          # Dashboard API + métriques applicatives
+│           └── kafka.json              # Dashboard Kafka (Phase 10)
 │
 ├── terraform/                  # Infrastructure AWS
 │   ├── modules/

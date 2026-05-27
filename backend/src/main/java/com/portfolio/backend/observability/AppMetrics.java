@@ -136,4 +136,30 @@ public class AppMetrics {
             .tag("operation", operationName)
             .register(registry));
     }
+
+    // =========================================================================
+    // Kafka — événements publiés
+    // =========================================================================
+
+    /**
+     * Incrémenter le compteur d'événements Kafka publiés avec succès.
+     *
+     * <p>Tags :
+     * - {@code topic}      — nom du topic Kafka (ex: "auth-events")
+     * - {@code event_type} — type de l'événement (ex: "UserLoginEvent")
+     *
+     * <p>PromQL Grafana :
+     * {@code rate(kafka_events_published_total[5m])}
+     *
+     * @param topic     nom du topic Kafka
+     * @param eventType nom de la classe de l'événement
+     */
+    public void incrementKafkaPublished(String topic, String eventType) {
+        Counter.builder("kafka.events.published")
+            .description("Kafka events successfully published by topic and type")
+            .tag("topic", topic)
+            .tag("event_type", eventType)
+            .register(registry)
+            .increment();
+    }
 }

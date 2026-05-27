@@ -3,7 +3,6 @@ package com.portfolio.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.portfolio.backend.config.SecurityConfig;
 import com.portfolio.backend.dto.request.ProjectRequest;
-import com.portfolio.backend.dto.response.ApiResponse;
 import com.portfolio.backend.dto.response.PageResponse;
 import com.portfolio.backend.dto.response.ProjectResponse;
 import com.portfolio.backend.entity.ProjectStatus;
@@ -14,15 +13,12 @@ import com.portfolio.backend.security.JwtAccessDeniedHandler;
 import com.portfolio.backend.security.JwtAuthenticationEntryPoint;
 import com.portfolio.backend.security.JwtTokenProvider;
 import com.portfolio.backend.service.ProjectService;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -82,13 +78,8 @@ class ProjectControllerTest {
     @MockBean
     private UserDetailsService userDetailsService;
 
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        AppMetrics appMetrics() {
-            return new AppMetrics(new SimpleMeterRegistry());
-        }
-    }
+    @MockBean
+    private AppMetrics appMetrics;
 
     private final ProjectResponse sampleProject = new ProjectResponse(
         1L, "Portfolio DevSecOps", "Description complète", "Résumé",

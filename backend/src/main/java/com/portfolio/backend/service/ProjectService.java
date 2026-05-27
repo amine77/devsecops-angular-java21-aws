@@ -7,6 +7,8 @@ import com.portfolio.backend.entity.Project;
 import com.portfolio.backend.entity.ProjectStatus;
 import com.portfolio.backend.entity.Skill;
 import com.portfolio.backend.exception.ResourceNotFoundException;
+import com.portfolio.backend.kafka.EventPublisher;
+import com.portfolio.backend.kafka.event.ProjectCreatedEvent;
 import com.portfolio.backend.mapper.ProjectMapper;
 import com.portfolio.backend.repository.ProjectRepository;
 import com.portfolio.backend.repository.SkillRepository;
@@ -14,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,15 +47,18 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final SkillRepository skillRepository;
     private final ProjectMapper projectMapper;
+    private final EventPublisher eventPublisher;
 
     public ProjectService(
         ProjectRepository projectRepository,
         SkillRepository skillRepository,
-        ProjectMapper projectMapper
+        ProjectMapper projectMapper,
+        EventPublisher eventPublisher
     ) {
         this.projectRepository = projectRepository;
         this.skillRepository = skillRepository;
         this.projectMapper = projectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -118,6 +124,13 @@ public class ProjectService {
 
         Project savedProject = projectRepository.save(project);
         log.info("Projet créé avec l'ID: {}", savedProject.getId());
+
+        // Publie l'événement d'audit sur Kafka (fire-and-forget)
+        String author = SecurityContextHolder.getContext().getAuthentication().getName();
+        eventPublisher.publishProjectCreatedEvent(
+            ProjectCreatedEvent.of(savedProject.getId(), savedProject.getTitle(), author)
+        );
+
         return projectMapper.toResponse(savedProject);
     }
 

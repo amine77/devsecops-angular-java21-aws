@@ -10,15 +10,12 @@ import com.portfolio.backend.security.JwtAccessDeniedHandler;
 import com.portfolio.backend.security.JwtAuthenticationEntryPoint;
 import com.portfolio.backend.security.JwtTokenProvider;
 import com.portfolio.backend.service.AuthService;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -64,17 +61,8 @@ class AuthControllerTest {
     @MockBean
     private UserDetailsService userDetailsService;
 
-    /**
-     * AppMetrics nécessite un MeterRegistry — on fournit un SimpleMeterRegistry de test.
-     * Raison : GlobalExceptionHandler injecte AppMetrics (appel incrementLoginFailure()).
-     */
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        AppMetrics appMetrics() {
-            return new AppMetrics(new SimpleMeterRegistry());
-        }
-    }
+    @MockBean
+    private AppMetrics appMetrics;
 
     private final AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
         1L, "admin@portfolio.dev", "Admin", "Portfolio", "ADMIN"

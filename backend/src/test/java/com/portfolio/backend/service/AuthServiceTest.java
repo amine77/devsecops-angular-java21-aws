@@ -4,6 +4,7 @@ import com.portfolio.backend.dto.request.LoginRequest;
 import com.portfolio.backend.dto.response.AuthResponse;
 import com.portfolio.backend.entity.Role;
 import com.portfolio.backend.entity.User;
+import com.portfolio.backend.kafka.EventPublisher;
 import com.portfolio.backend.observability.AppMetrics;
 import com.portfolio.backend.security.JwtTokenProvider;
 import org.junit.jupiter.api.AfterEach;
@@ -50,6 +51,9 @@ class AuthServiceTest {
 
     @Mock
     private AppMetrics metrics;
+
+    @Mock
+    private EventPublisher eventPublisher;
 
     @Mock
     private Authentication authentication;
