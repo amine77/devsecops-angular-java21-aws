@@ -292,6 +292,14 @@
                     <layers>
                         <enabled>true</enabled>
                     </layers>
+                    <!--
+                        IMPORTANT : spring-boot:run active optimizedLaunch=true par défaut,
+                        ce qui injecte -XX:TieredStopAtLevel=1 pour accélérer le démarrage.
+                        Cela désactive le JIT C2, faisant passer BCrypt strength=12 de ~300ms
+                        à ~20s par hash → timeout login en développement natif inacceptable.
+                        On désactive cette optimisation pour restaurer le C2 JIT complet.
+                    -->
+                    <optimizedLaunch>false</optimizedLaunch>
                 </configuration>
             </plugin>
 
