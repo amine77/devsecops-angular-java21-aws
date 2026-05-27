@@ -92,7 +92,39 @@ Les specs testent le flux complet :
 - `02-admin.cy.ts` — dashboard admin, création projet, modification, archivage
 - `03-portfolio.cy.ts` — accès public, navbar conditionnelle
 
-### 5. (Optionnel) Démarrer le broker Kafka + Kafka UI
+### 5. Tests de charge k6 (Phase 14)
+
+Prérequis : [k6 installé](https://k6.io/docs/get-started/installation/) + backend démarré.
+
+```powershell
+# Windows : winget install k6 --source winget
+# Linux/Mac : brew install k6
+
+# Scénario principal — 100 VUs, SLA p(95) < 200ms
+make test-load
+
+# Stress test login — 50 VUs (bcrypt = lent par design)
+make test-load-auth
+
+# Flux admin CRUD — 5 VUs (login + create + read + update + delete)
+make test-load-admin
+
+# Tous les scénarios séquentiellement
+make test-load-all
+```
+
+Les rapports HTML sont générés dans `k6/reports/` après chaque run.
+
+**Seuils (fail si non respectés) :**
+| Scénario | Threshold |
+|----------|-----------|
+| GET /projects (100 VUs) | `p(95) < 200ms`, `error rate < 1%` |
+| POST /auth/login (50 VUs) | `p(95) < 1500ms` (bcrypt intentionnel) |
+| Admin CRUD (5 VUs) | `p(95) < 500ms` |
+
+En CI : `Actions → "Load Tests — k6" → Run workflow` (déclenchement manuel, démarre le backend automatiquement dans le runner).
+
+### 6. (Optionnel) Démarrer le broker Kafka + Kafka UI
 
 ```powershell
 docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml up -d
@@ -183,6 +215,14 @@ docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.k
 │   │       ├── commands.ts             # cy.loginByApi(), cy.createProjectByApi()
 │   │       └── e2e.ts                  # Imports globaux
 │   └── cypress.config.ts               # Config baseUrl, env vars, timeouts
+│
+├── k6/                                 # Tests de charge (Phase 14)
+│   ├── lib/helpers.js                  # BASE_URL, getAdminToken(), authHeaders()
+│   ├── scenarios/
+│   │   ├── 01-public-projects.js       # 100 VUs, GET /projects, SLA p(95)<200ms
+│   │   ├── 02-auth-stress.js           # 50 VUs, POST /auth/login
+│   │   └── 03-admin-flow.js            # 5 VUs, flux CRUD admin complet
+│   └── reports/                        # Rapports HTML générés (gitignored)
 │
 ├── terraform/                  # Infrastructure AWS
 │   ├── modules/

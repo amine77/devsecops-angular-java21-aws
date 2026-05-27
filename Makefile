@@ -41,7 +41,8 @@ TF_DIR           ?= terraform
 TF_VARS          ?= $(TF_DIR)/terraform.tfvars
 
 .PHONY: help build build-backend build-frontend up up-prod down logs logs-backend logs-frontend \
-        test test-backend test-frontend lint lint-backend lint-frontend \
+        test test-backend test-frontend test-e2e test-load test-load-auth test-load-admin test-load-all \
+        lint lint-backend lint-frontend \
         push-ecr push-backend push-frontend \
         clean clean-containers clean-volumes clean-images \
         db-connect shell-backend shell-frontend \
@@ -195,6 +196,31 @@ test-frontend-watch: ## Lance Jest en mode watch (développement)
 test-e2e: ## Lance les tests Cypress E2E (nécessite l'appli lancée)
 	@echo "$(CYAN)▶ Tests E2E Cypress...$(RESET)"
 	cd frontend && npx cypress run
+
+test-load: ## Lance le scénario k6 principal — GET /projects 100 VUs (prérequis: backend démarré)
+	@echo "$(CYAN)▶ Test de charge k6 — scénario SLA principal...$(RESET)"
+	@command -v k6 >/dev/null 2>&1 || (echo "$(RED)✘ k6 non installé. Voir https://k6.io/docs/get-started/installation/$(RESET)" && exit 1)
+	k6 run k6/scenarios/01-public-projects.js
+	@echo "$(GREEN)✔ Rapport : k6/reports/01-public-projects.html$(RESET)"
+
+test-load-auth: ## Lance le scénario k6 stress login (50 VUs)
+	@echo "$(CYAN)▶ Test de charge k6 — stress login...$(RESET)"
+	k6 run k6/scenarios/02-auth-stress.js
+	@echo "$(GREEN)✔ Rapport : k6/reports/02-auth-stress.html$(RESET)"
+
+test-load-admin: ## Lance le scénario k6 flux admin CRUD (5 VUs)
+	@echo "$(CYAN)▶ Test de charge k6 — flux admin CRUD...$(RESET)"
+	k6 run k6/scenarios/03-admin-flow.js
+	@echo "$(GREEN)✔ Rapport : k6/reports/03-admin-flow.html$(RESET)"
+
+test-load-all: ## Lance tous les scénarios k6 séquentiellement
+	@echo "$(CYAN)▶ Tous les scénarios k6...$(RESET)"
+	$(MAKE) test-load
+	@sleep 5
+	$(MAKE) test-load-auth
+	@sleep 5
+	$(MAKE) test-load-admin
+	@echo "$(GREEN)✔ Tous les tests de charge terminés — rapports dans k6/reports/$(RESET)"
 
 # =============================================================================
 # LINTING — Qualité du code
