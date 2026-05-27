@@ -1,5 +1,6 @@
 package com.portfolio.backend.service;
 
+import com.portfolio.backend.config.CacheConfig;
 import com.portfolio.backend.dto.request.ProjectRequest;
 import com.portfolio.backend.dto.response.PageResponse;
 import com.portfolio.backend.dto.response.ProjectResponse;
@@ -14,6 +15,9 @@ import com.portfolio.backend.repository.ProjectRepository;
 import com.portfolio.backend.repository.SkillRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -67,6 +71,7 @@ public class ProjectService {
      * @param pageable paramètres de pagination (page, size, sort)
      * @return page de projets
      */
+    @Cacheable(value = CacheConfig.CACHE_PROJECTS)
     @Transactional(readOnly = true)
     public PageResponse<ProjectResponse> getAllActiveProjects(Pageable pageable) {
         Page<Project> page = projectRepository
@@ -78,6 +83,7 @@ public class ProjectService {
     /**
      * Récupère les projets mis en avant pour la homepage.
      */
+    @Cacheable(value = CacheConfig.CACHE_PROJECTS_FEATURED)
     @Transactional(readOnly = true)
     public List<ProjectResponse> getFeaturedProjects() {
         return projectMapper.toResponseList(
@@ -92,6 +98,7 @@ public class ProjectService {
      * @return le projet trouvé
      * @throws ResourceNotFoundException si le projet n'existe pas
      */
+    @Cacheable(value = CacheConfig.CACHE_PROJECT, key = "#id")
     @Transactional(readOnly = true)
     public ProjectResponse getProjectById(Long id) {
         Project project = findProjectOrThrow(id);
@@ -104,6 +111,10 @@ public class ProjectService {
      * @param request les données du projet
      * @return le projet créé
      */
+    @Caching(evict = {
+        @CacheEvict(value = CacheConfig.CACHE_PROJECTS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_PROJECTS_FEATURED, allEntries = true)
+    })
     public ProjectResponse createProject(ProjectRequest request) {
         log.info("Création d'un nouveau projet: {}", request.title());
 
@@ -142,6 +153,11 @@ public class ProjectService {
      * @return le projet mis à jour
      * @throws ResourceNotFoundException si le projet n'existe pas
      */
+    @Caching(evict = {
+        @CacheEvict(value = CacheConfig.CACHE_PROJECTS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_PROJECTS_FEATURED, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_PROJECT, key = "#id")
+    })
     public ProjectResponse updateProject(Long id, ProjectRequest request) {
         log.info("Mise à jour du projet ID: {}", id);
 
@@ -171,6 +187,11 @@ public class ProjectService {
      * @param id l'ID du projet à archiver
      * @throws ResourceNotFoundException si le projet n'existe pas
      */
+    @Caching(evict = {
+        @CacheEvict(value = CacheConfig.CACHE_PROJECTS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_PROJECTS_FEATURED, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_PROJECT, key = "#id")
+    })
     public void deleteProject(Long id) {
         log.info("Archivage du projet ID: {}", id);
         Project project = findProjectOrThrow(id);

@@ -229,6 +229,22 @@
         </dependency>
 
         <!-- ============================================================
+             SPRING DATA REDIS + SPRING CACHE
+             Raison : cache distribué pour les endpoints publics (GET /projects).
+             Réduit la charge DB sur Free Tier RDS en mettant en cache les
+             réponses JSON. TTL 5 min → cohérence acceptable pour un portfolio.
+             Micrometer auto-expose les métriques de cache via /actuator/prometheus.
+             ============================================================ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
+        <!-- ============================================================
              H2 — BASE DE DONNÉES EN MÉMOIRE (dev/test uniquement)
              Raison : tests rapides sans PostgreSQL installé localement.
              Scope test : présent uniquement dans les tests.

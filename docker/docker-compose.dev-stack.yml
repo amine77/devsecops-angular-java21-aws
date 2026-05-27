@@ -50,6 +50,24 @@ services:
       retries: 5
 
   # ===========================================================================
+  # Redis — Cache distribué (Phase 11)
+  # ===========================================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: portfolio-redis
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    networks:
+      - dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ===========================================================================
   # Prometheus — Scrape le backend natif via host.docker.internal
   # ===========================================================================
   prometheus:

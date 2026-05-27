@@ -64,6 +64,7 @@ npm start
 | Prometheus | http://localhost:9090 | — |
 | Grafana | http://localhost:3000 | `admin` / `admin1` |
 | Kafka UI | http://localhost:8090 | — |
+| Redis | localhost:6379 | — |
 
 ### Comptes de démonstration
 
@@ -78,7 +79,17 @@ npm start
 docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml up -d
 ```
 
-Les événements métier sont alors publiés en temps réel :
+Redis est inclus dans la stack de support (`docker-compose.dev-stack.yml`) et démarre automatiquement.
+Le cache est activé dès que le backend démarre avec un Redis accessible.
+
+Stratégie de cache :
+- `GET /projects` (liste) — cachée 5 min, invalidée à chaque création/mise à jour/suppression
+- `GET /projects/{id}` (détail) — caché 10 min par ID, invalidé sur modification
+- `GET /projects/featured` — caché 5 min, invalidé sur toute modification
+
+Le dashboard **Grafana → "Redis Cache — Hits, Misses & Évictions"** (http://localhost:3000) affiche le hit rate en temps réel.
+
+Les événements métier Kafka sont publiés en temps réel :
 - `auth-events` — `UserLoginEvent` à chaque tentative de login
 - `project-events` — `ProjectCreatedEvent` à chaque création de projet
 
@@ -139,7 +150,8 @@ docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.k
 │       ├── provisioning/               # Datasource + dashboard auto-provisionnés
 │       └── dashboards/
 │           ├── portfolio.json          # Dashboard API + métriques applicatives
-│           └── kafka.json              # Dashboard Kafka (Phase 10)
+│           ├── kafka.json              # Dashboard Kafka (Phase 10)
+│           └── cache.json              # Dashboard Redis Cache (Phase 11)
 │
 ├── terraform/                  # Infrastructure AWS
 │   ├── modules/
