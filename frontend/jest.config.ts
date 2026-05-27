@@ -35,16 +35,15 @@ const config: Config = {
   ],
 
   // coverageThreshold (SINGULIER) — propriété correcte de Jest.
-  // coverageThresholds (pluriel) est invalide et ignoré silencieusement.
-  // Seuil initial à 15% (2 fichiers de tests couvrent auth + login).
-  // À augmenter progressivement au fil des sprints.
-  // Cible finale : 70% (atteinte quand tous les composants ont leurs specs).
+  // Phase 9 : core layer (services, guards, interceptors) entièrement couvert.
+  // Seuils relevés pour refléter la couverture actuelle et prévenir les régressions.
+  // Cible finale : 70% (atteinte quand tous les composants auront leurs specs).
   coverageThreshold: {
     global: {
-      statements: 15,
-      branches: 20,
-      functions: 12,
-      lines: 15,
+      statements: 30,
+      branches: 45,
+      functions: 25,
+      lines: 30,
     },
   },
 

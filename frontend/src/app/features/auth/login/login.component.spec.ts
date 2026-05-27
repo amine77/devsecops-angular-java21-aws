@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
@@ -114,7 +115,7 @@ describe('LoginComponent', () => {
     });
   });
 
-  describe('Messages de validation', () => {
+  describe('Messages de validation — emailErrors', () => {
     it('devrait retourner null si champ non touché', () => {
       expect(component.emailErrors).toBeNull();
     });
@@ -123,6 +124,58 @@ describe('LoginComponent', () => {
       component['loginForm'].get('email')?.markAsTouched();
       component['loginForm'].patchValue({ email: '' });
       expect(component.emailErrors).toContain('obligatoire');
+    });
+
+    it('devrait retourner message "Format" si email invalide et touché', () => {
+      component['loginForm'].get('email')?.markAsTouched();
+      component['loginForm'].patchValue({ email: 'not-an-email' });
+      expect(component.emailErrors).toContain('Format');
+    });
+  });
+
+  describe('Messages de validation — passwordErrors', () => {
+    it('devrait retourner null si champ non touché', () => {
+      expect(component.passwordErrors).toBeNull();
+    });
+
+    it('devrait retourner message "obligatoire" si password vide et touché', () => {
+      component['loginForm'].get('password')?.markAsTouched();
+      component['loginForm'].patchValue({ password: '' });
+      expect(component.passwordErrors).toContain('obligatoire');
+    });
+
+    it('devrait retourner message "Minimum 6" si password trop court et touché', () => {
+      component['loginForm'].get('password')?.markAsTouched();
+      component['loginForm'].patchValue({ password: 'abc' });
+      expect(component.passwordErrors).toContain('Minimum 6');
+    });
+
+    it('devrait retourner null si password valide et touché', () => {
+      component['loginForm'].get('password')?.markAsTouched();
+      component['loginForm'].patchValue({ password: 'validpassword' });
+      expect(component.passwordErrors).toBeNull();
+    });
+  });
+
+  describe('Redirection si déjà authentifié', () => {
+    it('devrait rediriger vers /admin si l\'utilisateur est déjà connecté', () => {
+      mockAuthService.isAuthenticated.mockReturnValue(true);
+      const router = TestBed.inject(Router);
+      const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      component.ngOnInit();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/admin']);
+    });
+
+    it('ne devrait pas rediriger si l\'utilisateur n\'est pas connecté', () => {
+      mockAuthService.isAuthenticated.mockReturnValue(false);
+      const router = TestBed.inject(Router);
+      const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      component.ngOnInit();
+
+      expect(navigateSpy).not.toHaveBeenCalled();
     });
   });
 });
