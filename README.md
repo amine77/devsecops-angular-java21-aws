@@ -73,7 +73,26 @@ npm start
 | Admin | `admin@portfolio.dev` | `Admin@2024!` |
 | Utilisateur | `demo@portfolio.dev` | `Admin@2024!` |
 
-### 4. (Optionnel) Démarrer le broker Kafka + Kafka UI
+### 4. Lancer les tests E2E Cypress (Phase 13)
+
+Prérequis : backend + frontend + PostgreSQL démarrés (étapes 1–3).
+
+```powershell
+cd frontend
+
+# Mode headless (CI)
+npm run e2e
+
+# Mode interactif (navigateur Cypress ouvert)
+npm run e2e:open
+```
+
+Les specs testent le flux complet :
+- `01-auth.cy.ts` — redirection non-auth, validation login, login réussi, déconnexion
+- `02-admin.cy.ts` — dashboard admin, création projet, modification, archivage
+- `03-portfolio.cy.ts` — accès public, navbar conditionnelle
+
+### 5. (Optionnel) Démarrer le broker Kafka + Kafka UI
 
 ```powershell
 docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.kafka.yml up -d
@@ -146,12 +165,24 @@ docker-compose -f docker/docker-compose.dev-stack.yml -f docker/docker-compose.k
 │   │   ├── prometheus.yml              # Scrape backend Docker
 │   │   └── prometheus-native.yml       # Scrape backend natif (host.docker.internal)
 │   ├── docker-compose.kafka.yml         # Kafka KRaft broker + Kafka UI (Phase 10)
+│   ├── docker-compose.redis.yml         # (inclus dans dev-stack)
 │   └── grafana/
 │       ├── provisioning/               # Datasource + dashboard auto-provisionnés
 │       └── dashboards/
 │           ├── portfolio.json          # Dashboard API + métriques applicatives
 │           ├── kafka.json              # Dashboard Kafka (Phase 10)
 │           └── cache.json              # Dashboard Redis Cache (Phase 11)
+│
+├── frontend/
+│   ├── cypress/
+│   │   ├── e2e/
+│   │   │   ├── 01-auth.cy.ts           # Tests auth E2E (Phase 13)
+│   │   │   ├── 02-admin.cy.ts          # Tests CRUD admin E2E (Phase 13)
+│   │   │   └── 03-portfolio.cy.ts      # Tests portfolio public E2E (Phase 13)
+│   │   └── support/
+│   │       ├── commands.ts             # cy.loginByApi(), cy.createProjectByApi()
+│   │       └── e2e.ts                  # Imports globaux
+│   └── cypress.config.ts               # Config baseUrl, env vars, timeouts
 │
 ├── terraform/                  # Infrastructure AWS
 │   ├── modules/
