@@ -119,6 +119,12 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
+            // Handlers d'erreurs HTTP : 401 pour non-authentifié, 403 pour non-autorisé
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                .accessDeniedHandler(jwtAccessDeniedHandler)
+            )
+
             // Fournisseur d'authentification (BCrypt + UserDetailsService)
             .authenticationProvider(authenticationProvider())
 

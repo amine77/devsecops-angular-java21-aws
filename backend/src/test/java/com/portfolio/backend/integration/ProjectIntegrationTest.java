@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Prérequis : Docker doit être installé sur la machine de test.
  */
 @DataJpaTest
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @DisplayName("ProjectRepository — Tests d'intégration (PostgreSQL réel)")
 class ProjectIntegrationTest {

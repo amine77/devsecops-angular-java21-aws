@@ -132,7 +132,6 @@ class ProjectServiceTest {
                 true, 1, List.of()
             );
 
-            given(skillRepository.findAllById(List.of())).willReturn(List.of());
             given(projectRepository.save(any(Project.class))).willReturn(testProject);
             given(projectMapper.toResponse(testProject)).willReturn(testProjectResponse);
 

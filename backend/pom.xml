@@ -371,6 +371,16 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <!-- Exclusions : code généré (Lombok entities, MapStruct mappers)
+                         Ces classes ne contiennent pas de logique métier à tester.
+                         JaCoCo mesure la couverture du code MÉTIER uniquement. -->
+                    <excludes>
+                        <exclude>com/portfolio/backend/entity/**</exclude>
+                        <exclude>com/portfolio/backend/mapper/**</exclude>
+                        <exclude>com/portfolio/backend/BackendApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
