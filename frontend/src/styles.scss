@@ -1,3 +1,17 @@
+@use '@angular/material' as mat;
+
+// Thème Material 3 dark — couleurs cohérentes avec le design slate/blue du portfolio
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$cyan-palette,
+      theme-type: dark,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
 /* =============================================================================
    STYLES GLOBAUX — Portfolio DevSecOps
    Dark theme moderne, épuré, professionnel
@@ -335,3 +349,5 @@ code, pre {
     grid-template-columns: 1fr;
   }
 }
+
+html, body { height: 100%; }

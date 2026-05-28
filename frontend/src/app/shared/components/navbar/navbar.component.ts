@@ -1,81 +1,50 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
 
 import { AuthService } from '@core/services/auth.service';
 
-/**
- * Barre de navigation fixe.
- *
- * Utilise les Signals (via authService) pour réagir aux changements d'état.
- * Avec ChangeDetectionStrategy.OnPush, le composant ne se re-rend que
- * quand les Signals changent — pas à chaque événement DOM.
- */
 @Component({
-  selector: 'app-navbar',
-  standalone: true,
-  imports: [RouterLink, RouterLinkActive],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <nav class="navbar">
-      <div class="navbar__container">
-        <!-- Logo / Brand -->
-        <a routerLink="/portfolio" class="navbar__brand">
-          <span class="navbar__logo">&lt;/&gt;</span>
-          <span class="navbar__title">DevSecOps</span>
+    selector: 'app-navbar',
+    standalone: true,
+    imports: [RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
+    <mat-toolbar class="navbar">
+      <a routerLink="/portfolio" class="navbar__brand">
+        <span class="navbar__logo">&lt;/&gt;</span>
+        <span class="navbar__title">DevSecOps</span>
+      </a>
+
+      <nav class="navbar__links">
+        <a routerLink="/portfolio" routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: true }" mat-button class="nav-link">
+          Portfolio
         </a>
+        <a routerLink="/portfolio/projects" routerLinkActive="active" mat-button class="nav-link">
+          Projets
+        </a>
+        <a routerLink="/portfolio/skills" routerLinkActive="active" mat-button class="nav-link">
+          Compétences
+        </a>
+      </nav>
 
-        <!-- Navigation links -->
-        <ul class="navbar__links">
-          <li>
-            <a
-              routerLink="/portfolio"
-              routerLinkActive="active"
-              class="navbar__link"
-            >
-              Portfolio
-            </a>
-          </li>
-          <li>
-            <a
-              routerLink="/portfolio/projects"
-              routerLinkActive="active"
-              class="navbar__link"
-            >
-              Projets
-            </a>
-          </li>
-          <li>
-            <a
-              routerLink="/portfolio/skills"
-              routerLinkActive="active"
-              class="navbar__link"
-            >
-              Compétences
-            </a>
-          </li>
-        </ul>
+      <span class="toolbar-spacer"></span>
 
-        <!-- Actions utilisateur -->
-        <div class="navbar__actions">
-          @if (authService.isAuthenticated()) {
-            @if (authService.isAdmin()) {
-              <a routerLink="/admin" class="btn btn-outline btn-sm">
-                Dashboard
-              </a>
-            }
-            <button (click)="logout()" class="btn btn-ghost btn-sm">
-              Déconnexion
-            </button>
-          } @else {
-            <a routerLink="/auth/login" class="btn btn-primary btn-sm">
-              Connexion
-            </a>
+      <div class="navbar__actions">
+        @if (authService.isAuthenticated()) {
+          @if (authService.isAdmin()) {
+            <a routerLink="/admin" mat-stroked-button color="primary">Dashboard</a>
           }
-        </div>
+          <button mat-button (click)="logout()">Déconnexion</button>
+        } @else {
+          <a routerLink="/auth/login" mat-raised-button color="primary">Connexion</a>
+        }
       </div>
-    </nav>
+    </mat-toolbar>
   `,
-  styleUrl: './navbar.component.scss',
+    styleUrl: './navbar.component.scss'
 })
 export class NavbarComponent {
   protected readonly authService = inject(AuthService);

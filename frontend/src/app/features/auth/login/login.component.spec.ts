@@ -115,45 +115,51 @@ describe('LoginComponent', () => {
     });
   });
 
-  describe('Messages de validation — emailErrors', () => {
-    it('devrait retourner null si champ non touché', () => {
-      expect(component.emailErrors).toBeNull();
+  describe('Validation email', () => {
+    it('ne devrait pas être touché au départ', () => {
+      expect(component['loginForm'].get('email')?.touched).toBe(false);
     });
 
-    it('devrait retourner message "obligatoire" si email vide et touché', () => {
+    it('devrait avoir l\'erreur "required" si email vide et touché', () => {
       component['loginForm'].get('email')?.markAsTouched();
       component['loginForm'].patchValue({ email: '' });
-      expect(component.emailErrors).toContain('obligatoire');
+      expect(component['loginForm'].get('email')?.hasError('required')).toBe(true);
     });
 
-    it('devrait retourner message "Format" si email invalide et touché', () => {
+    it('devrait avoir l\'erreur "email" si format invalide', () => {
       component['loginForm'].get('email')?.markAsTouched();
       component['loginForm'].patchValue({ email: 'not-an-email' });
-      expect(component.emailErrors).toContain('Format');
+      expect(component['loginForm'].get('email')?.hasError('email')).toBe(true);
+    });
+
+    it('ne devrait pas avoir d\'erreur avec un email valide', () => {
+      component['loginForm'].get('email')?.markAsTouched();
+      component['loginForm'].patchValue({ email: 'test@test.com' });
+      expect(component['loginForm'].get('email')?.errors).toBeNull();
     });
   });
 
-  describe('Messages de validation — passwordErrors', () => {
-    it('devrait retourner null si champ non touché', () => {
-      expect(component.passwordErrors).toBeNull();
+  describe('Validation mot de passe', () => {
+    it('ne devrait pas être touché au départ', () => {
+      expect(component['loginForm'].get('password')?.touched).toBe(false);
     });
 
-    it('devrait retourner message "obligatoire" si password vide et touché', () => {
+    it('devrait avoir l\'erreur "required" si password vide et touché', () => {
       component['loginForm'].get('password')?.markAsTouched();
       component['loginForm'].patchValue({ password: '' });
-      expect(component.passwordErrors).toContain('obligatoire');
+      expect(component['loginForm'].get('password')?.hasError('required')).toBe(true);
     });
 
-    it('devrait retourner message "Minimum 6" si password trop court et touché', () => {
+    it('devrait avoir l\'erreur "minlength" si password trop court', () => {
       component['loginForm'].get('password')?.markAsTouched();
       component['loginForm'].patchValue({ password: 'abc' });
-      expect(component.passwordErrors).toContain('Minimum 6');
+      expect(component['loginForm'].get('password')?.hasError('minlength')).toBe(true);
     });
 
-    it('devrait retourner null si password valide et touché', () => {
+    it('ne devrait pas avoir d\'erreur avec un password valide', () => {
       component['loginForm'].get('password')?.markAsTouched();
       component['loginForm'].patchValue({ password: 'validpassword' });
-      expect(component.passwordErrors).toBeNull();
+      expect(component['loginForm'].get('password')?.errors).toBeNull();
     });
   });
 

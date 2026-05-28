@@ -19,11 +19,10 @@ import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skil
  * depuis le signal skills — pas de logique de transformation dans le template.
  */
 @Component({
-  selector: 'app-skills',
-  standalone: true,
-  imports: [LoadingSpinnerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-skills',
+    imports: [LoadingSpinnerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="section">
       <div class="container">
         <h1 class="section-title">Compétences</h1>
@@ -58,7 +57,7 @@ import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skil
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .skill-group {
       margin-bottom: var(--spacing-2xl);
       &__title {
@@ -91,7 +90,7 @@ import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skil
         &--active { background: var(--color-accent); }
       }
     }
-  `],
+  `]
 })
 export class SkillsComponent implements OnInit {
   private readonly skillService = inject(SkillService);

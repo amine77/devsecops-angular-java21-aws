@@ -24,12 +24,11 @@ import { Project } from '@shared/models/project.model';
  * Le signal est mis à jour dans le callback next/error de subscribe.
  */
 @Component({
-  selector: 'app-home',
-  standalone: true,
-  imports: [RouterLink, ProjectCardComponent, LoadingSpinnerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
+    selector: 'app-home',
+    imports: [RouterLink, ProjectCardComponent, LoadingSpinnerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    templateUrl: './home.component.html',
+    styleUrl: './home.component.scss'
 })
 export class HomeComponent implements OnInit {
   private readonly projectService = inject(ProjectService);

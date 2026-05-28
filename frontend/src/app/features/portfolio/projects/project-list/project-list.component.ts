@@ -13,11 +13,10 @@ import { Project } from '@shared/models/project.model';
  * qui rappellent l'API avec les bons paramètres.
  */
 @Component({
-  selector: 'app-project-list',
-  standalone: true,
-  imports: [ProjectCardComponent, LoadingSpinnerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-project-list',
+    imports: [ProjectCardComponent, LoadingSpinnerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="section">
       <div class="container">
         <h1 class="section-title">Mes projets</h1>
@@ -67,7 +66,7 @@ import { Project } from '@shared/models/project.model';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .error-state, .empty-message {
       text-align: center;
       padding: var(--spacing-3xl);
@@ -84,7 +83,7 @@ import { Project } from '@shared/models/project.model';
         color: var(--color-text-secondary);
       }
     }
-  `],
+  `]
 })
 export class ProjectListComponent implements OnInit {
   private readonly projectService = inject(ProjectService);

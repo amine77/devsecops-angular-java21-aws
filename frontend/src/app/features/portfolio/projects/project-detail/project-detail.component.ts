@@ -13,11 +13,10 @@ import { Project } from '@shared/models/project.model';
  * Plus besoin d'injecter ActivatedRoute pour lire :id !
  */
 @Component({
-  selector: 'app-project-detail',
-  standalone: true,
-  imports: [RouterLink, LoadingSpinnerComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-project-detail',
+    imports: [RouterLink, LoadingSpinnerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (isLoading()) {
       <app-loading-spinner message="Chargement du projet..." [fullPage]="true" />
     } @else if (error()) {
@@ -71,7 +70,7 @@ import { Project } from '@shared/models/project.model';
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .project-detail {
       &__back {
         display: inline-flex;
@@ -120,7 +119,7 @@ import { Project } from '@shared/models/project.model';
       gap: var(--spacing-lg);
       text-align: center;
     }
-  `],
+  `]
 })
 export class ProjectDetailComponent implements OnInit {
   /** Injecté depuis le param de route :id grâce à withComponentInputBinding() */

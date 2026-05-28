@@ -15,13 +15,12 @@ import { Project } from '@shared/models/project.model';
  * Idéal pour les listes — évite de re-rendre toutes les cards à chaque action.
  */
 @Component({
-  selector: 'app-project-card',
-  standalone: true,
-  // SlicePipe : requis explicitement dans les composants standalone
-  // (pas d'import automatique comme avec NgModules + CommonModule)
-  imports: [RouterLink, SlicePipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-project-card',
+    // SlicePipe : requis explicitement dans les composants standalone
+    // (pas d'import automatique comme avec NgModules + CommonModule)
+    imports: [RouterLink, SlicePipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <article class="project-card card">
       <!-- Image ou placeholder -->
       <div class="project-card__image">
@@ -75,7 +74,7 @@ import { Project } from '@shared/models/project.model';
       </div>
     </article>
   `,
-  styles: [`
+    styles: [`
     .project-card {
       display: flex;
       flex-direction: column;
@@ -159,7 +158,7 @@ import { Project } from '@shared/models/project.model';
       padding: 0.375rem 0.875rem;
       font-size: var(--font-size-xs);
     }
-  `],
+  `]
 })
 export class ProjectCardComponent {
   @Input({ required: true }) project!: Project;

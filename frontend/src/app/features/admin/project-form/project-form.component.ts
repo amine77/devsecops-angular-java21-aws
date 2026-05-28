@@ -1,104 +1,117 @@
 import { ChangeDetectionStrategy, Component, Input, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { ProjectService } from '@core/services/project.service';
 import { SkillService } from '@core/services/skill.service';
 import { Skill } from '@shared/models/skill.model';
 
-/**
- * Formulaire de création / modification d'un projet.
- * Réutilisable : si @Input() id est présent → mode édition, sinon → mode création.
- */
 @Component({
   selector: 'app-project-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCheckboxModule,
+    MatChipsModule,
+    MatProgressSpinnerModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="section">
       <div class="container container--narrow">
+
         <div class="form-header">
-          <a routerLink="/admin" class="btn btn-ghost">← Retour</a>
+          <a routerLink="/admin" mat-icon-button matTooltip="Retour">
+            <mat-icon>arrow_back</mat-icon>
+          </a>
           <h1>{{ isEditMode ? 'Modifier le projet' : 'Nouveau projet' }}</h1>
         </div>
 
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="card project-form">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="project-form">
 
-          <div class="form-group">
-            <label for="title" class="form-label">Titre *</label>
-            <input id="title" type="text" formControlName="title"
-                   class="form-control" [class.is-invalid]="isInvalid('title')" />
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Titre *</mat-label>
+            <input matInput formControlName="title" placeholder="Mon super projet" />
             @if (isInvalid('title')) {
-              <span class="form-error">Le titre est obligatoire (2-200 caractères)</span>
+              <mat-error>Le titre est obligatoire (2-200 caractères)</mat-error>
             }
-          </div>
+          </mat-form-field>
 
-          <div class="form-group">
-            <label for="summary" class="form-label">Résumé court</label>
-            <input id="summary" type="text" formControlName="summary"
-                   class="form-control" placeholder="Affiché sur les cards..." />
-          </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Résumé court</mat-label>
+            <input matInput formControlName="summary" placeholder="Affiché sur les cards..." />
+          </mat-form-field>
 
-          <div class="form-group">
-            <label for="description" class="form-label">Description complète *</label>
-            <textarea id="description" formControlName="description"
-                      class="form-control" rows="6"
-                      [class.is-invalid]="isInvalid('description')"></textarea>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description complète *</mat-label>
+            <textarea matInput formControlName="description" rows="6"></textarea>
             @if (isInvalid('description')) {
-              <span class="form-error">Description obligatoire (10-5000 caractères)</span>
+              <mat-error>Description obligatoire (10-5000 caractères)</mat-error>
             }
-          </div>
+          </mat-form-field>
 
           <div class="form-row">
-            <div class="form-group">
-              <label for="githubUrl" class="form-label">URL GitHub</label>
-              <input id="githubUrl" type="url" formControlName="githubUrl" class="form-control"
-                     placeholder="https://github.com/..." />
-            </div>
-            <div class="form-group">
-              <label for="demoUrl" class="form-label">URL Démo</label>
-              <input id="demoUrl" type="url" formControlName="demoUrl" class="form-control"
-                     placeholder="https://..." />
-            </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>URL GitHub</mat-label>
+              <input matInput formControlName="githubUrl" placeholder="https://github.com/..." />
+              <mat-icon matPrefix>code</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>URL Démo</mat-label>
+              <input matInput formControlName="demoUrl" placeholder="https://..." />
+              <mat-icon matPrefix>open_in_new</mat-icon>
+            </mat-form-field>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Options</label>
-            <label class="checkbox-label">
-              <input type="checkbox" formControlName="featured" />
-              <span>Mettre en vedette (homepage)</span>
-            </label>
-          </div>
+          <mat-checkbox formControlName="featured" color="primary">
+            Mettre en vedette (homepage)
+          </mat-checkbox>
 
-          <!-- Skills selection -->
           @if (allSkills().length > 0) {
-            <div class="form-group">
-              <label class="form-label">Compétences associées</label>
-              <div class="skills-grid">
+            <div class="skills-section">
+              <p class="skills-label">Compétences associées</p>
+              <mat-chip-listbox class="skills-chips">
                 @for (skill of allSkills(); track skill.id) {
-                  <label class="skill-checkbox">
-                    <input
-                      type="checkbox"
-                      [value]="skill.id"
-                      [checked]="isSkillSelected(skill.id)"
-                      (change)="toggleSkill(skill.id, $event)"
-                    />
-                    <span>{{ skill.name }}</span>
-                  </label>
+                  <mat-chip-option
+                    [value]="skill.id"
+                    [selected]="isSkillSelected(skill.id)"
+                    (selectionChange)="onSkillChange(skill.id, $event.selected)"
+                  >
+                    {{ skill.name }}
+                  </mat-chip-option>
                 }
-              </div>
+              </mat-chip-listbox>
             </div>
           }
 
           @if (errorMessage()) {
-            <div class="alert alert-error">{{ errorMessage() }}</div>
+            <div class="form-error-banner">
+              <mat-icon>error_outline</mat-icon>
+              {{ errorMessage() }}
+            </div>
           }
 
           <div class="form-actions">
-            <a routerLink="/admin" class="btn btn-ghost">Annuler</a>
-            <button type="submit" class="btn btn-primary" [disabled]="isLoading()">
-              @if (isLoading()) { Sauvegarde... } @else { Sauvegarder }
+            <a routerLink="/admin" mat-button>Annuler</a>
+            <button mat-raised-button color="primary" type="submit" [disabled]="isLoading()">
+              @if (isLoading()) {
+                <mat-progress-spinner mode="indeterminate" diameter="18" />
+              }
+              {{ isLoading() ? 'Sauvegarde...' : 'Sauvegarder' }}
             </button>
           </div>
 
@@ -108,16 +121,50 @@ import { Skill } from '@shared/models/skill.model';
   `,
   styles: [`
     .container--narrow { max-width: 720px; }
-    .form-header { display: flex; align-items: center; gap: var(--spacing-lg); margin-bottom: var(--spacing-xl); }
-    .project-form { display: flex; flex-direction: column; gap: var(--spacing-lg); padding: var(--spacing-2xl); }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); }
-    textarea.form-control { resize: vertical; }
-    .checkbox-label { display: flex; align-items: center; gap: var(--spacing-sm); cursor: pointer; font-size: var(--font-size-sm); }
-    .skills-grid { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
-    .skill-checkbox { display: flex; align-items: center; gap: var(--spacing-xs); padding: 0.375rem 0.75rem; background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-full); cursor: pointer; font-size: var(--font-size-xs); transition: all var(--transition-fast); &:hover { border-color: var(--color-accent); } }
-    .form-actions { display: flex; justify-content: flex-end; gap: var(--spacing-md); }
-    .alert { padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); font-size: var(--font-size-sm); }
-    .alert-error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
+    .form-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .project-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .full-width { width: 100%; }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .skills-section { margin: 0.5rem 0; }
+    .skills-label {
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 0.5rem;
+    }
+    .skills-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .form-error-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.3);
+      color: #fca5a5;
+      font-size: 0.875rem;
+    }
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    @media (max-width: 600px) {
+      .form-row { grid-template-columns: 1fr; }
+    }
   `],
 })
 export class ProjectFormComponent implements OnInit {
@@ -127,6 +174,7 @@ export class ProjectFormComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly skillService = inject(SkillService);
   private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
 
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -165,10 +213,9 @@ export class ProjectFormComponent implements OnInit {
     return this.selectedSkillIds().includes(id);
   }
 
-  protected toggleSkill(id: number, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  protected onSkillChange(id: number, selected: boolean): void {
     this.selectedSkillIds.update((ids) =>
-      checked ? [...ids, id] : ids.filter((i) => i !== id)
+      selected ? [...ids, id] : ids.filter((i) => i !== id)
     );
   }
 
@@ -190,7 +237,10 @@ export class ProjectFormComponent implements OnInit {
       : this.projectService.createProject(data);
 
     request$.subscribe({
-      next: () => void this.router.navigate(['/admin']),
+      next: () => {
+        this.snackBar.open('Projet sauvegardé.', 'OK', { duration: 3000 });
+        void this.router.navigate(['/admin']);
+      },
       error: () => {
         this.errorMessage.set('Erreur lors de la sauvegarde.');
         this.isLoading.set(false);

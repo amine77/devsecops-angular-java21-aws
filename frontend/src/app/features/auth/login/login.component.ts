@@ -8,31 +8,28 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { AuthService } from '@core/services/auth.service';
 
-/**
- * Composant de connexion.
- *
- * Utilise Reactive Forms (FormBuilder) plutôt que Template-driven Forms.
- * Raisons des Reactive Forms pour un dev senior :
- * - Validations centralisées dans le composant (pas dans le template)
- * - Testabilité : on peut tester la validation sans rendu
- * - Typage fort avec FormGroup<{...}>
- * - Gestion asynchrone plus naturelle
- *
- * Signals pour l'état local :
- * - isLoading : affichage du spinner pendant l'appel API
- * - errorMessage : message d'erreur de l'API
- *
- * Avantage vs propriétés normales :
- * - Avec OnPush, les Signals déclenchent automatiquement la re-détection
- * - Pas besoin de ChangeDetectorRef.markForCheck()
- */
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
@@ -45,6 +42,7 @@ export class LoginComponent implements OnInit {
 
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly hidePassword = signal(true);
 
   private returnUrl = '/admin';
 
@@ -54,24 +52,17 @@ export class LoginComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Si déjà connecté → redirect direct
     if (this.authService.isAuthenticated()) {
       void this.router.navigate([this.returnUrl]);
       return;
     }
-    // Récupère l'URL de retour depuis les query params
     this.returnUrl = (this.route.snapshot.queryParams['returnUrl'] as string | undefined) ?? '/admin';
   }
 
-  /**
-   * Soumission du formulaire.
-   *
-   * Flux :
-   * 1. Valide le formulaire
-   * 2. Appel AuthService.login()
-   * 3. Succès → navigate vers returnUrl
-   * 4. Erreur → affiche message d'erreur
-   */
+  protected togglePassword(): void {
+    this.hidePassword.update(v => !v);
+  }
+
   onSubmit(): void {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
@@ -101,22 +92,5 @@ export class LoginComponent implements OnInit {
         }
       },
     });
-  }
-
-  /** Helpers pour les messages de validation dans le template. */
-  get emailErrors(): string | null {
-    const ctrl = this.loginForm.get('email');
-    if (!ctrl?.touched || ctrl.valid) return null;
-    if (ctrl.hasError('required')) return "L'email est obligatoire.";
-    if (ctrl.hasError('email')) return 'Format d\'email invalide.';
-    return null;
-  }
-
-  get passwordErrors(): string | null {
-    const ctrl = this.loginForm.get('password');
-    if (!ctrl?.touched || ctrl.valid) return null;
-    if (ctrl.hasError('required')) return 'Le mot de passe est obligatoire.';
-    if (ctrl.hasError('minlength')) return 'Minimum 6 caractères.';
-    return null;
   }
 }
