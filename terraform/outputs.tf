@@ -106,6 +106,44 @@ output "cloudwatch_sns_topic_arn" {
 }
 
 # =============================================================================
+# LAMBDA
+# =============================================================================
+output "lambda_weekly_report_function_name" {
+  description = "Name of the weekly report Lambda function"
+  value       = module.lambda_weekly_report.function_name
+}
+
+output "lambda_weekly_report_log_group" {
+  description = "CloudWatch Log Group for the weekly report Lambda"
+  value       = module.lambda_weekly_report.log_group_name
+}
+
+output "lambda_image_resize_function_name" {
+  description = "Name of the image-resize Lambda function"
+  value       = module.lambda_image_resize.function_name
+}
+
+output "images_bucket_name" {
+  description = "S3 bucket name for project images"
+  value       = module.lambda_image_resize.bucket_name
+}
+
+output "images_resized_base_url" {
+  description = "Public base URL for resized WebP images"
+  value       = module.lambda_image_resize.resized_base_url
+}
+
+output "contact_api_endpoint" {
+  description = "HTTPS endpoint for the contact form — set in Angular environment"
+  value       = module.lambda_contact_form.api_endpoint
+}
+
+output "lambda_contact_function_name" {
+  description = "Name of the contact form Lambda function"
+  value       = module.lambda_contact_form.function_name
+}
+
+# =============================================================================
 # COMMANDES PRATIQUES
 # =============================================================================
 output "deploy_commands" {

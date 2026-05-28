@@ -1,0 +1,243 @@
+# =============================================================================
+# DAST — OWASP ZAP API Scan (Phase 12)
+# =============================================================================
+# Dynamic Application Security Testing : ZAP inspecte l'application VIVANTE
+# au lieu d'analyser le code source (SAST).
+#
+# Différence avec security.yml (SAST) :
+#   - SAST : analyse le code source sans exécuter l'appli (CodeQL, Semgrep)
+#   - DAST : démarre le backend réel et envoie de vraies requêtes HTTP
+#
+# Ce que ZAP teste ici :
+#   1. Tous les endpoints listés dans la spec OpenAPI (/v3/api-docs)
+#   2. Injections (SQL, XSS, Path traversal, SSTI)
+#   3. En-têtes de sécurité HTTP manquants
+#   4. Problèmes d'authentification et d'autorisation
+#   5. Exposition d'informations sensibles
+#
+# UTILISATION :
+#   GitHub → Actions → "DAST — OWASP ZAP" → Run workflow
+#   Rapport HTML → onglet Artifacts du run
+#   Résultats SARIF → GitHub → Security → Code scanning alerts
+#
+# DÉCLENCHEMENTS :
+#   - Manuel (workflow_dispatch) — avec choix du type de scan
+#   - Hebdomadaire le lundi 4h UTC
+# =============================================================================
+
+name: DAST — OWASP ZAP
+
+on:
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type de scan ZAP'
+        required: true
+        default: 'api'
+        type: choice
+        options:
+          - api       # Scan actif sur la spec OpenAPI (recommandé — ~5 min)
+          - baseline  # Scan passif uniquement — plus rapide, moins intrusif
+  schedule:
+    - cron: '0 4 * * 1'  # Lundi 4h UTC
+
+# Node.js 24 opt-in (obligatoire à partir du 2 juin 2026)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  BACKEND_URL: http://localhost:8080
+  JWT_SECRET: zap-test-secret-key-minimum-256-bits-for-hs256-algorithm
+
+permissions:
+  contents: read
+  issues: write         # ZAP peut créer des issues GitHub
+  security-events: write  # Upload SARIF → GitHub Security tab
+
+jobs:
+
+  zap-dast:
+    name: ZAP ${{ inputs.scan_type || 'api' }} scan
+    runs-on: ubuntu-latest
+
+    # ── Services annexes (même pattern que k6-load-test.yml) ────────────────
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: portfolio_dev
+          POSTGRES_USER: portfolio_user
+          POSTGRES_PASSWORD: portfolio_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+
+      # ── Checkout & Java ───────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # ── Démarrage du backend Spring Boot ─────────────────────────────────
+      # Kafka désactivé (non requis pour le scan — réduit le temps de démarrage)
+      - name: Démarrer le backend Spring Boot
+        working-directory: backend
+        run: |
+          mvn spring-boot:run \
+            -Dspring-boot.run.profiles=dev \
+            -Dspring.datasource.url=jdbc:postgresql://localhost:5432/portfolio_dev \
+            -Dspring.datasource.username=portfolio_user \
+            -Dspring.datasource.password=portfolio_pass \
+            -Dspring.data.redis.host=localhost \
+            -Dspring.kafka.listener.auto-startup=false \
+            -Dspring.kafka.admin.auto-create=false \
+            -DJWT_SECRET=${{ env.JWT_SECRET }} &
+          echo "Backend PID: $!"
+        env:
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+
+      - name: Attendre que le backend soit prêt
+        run: |
+          echo "Attente du backend sur :8080..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/actuator/health/readiness > /dev/null 2>&1; then
+              echo "Backend prêt après ${i}x10s"
+              break
+            fi
+            echo "  Tentative $i/30 — attente 10s..."
+            sleep 10
+          done
+          echo "=== Health check ==="
+          curl -sf http://localhost:8080/actuator/health | python3 -m json.tool
+
+      # ── Obtention du token JWT admin pour le scan authentifié ─────────────
+      # ZAP injectera ce token dans chaque requête (via auth-header.txt).
+      # Sans auth, les endpoints protégés retournent 401 → scan incomplet.
+      - name: Obtenir le token JWT admin
+        id: auth
+        run: |
+          RESPONSE=$(curl -sf -X POST http://localhost:8080/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@portfolio.dev","password":"Admin@2024!"}')
+          TOKEN=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "JWT admin obtenu (${#TOKEN} chars)"
+
+      # ── Préparation du fichier d'en-têtes pour ZAP ───────────────────────
+      # ZAP lit ce fichier et injecte l'en-tête Authorization dans chaque requête.
+      # Le token n'est PAS logué en clair dans les artefacts.
+      - name: Préparer les en-têtes d'authentification ZAP
+        run: |
+          mkdir -p zap/reports
+          echo "Authorization: Bearer ${{ steps.auth.outputs.token }}" > zap/auth-header.txt
+          echo "Content-Type: application/json" >> zap/auth-header.txt
+
+      # ── ZAP API Scan (scan actif sur la spec OpenAPI) ─────────────────────
+      # -t : URL de la spec OpenAPI 3
+      # -H : fichier d'en-têtes (auth Bearer)
+      # -c : fichier de règles (suppression faux positifs API)
+      # fail_action: false → ne pas échouer le build sur des alertes (rapport seul)
+      - name: ZAP — API Scan (OpenAPI + scan actif)
+        if: inputs.scan_type == 'api' || inputs.scan_type == ''
+        uses: zaproxy/action-api-scan@v0.7.0
+        with:
+          target: '${{ env.BACKEND_URL }}/v3/api-docs'
+          format: openapi
+          fail_action: false
+          allow_issue_writing: false
+          rules_file_name: 'zap/zap-rules.tsv'
+          cmd_options: '-H /zap/wrk/zap/auth-header.txt'
+
+      # ── ZAP Baseline Scan (scan passif uniquement, sans attaque active) ───
+      # Plus rapide, moins intrusif — idéal pour pre-merge check
+      - name: ZAP — Baseline Scan (passif uniquement)
+        if: inputs.scan_type == 'baseline'
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: '${{ env.BACKEND_URL }}'
+          fail_action: false
+          allow_issue_writing: false
+          rules_file_name: 'zap/zap-rules.tsv'
+
+      # ── Upload des rapports ZAP ───────────────────────────────────────────
+      - name: Upload rapports ZAP (HTML + JSON)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-dast-report-${{ github.run_id }}
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+          retention-days: 30
+
+      # ── Upload SARIF vers GitHub Security tab ────────────────────────────
+      - name: Upload ZAP SARIF → GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: report_sarif.sarif
+          category: zap-dast-${{ inputs.scan_type || 'api' }}
+        continue-on-error: true  # SARIF non généré si ZAP n'a pas démarré
+
+      # ── Résumé dans GitHub Step Summary ──────────────────────────────────
+      - name: Résumé du scan DAST
+        if: always()
+        run: |
+          echo "## DAST — OWASP ZAP Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Paramètre | Valeur |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Cible | \`${{ env.BACKEND_URL }}/v3/api-docs\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type de scan | \`${{ inputs.scan_type || 'api' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Authentification | Bearer JWT (admin) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Rapport | Onglet **Artifacts** → \`zap-dast-report-${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f report_json.json ]; then
+            echo "### Alertes par niveau de risque" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Niveau | Alertes |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|---------|" >> $GITHUB_STEP_SUMMARY
+            python3 -c "
+          import json
+          with open('report_json.json') as f:
+              data = json.load(f)
+          totals = {'High': 0, 'Medium': 0, 'Low': 0, 'Informational': 0}
+          for site in data.get('site', []):
+              for alert in site.get('alerts', []):
+                  risk = alert.get('riskdesc', 'Informational').split(' ')[0]
+                  if risk in totals:
+                      totals[risk] += int(alert.get('count', 1))
+          for level, count in totals.items():
+              icon = {'High': '🔴', 'Medium': '🟠', 'Low': '🟡', 'Informational': 'ℹ️'}[level]
+              print(f'| {icon} {level} | {count} |')
+          " >> $GITHUB_STEP_SUMMARY 2>/dev/null \
+              || echo "| Parsing | Non disponible |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Résultats SARIF → [Security → Code scanning](https://github.com/${{ github.repository }}/security/code-scanning)" >> $GITHUB_STEP_SUMMARY
+
+      # ── Nettoyage du token du workspace ──────────────────────────────────
+      # Le fichier auth-header.txt contient le JWT — on le supprime après le scan.
+      - name: Supprimer le fichier de token
+        if: always()
+        run: rm -f zap/auth-header.txt

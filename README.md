@@ -1,4 +1,4 @@
-# Portfolio DevSecOps — Angular 18 + Spring Boot Java 21 + AWS
+# Portfolio DevSecOps — Angular 20 + Spring Boot Java 21 + AWS
 
 Application full-stack démontrant une pipeline DevSecOps complète : du développement local
 jusqu'au déploiement AWS, avec observabilité, messaging, cache, et tests à tous les niveaux.
@@ -7,15 +7,16 @@ jusqu'au déploiement AWS, avec observabilité, messaging, cache, et tests à to
 
 | Couche | Technologie |
 |--------|-------------|
-| Frontend | Angular 18, TypeScript, Signals, Reactive Forms |
+| Frontend | Angular 20, TypeScript, Angular Material 3 (dark theme), Signals |
 | Backend | Spring Boot 3.3, Java 21, Virtual Threads (Project Loom) |
 | Base de données | PostgreSQL 15, Flyway migrations |
 | Cache | Redis 7.2 — Spring Cache `@Cacheable`, TTL 5/10 min |
 | Messaging | Apache Kafka KRaft (sans Zookeeper) — événements métier asynchrones |
-| Sécurité | JWT (HS384), BCrypt cost=12, Spring Security, OWASP Dependency Check |
+| Serverless | AWS Lambda (Node.js 20) — 3 fonctions : rapport hebdomadaire, resize images, formulaire contact |
+| Sécurité | JWT (HS384), BCrypt cost=12, Spring Security, OWASP Dependency Check, OWASP ZAP DAST |
 | Observabilité | Prometheus, Grafana (3 dashboards), Logback JSON + MDC, Micrometer |
-| Tests | JUnit 5 + Mockito (47 tests), Cypress E2E (20 specs), k6 load tests (3 scénarios) |
-| Infrastructure | AWS — EC2, RDS, ECR, VPC, CloudWatch via Terraform |
+| Tests | JUnit 5 + Mockito (47 tests), Jest (53 tests), Cypress E2E (20 specs), k6 load tests (3 scénarios) |
+| Infrastructure | AWS — EC2, RDS, ECR, VPC, CloudWatch, Lambda, S3, API Gateway, SES via Terraform |
 | CI/CD | GitHub Actions — build, test, SAST (CodeQL), Trivy, OWASP DC, deploy |
 
 ---
@@ -171,6 +172,82 @@ Dashboard Grafana : `"Redis Cache — Hits, Misses & Évictions"` → hit rate, 
 
 ---
 
+## 🔍 DAST OWASP ZAP (Phase 12)
+
+Dynamic Application Security Testing : ZAP démarre le backend réel et envoie de vraies requêtes HTTP pour trouver des vulnérabilités que le SAST ne peut pas détecter.
+
+### Ce que ZAP teste
+
+- Injections (SQL, XSS, Path traversal, SSTI)
+- En-têtes de sécurité HTTP manquants
+- Problèmes d'authentification et d'autorisation
+- Exposition d'informations sensibles dans les réponses
+
+### Lancement local
+
+Prérequis : Docker + backend démarré.
+
+```powershell
+make test-dast          # Scan actif complet (OpenAPI spec + payloads d'injection)
+make test-dast-baseline # Scan passif uniquement (plus rapide)
+```
+
+Rapports générés dans `zap/reports/`.
+
+### En CI
+
+```
+GitHub → Actions → "DAST — OWASP ZAP" → Run workflow
+```
+
+Deux modes : `api` (scan actif, ~5 min) ou `baseline` (passif, ~2 min).
+Résultats SARIF → **GitHub → Security → Code scanning alerts**.
+Rapport HTML → onglet **Artifacts** du run.
+
+Scan automatique chaque lundi 4h UTC.
+
+| Fichier | Rôle |
+|---------|------|
+| `.github/workflows/dast-zap.yml` | Workflow CI — démarre le backend + ZAP |
+| `zap/zap-rules.tsv` | Suppression des faux positifs (API REST) |
+
+---
+
+## ⚡ AWS Lambda — Architecture Serverless (Phase 15)
+
+Trois fonctions Lambda Node.js 20 couvrent des cas d'usage **event-driven** que Spring Boot ne doit pas gérer :
+
+| Fonction | Déclencheur | Rôle |
+|---|---|---|
+| `weekly-report` | EventBridge Scheduler (lun. 8h UTC) | Rapport HTML hebdomadaire → SES |
+| `image-resize` | S3 PutObject (`originals/`) | 3 variantes WebP via Sharp (640×360, 320×180, 1200×630) |
+| `contact-form` | API Gateway HTTP POST `/contact` | Formulaire de contact → SES |
+
+**Coût total : $0/mois** (Free Tier AWS à vie pour ces volumes).
+
+### Déploiement
+
+```bash
+# Vérifier les emails dans SES sandbox (une seule fois)
+make ses-verify SENDER_EMAIL=noreply@domaine.com RECIPIENT_EMAIL=admin@gmail.com
+
+# Builder les 3 Lambdas (npm ci)
+make lambda-build
+
+# Déployer via Terraform
+make tf-plan && make tf-apply
+
+# Tester
+make lambda-invoke-weekly-report   # Envoie un rapport immédiatement
+make lambda-test-contact           # Teste le formulaire de contact
+```
+
+> **Note Sharp :** la Lambda `image-resize` utilise `sharp` (binaires Linux natifs). Le build npm passe `--platform=linux --arch=x64` pour être compatible avec l'environnement d'exécution Lambda depuis Windows ou macOS.
+
+Voir [`docs/PHASE15-Lambda-Serverless.md`](docs/PHASE15-Lambda-Serverless.md) pour l'architecture complète, les diagrammes et les points clés entretien.
+
+---
+
 ## Arrêt et reset
 
 ```powershell
@@ -205,7 +282,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   │   └── logback-spring.xml            # JSON en prod, couleurs en dev
 │   └── Dockerfile                        # Multi-stage build (Maven → JRE Alpine)
 │
-├── frontend/                             # Angular 18
+├── frontend/                             # Angular 20 + Angular Material 3
 │   ├── src/app/
 │   │   ├── core/                         # Services, guards, interceptors
 │   │   ├── features/                     # auth/, admin/, portfolio/
@@ -244,6 +321,11 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │           ├── kafka.json                # Événements Kafka par topic (Phase 10)
 │           └── cache.json                # Redis hits/misses/évictions (Phase 11)
 │
+├── lambdas/                              # Fonctions AWS Lambda (Node.js 20 ESM)
+│   ├── weekly-report/                    # EventBridge → rapport HTML → SES
+│   ├── image-resize/                     # S3 trigger → Sharp → 3 WebP variants
+│   └── contact-form/                     # API Gateway → validation → SES
+│
 ├── terraform/                            # Infrastructure AWS
 │   ├── modules/
 │   │   ├── vpc/                          # VPC + subnets + IGW
@@ -251,7 +333,10 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   │   ├── security-groups/              # Règles firewall EC2/RDS
 │   │   ├── rds/                          # PostgreSQL RDS Free Tier
 │   │   ├── ec2/                          # Serveur applicatif t2.micro
-│   │   └── cloudwatch/                   # Logs + métriques + alertes
+│   │   ├── cloudwatch/                   # Logs + métriques + alertes
+│   │   ├── lambda-weekly-report/         # IAM + Lambda + EventBridge Scheduler
+│   │   ├── lambda-image-resize/          # IAM + Lambda + S3 bucket + notification
+│   │   └── lambda-contact-form/          # IAM + Lambda + API Gateway HTTP
 │   └── terraform.tfvars.example
 │
 ├── .github/workflows/
@@ -270,6 +355,14 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── PHASE5-Terraform.md
 │   ├── PHASE6-CICD.md
 │   ├── PHASE7-Observability.md
+│   ├── PHASE8-Tests-Backend.md
+│   ├── PHASE9-Tests-Frontend.md
+│   ├── PHASE10-Kafka.md
+│   ├── PHASE11-Redis-Cache.md
+│   ├── PHASE12-DAST.md
+│   ├── PHASE13-Cypress-E2E.md
+│   ├── PHASE14-k6-Load-Tests.md
+│   ├── PHASE15-Lambda-Serverless.md
 │   └── FINOPS-Cost-Analysis.md
 │
 └── Makefile                              # Raccourcis : make up/down/test/test-load/...
@@ -291,4 +384,6 @@ Injectées via GitHub Actions Secrets :
 | `REDIS_PASSWORD` | Mot de passe Redis (vide en dev) |
 | `KAFKA_BOOTSTRAP_SERVERS` | `kafka:9092` en Docker, MSK endpoint en prod |
 | `CORS_ALLOWED_ORIGINS` | Domaine frontend (ex: `https://monapp.duckdns.org`) |
+| `TF_VAR_lambda_sender_email` | Email SES vérifié (expéditeur Lambdas) |
+| `TF_VAR_lambda_recipient_email` | Email de réception des rapports et contacts |
 | `SERVER_PORT` | Port HTTP (défaut : 8080) |

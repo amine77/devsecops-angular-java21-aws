@@ -1,0 +1,5 @@
+# Rapports générés par ZAP (locaux ou CI)
+reports/
+
+# Fichier de token JWT temporaire (créé/supprimé par make test-dast)
+auth-header.txt

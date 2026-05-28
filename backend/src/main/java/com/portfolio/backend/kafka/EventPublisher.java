@@ -44,17 +44,25 @@ public class EventPublisher {
      * @param event l'événement à publier (login réussi ou échoué)
      */
     public void publishLoginEvent(UserLoginEvent event) {
-        kafkaTemplate.send(KafkaTopics.AUTH_EVENTS, event.email(), event)
-            .whenComplete((result, ex) -> {
-                if (ex != null) {
-                    log.warn("Kafka publish failed [topic={}]: {}", KafkaTopics.AUTH_EVENTS, ex.getMessage());
-                } else {
-                    metrics.incrementKafkaPublished(KafkaTopics.AUTH_EVENTS, "UserLoginEvent");
-                    log.debug("Event published [topic={}, offset={}]",
-                        KafkaTopics.AUTH_EVENTS,
-                        result.getRecordMetadata().offset());
-                }
-            });
+        Thread.ofVirtual().start(() -> {
+            try {
+                kafkaTemplate.send(KafkaTopics.AUTH_EVENTS, event.email(), event)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.warn("Kafka publish failed [topic={}]: {}",
+                                KafkaTopics.AUTH_EVENTS, ex.getMessage());
+                        } else {
+                            metrics.incrementKafkaPublished(KafkaTopics.AUTH_EVENTS, "UserLoginEvent");
+                            log.debug("Event published [topic={}, offset={}]",
+                                KafkaTopics.AUTH_EVENTS,
+                                result.getRecordMetadata().offset());
+                        }
+                    });
+            } catch (Exception ex) {
+                log.warn("Kafka unavailable, event dropped [topic={}]: {}",
+                    KafkaTopics.AUTH_EVENTS, ex.getMessage());
+            }
+        });
     }
 
     /**
@@ -64,16 +72,24 @@ public class EventPublisher {
      */
     public void publishProjectCreatedEvent(ProjectCreatedEvent event) {
         String key = event.projectId().toString();
-        kafkaTemplate.send(KafkaTopics.PROJECT_EVENTS, key, event)
-            .whenComplete((result, ex) -> {
-                if (ex != null) {
-                    log.warn("Kafka publish failed [topic={}]: {}", KafkaTopics.PROJECT_EVENTS, ex.getMessage());
-                } else {
-                    metrics.incrementKafkaPublished(KafkaTopics.PROJECT_EVENTS, "ProjectCreatedEvent");
-                    log.debug("Event published [topic={}, offset={}]",
-                        KafkaTopics.PROJECT_EVENTS,
-                        result.getRecordMetadata().offset());
-                }
-            });
+        Thread.ofVirtual().start(() -> {
+            try {
+                kafkaTemplate.send(KafkaTopics.PROJECT_EVENTS, key, event)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.warn("Kafka publish failed [topic={}]: {}",
+                                KafkaTopics.PROJECT_EVENTS, ex.getMessage());
+                        } else {
+                            metrics.incrementKafkaPublished(KafkaTopics.PROJECT_EVENTS, "ProjectCreatedEvent");
+                            log.debug("Event published [topic={}, offset={}]",
+                                KafkaTopics.PROJECT_EVENTS,
+                                result.getRecordMetadata().offset());
+                        }
+                    });
+            } catch (Exception ex) {
+                log.warn("Kafka unavailable, event dropped [topic={}]: {}",
+                    KafkaTopics.PROJECT_EVENTS, ex.getMessage());
+            }
+        });
     }
 }

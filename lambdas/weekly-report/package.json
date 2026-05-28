@@ -1,0 +1,10 @@
+{
+  "name": "portfolio-lambda-weekly-report",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda : rapport hebdomadaire portfolio → SES",
+  "main": "index.mjs",
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.787.0"
+  }
+}

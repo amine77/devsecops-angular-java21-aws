@@ -1,0 +1,10 @@
+{
+  "name": "portfolio-lambda-contact-form",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda : formulaire de contact → SES via API Gateway HTTP",
+  "main": "index.mjs",
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.787.0"
+  }
+}

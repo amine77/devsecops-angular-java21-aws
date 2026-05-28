@@ -46,9 +46,11 @@ TF_VARS          ?= $(TF_DIR)/terraform.tfvars
         push-ecr push-backend push-frontend \
         clean clean-containers clean-volumes clean-images \
         db-connect shell-backend shell-frontend \
-        trivy-scan security-check \
+        trivy-scan security-check test-dast test-dast-baseline \
         status health \
-        tf-init tf-validate tf-plan tf-apply tf-destroy tf-output tf-fmt
+        tf-init tf-validate tf-plan tf-apply tf-destroy tf-output tf-fmt \
+        lambda-build lambda-build-weekly-report lambda-build-image-resize lambda-build-contact-form \
+        lambda-invoke-weekly-report lambda-test-contact ses-verify
 
 # =============================================================================
 # AIDE — cible par défaut
@@ -272,6 +274,58 @@ push-frontend: ## Tag et push l'image frontend sur ECR
 # =============================================================================
 # SÉCURITÉ — Scan et hardening
 # =============================================================================
+test-dast: ## Lance OWASP ZAP API scan contre le backend local (prérequis: backend démarré + JWT token)
+	@echo "$(CYAN)▶ DAST — OWASP ZAP API Scan...$(RESET)"
+	@command -v docker >/dev/null 2>&1 || (echo "$(RED)✘ Docker requis pour ZAP$(RESET)" && exit 1)
+	@if [ -z "$$(curl -sf http://localhost:8080/actuator/health/readiness 2>/dev/null)" ]; then \
+		echo "$(RED)✘ Backend non démarré. Lancer : make up  ou  mvn spring-boot:run$(RESET)"; \
+		exit 1; \
+	fi
+	@echo "$(CYAN)  Obtention du token JWT admin...$(RESET)"
+	@mkdir -p zap/reports
+	@TOKEN=$$(curl -sf -X POST http://localhost:8080/auth/login \
+		-H "Content-Type: application/json" \
+		-d '{"email":"admin@portfolio.dev","password":"Admin@2024!"}' \
+		| python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])" 2>/dev/null); \
+	if [ -z "$$TOKEN" ]; then \
+		echo "$(RED)✘ Impossible d'obtenir le token JWT$(RESET)"; \
+		exit 1; \
+	fi; \
+	echo "Authorization: Bearer $$TOKEN" > zap/auth-header.txt; \
+	echo "Content-Type: application/json" >> zap/auth-header.txt; \
+	echo "$(CYAN)  Démarrage du scan ZAP API (OpenAPI)...$(RESET)"; \
+	docker run --rm \
+		--network host \
+		-v $$(pwd)/zap:/zap/wrk/:rw \
+		ghcr.io/zaproxy/zaproxy:stable \
+		zap-api-scan.py \
+		-t http://localhost:8080/v3/api-docs \
+		-f openapi \
+		-H /zap/wrk/auth-header.txt \
+		-c /zap/wrk/zap-rules.tsv \
+		-r /zap/wrk/reports/zap-report.html \
+		-J /zap/wrk/reports/zap-report.json \
+		2>&1; \
+	rm -f zap/auth-header.txt
+	@echo "$(GREEN)✔ Scan DAST terminé$(RESET)"
+	@echo "  Rapport HTML : zap/reports/zap-report.html"
+	@echo "  Rapport JSON : zap/reports/zap-report.json"
+
+test-dast-baseline: ## Lance ZAP Baseline (scan passif uniquement, plus rapide)
+	@echo "$(CYAN)▶ DAST — OWASP ZAP Baseline (passif)...$(RESET)"
+	@command -v docker >/dev/null 2>&1 || (echo "$(RED)✘ Docker requis pour ZAP$(RESET)" && exit 1)
+	@mkdir -p zap/reports
+	docker run --rm \
+		--network host \
+		-v $$(pwd)/zap:/zap/wrk/:rw \
+		ghcr.io/zaproxy/zaproxy:stable \
+		zap-baseline.py \
+		-t http://localhost:8080 \
+		-c /zap/wrk/zap-rules.tsv \
+		-r /zap/wrk/reports/zap-baseline.html \
+		2>&1
+	@echo "$(GREEN)✔ Baseline terminé : zap/reports/zap-baseline.html$(RESET)"
+
 trivy-scan: ## Scanne les 2 images avec Trivy (vulnérabilités)
 	@echo "$(CYAN)▶ Scan Trivy backend...$(RESET)"
 	trivy image --exit-code 1 --severity HIGH,CRITICAL portfolio-backend:$(IMAGE_TAG)
@@ -402,6 +456,60 @@ tf-ssh: ## SSH vers l'EC2 via les outputs Terraform
 	@EC2_IP=$$(cd $(TF_DIR) && terraform output -raw ec2_public_ip 2>/dev/null); \
 	KEY=$$(cd $(TF_DIR) && terraform output -raw ec2_key_name 2>/dev/null || echo "portfolio-key"); \
 	ssh -i ~/.ssh/$${KEY}.pem ec2-user@$$EC2_IP
+
+# =============================================================================
+# LAMBDA — Fonctions serverless
+# =============================================================================
+lambda-build: lambda-build-weekly-report lambda-build-image-resize lambda-build-contact-form ## Build toutes les fonctions Lambda (npm ci)
+	@echo "$(GREEN)✔ Toutes les fonctions Lambda buildées$(RESET)"
+
+lambda-build-weekly-report: ## Build la Lambda weekly-report (npm ci --omit=dev)
+	@echo "$(CYAN)▶ Build Lambda weekly-report...$(RESET)"
+	@command -v node >/dev/null 2>&1 || (echo "$(RED)✘ Node.js requis$(RESET)" && exit 1)
+	cd lambdas/weekly-report && npm ci --omit=dev
+	@echo "$(GREEN)✔ Lambda weekly-report buildée$(RESET)"
+
+lambda-build-image-resize: ## Build la Lambda image-resize (sharp binaire Linux x86_64)
+	@echo "$(CYAN)▶ Build Lambda image-resize...$(RESET)"
+	@command -v node >/dev/null 2>&1 || (echo "$(RED)✘ Node.js requis$(RESET)" && exit 1)
+	cd lambdas/image-resize && npm ci --omit=dev \
+		--platform=linux --arch=x64 --libc=glibc
+	@echo "$(GREEN)✔ Lambda image-resize buildée (sharp Linux x86_64)$(RESET)"
+
+lambda-build-contact-form: ## Build la Lambda contact-form (npm ci --omit=dev)
+	@echo "$(CYAN)▶ Build Lambda contact-form...$(RESET)"
+	@command -v node >/dev/null 2>&1 || (echo "$(RED)✘ Node.js requis$(RESET)" && exit 1)
+	cd lambdas/contact-form && npm ci --omit=dev
+	@echo "$(GREEN)✔ Lambda contact-form buildée$(RESET)"
+
+lambda-invoke-weekly-report: ## Invoque la Lambda weekly-report manuellement (test AWS)
+	@echo "$(CYAN)▶ Invocation Lambda weekly-report...$(RESET)"
+	@FUNC=$$(cd $(TF_DIR) && terraform output -raw lambda_weekly_report_function_name 2>/dev/null || echo "portfolio-dev-weekly-report"); \
+	aws lambda invoke \
+		--function-name $$FUNC \
+		--region $(AWS_REGION) \
+		--log-type Tail \
+		--cli-binary-format raw-in-base64-out \
+		/tmp/lambda-response.json \
+		| python3 -c "import sys,json,base64; r=json.load(sys.stdin); print(base64.b64decode(r.get('LogResult','')).decode())" 2>/dev/null; \
+	echo "$(GREEN)✔ Réponse :$(RESET)" && cat /tmp/lambda-response.json
+
+lambda-test-contact: ## Teste le formulaire de contact via curl (API Gateway déployée)
+	@echo "$(CYAN)▶ Test formulaire de contact...$(RESET)"
+	@API=$$(cd $(TF_DIR) && terraform output -raw contact_api_endpoint 2>/dev/null); \
+	test -n "$$API" || (echo "$(RED)✘ Déployer Terraform d'abord$(RESET)" && exit 1); \
+	curl -s -X POST "$$API" \
+		-H "Content-Type: application/json" \
+		-d '{"name":"Test CI","email":"test@example.com","message":"Message de test depuis le Makefile."}' \
+		| python3 -m json.tool
+
+ses-verify: ## Vérifie les 2 adresses email dans SES (sandbox uniquement)
+	@echo "$(CYAN)▶ Vérification des emails SES...$(RESET)"
+	@test -n "$(SENDER_EMAIL)"    || (echo "$(RED)✘ SENDER_EMAIL non défini$(RESET)" && exit 1)
+	@test -n "$(RECIPIENT_EMAIL)" || (echo "$(RED)✘ RECIPIENT_EMAIL non défini$(RESET)" && exit 1)
+	aws ses verify-email-identity --email-address $(SENDER_EMAIL)    --region $(AWS_REGION)
+	aws ses verify-email-identity --email-address $(RECIPIENT_EMAIL) --region $(AWS_REGION)
+	@echo "$(YELLOW)⚠ Ouvre les emails de vérification reçus et clique sur les liens$(RESET)"
 
 inspect-network: ## Inspecte le réseau Docker du projet
 	docker network inspect portfolio-network

@@ -7,6 +7,7 @@ import com.portfolio.backend.dto.response.ProjectResponse;
 import com.portfolio.backend.entity.Project;
 import com.portfolio.backend.entity.ProjectStatus;
 import com.portfolio.backend.entity.Skill;
+import com.portfolio.backend.entity.User;
 import com.portfolio.backend.exception.ResourceNotFoundException;
 import com.portfolio.backend.kafka.EventPublisher;
 import com.portfolio.backend.kafka.event.ProjectCreatedEvent;
@@ -118,6 +119,7 @@ public class ProjectService {
     public ProjectResponse createProject(ProjectRequest request) {
         log.info("Création d'un nouveau projet: {}", request.title());
 
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         List<Skill> skills = resolveSkills(request.skillIds());
 
         Project project = Project.builder()
@@ -131,6 +133,7 @@ public class ProjectService {
             .sortOrder(request.sortOrder() != null ? request.sortOrder() : 0)
             .status(ProjectStatus.ACTIVE)
             .skills(skills)
+            .user(currentUser)
             .build();
 
         Project savedProject = projectRepository.save(project);
