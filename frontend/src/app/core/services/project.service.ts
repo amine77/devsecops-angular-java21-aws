@@ -55,16 +55,12 @@ export class ProjectService {
 
   /** Détail d'un projet par ID. */
   getProjectById(id: number): Observable<Project> {
-    return this.http
-      .get<ApiResponse<Project>>(`${this.baseUrl}/${id}`)
-      .pipe(map((r) => r.data!));
+    return this.http.get<ApiResponse<Project>>(`${this.baseUrl}/${id}`).pipe(map((r) => r.data!));
   }
 
   /** Crée un projet (ADMIN). */
   createProject(data: ProjectFormData): Observable<Project> {
-    return this.http
-      .post<ApiResponse<Project>>(this.baseUrl, data)
-      .pipe(map((r) => r.data!));
+    return this.http.post<ApiResponse<Project>>(this.baseUrl, data).pipe(map((r) => r.data!));
   }
 
   /** Met à jour un projet (ADMIN). */

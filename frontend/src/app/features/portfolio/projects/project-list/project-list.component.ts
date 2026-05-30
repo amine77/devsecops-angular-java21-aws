@@ -13,17 +13,18 @@ import { Project } from '@shared/models/project.model';
  * qui rappellent l'API avec les bons paramètres.
  */
 @Component({
-    selector: 'app-project-list',
-    imports: [ProjectCardComponent, LoadingSpinnerComponent],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-project-list',
+  imports: [ProjectCardComponent, LoadingSpinnerComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <div class="section projects-page">
       <div class="container">
-
         <!-- Page header -->
         <div class="projects-header">
           <div>
-            <h1 class="section-title" style="text-align:left; margin-bottom: 0.5rem">Mes projets</h1>
+            <h1 class="section-title" style="text-align:left; margin-bottom: 0.5rem">
+              Mes projets
+            </h1>
             <p class="section-subtitle" style="text-align:left; margin-bottom: 0">
               Applications cloud native · Infrastructure as Code · DevSecOps
             </p>
@@ -68,58 +69,62 @@ import { Project } from '@shared/models/project.model';
             </nav>
           }
         }
-
       </div>
     </div>
   `,
-    styles: [`
-    .projects-header {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      margin-bottom: var(--spacing-2xl);
-      gap: var(--spacing-md);
-    }
-    .projects-count {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-sm);
-      padding: 0.375rem 0.875rem;
-      flex-shrink: 0;
-    }
-    .error-state {
-      text-align: center;
-      padding: var(--spacing-3xl);
-      color: var(--color-text-secondary);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--spacing-md);
-    }
-    .error-state__icon {
-      font-size: 2.5rem;
-      color: var(--color-warning);
-    }
-    .empty-state {
-      text-align: center;
-      padding: var(--spacing-3xl);
-      color: var(--color-text-secondary);
-    }
-    .pagination {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-2xl);
-    }
-    .pagination__info {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-secondary);
-      font-family: var(--font-mono);
-    }
-    @media (max-width: 640px) {
-      .projects-header { flex-direction: column; align-items: flex-start; }
-    }
-  `]
+  styles: [
+    `
+      .projects-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: var(--spacing-2xl);
+        gap: var(--spacing-md);
+      }
+      .projects-count {
+        font-family: var(--font-mono);
+        font-size: var(--font-size-sm);
+        padding: 0.375rem 0.875rem;
+        flex-shrink: 0;
+      }
+      .error-state {
+        text-align: center;
+        padding: var(--spacing-3xl);
+        color: var(--color-text-secondary);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-md);
+      }
+      .error-state__icon {
+        font-size: 2.5rem;
+        color: var(--color-warning);
+      }
+      .empty-state {
+        text-align: center;
+        padding: var(--spacing-3xl);
+        color: var(--color-text-secondary);
+      }
+      .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-lg);
+        margin-top: var(--spacing-2xl);
+      }
+      .pagination__info {
+        font-size: var(--font-size-sm);
+        color: var(--color-text-secondary);
+        font-family: var(--font-mono);
+      }
+      @media (max-width: 640px) {
+        .projects-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    `,
+  ],
 })
 export class ProjectListComponent implements OnInit {
   private readonly projectService = inject(ProjectService);

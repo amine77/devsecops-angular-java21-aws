@@ -18,25 +18,27 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
       }
     </div>
   `,
-  styles: [`
-    .spinner-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: var(--spacing-md);
-      padding: var(--spacing-2xl);
+  styles: [
+    `
+      .spinner-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-2xl);
 
-      &--full {
-        min-height: calc(100vh - var(--navbar-height));
+        &--full {
+          min-height: calc(100vh - var(--navbar-height));
+        }
       }
-    }
 
-    .spinner-message {
-      color: var(--color-text-secondary);
-      font-size: var(--font-size-sm);
-    }
-  `],
+      .spinner-message {
+        color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+      }
+    `,
+  ],
 })
 export class LoadingSpinnerComponent {
   @Input() message?: string;

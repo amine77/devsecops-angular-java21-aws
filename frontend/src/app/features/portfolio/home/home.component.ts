@@ -24,11 +24,11 @@ import { Project } from '@shared/models/project.model';
  * Le signal est mis à jour dans le callback next/error de subscribe.
  */
 @Component({
-    selector: 'app-home',
-    imports: [RouterLink, ProjectCardComponent, LoadingSpinnerComponent],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    templateUrl: './home.component.html',
-    styleUrl: './home.component.scss'
+  selector: 'app-home',
+  imports: [RouterLink, ProjectCardComponent, LoadingSpinnerComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './home.component.html',
+  styleUrl: './home.component.scss',
 })
 export class HomeComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
@@ -38,12 +38,20 @@ export class HomeComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
 
   protected readonly techStack = [
-    'Angular 20', 'Spring Boot', 'Java 21', 'PostgreSQL',
-    'Docker', 'Kubernetes', 'Helm', 'Terraform', 'AWS', 'GitHub Actions',
+    'Angular 20',
+    'Spring Boot',
+    'Java 21',
+    'PostgreSQL',
+    'Docker',
+    'Kubernetes',
+    'Helm',
+    'Terraform',
+    'AWS',
+    'GitHub Actions',
   ];
 
   protected readonly stats = [
-    { value: '5+', label: 'Ans d\'expérience' },
+    { value: '5+', label: "Ans d'expérience" },
     { value: '15+', label: 'Projets livrés' },
     { value: '10+', label: 'Technologies maîtrisées' },
     { value: '100%', label: 'Passion du code' },

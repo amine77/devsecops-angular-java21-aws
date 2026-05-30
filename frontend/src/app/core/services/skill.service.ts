@@ -14,16 +14,12 @@ export class SkillService {
 
   /** Toutes les compétences (triées par catégorie). */
   getAllSkills(): Observable<Skill[]> {
-    return this.http
-      .get<ApiResponse<Skill[]>>(this.baseUrl)
-      .pipe(map((r) => r.data!));
+    return this.http.get<ApiResponse<Skill[]>>(this.baseUrl).pipe(map((r) => r.data!));
   }
 
   /** Compétences filtrées par catégorie. */
   getSkillsByCategory(category: SkillCategory): Observable<Skill[]> {
     const params = new HttpParams().set('category', category);
-    return this.http
-      .get<ApiResponse<Skill[]>>(this.baseUrl, { params })
-      .pipe(map((r) => r.data!));
+    return this.http.get<ApiResponse<Skill[]>>(this.baseUrl, { params }).pipe(map((r) => r.data!));
   }
 }

@@ -30,7 +30,6 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
   template: `
     <div class="section">
       <div class="container">
-
         <div class="dashboard-header">
           <div>
             <h1>Dashboard Admin</h1>
@@ -49,7 +48,6 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
         } @else {
           <div class="mat-elevation-z2">
             <table mat-table [dataSource]="projects()" class="dashboard-table">
-
               <ng-container matColumnDef="title">
                 <th mat-header-cell *matHeaderCellDef>Titre</th>
                 <td mat-cell *matCellDef="let p">{{ p.title }}</td>
@@ -96,38 +94,62 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="columns"></tr>
-              <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+              <tr mat-row *matRowDef="let row; columns: columns"></tr>
 
               <tr class="mat-row" *matNoDataRow>
-                <td class="mat-cell no-data" [attr.colspan]="columns.length">
-                  Aucun projet.
-                </td>
+                <td class="mat-cell no-data" [attr.colspan]="columns.length">Aucun projet.</td>
               </tr>
-
             </table>
           </div>
         }
-
       </div>
     </div>
   `,
-  styles: [`
-    .dashboard-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 2rem;
-      p { margin-top: 0.25rem; color: var(--color-text-secondary); }
-    }
-    .dashboard-loading { display: flex; justify-content: center; padding: 3rem; }
-    .dashboard-table { width: 100%; }
-    .actions-cell { display: flex; gap: 0.25rem; }
-    .no-data { text-align: center; padding: 2rem !important; color: var(--color-text-muted); }
-    .chip-active   { --mdc-chip-label-text-color: #34d399; background: rgba(16,185,129,.15) !important; }
-    .chip-archived { --mdc-chip-label-text-color: #fbbf24; background: rgba(245,158,11,.15) !important; }
-    .icon-star  { color: #fbbf24; }
-    .icon-muted { color: var(--color-text-muted); }
-  `],
+  styles: [
+    `
+      .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        p {
+          margin-top: 0.25rem;
+          color: var(--color-text-secondary);
+        }
+      }
+      .dashboard-loading {
+        display: flex;
+        justify-content: center;
+        padding: 3rem;
+      }
+      .dashboard-table {
+        width: 100%;
+      }
+      .actions-cell {
+        display: flex;
+        gap: 0.25rem;
+      }
+      .no-data {
+        text-align: center;
+        padding: 2rem !important;
+        color: var(--color-text-muted);
+      }
+      .chip-active {
+        --mdc-chip-label-text-color: #34d399;
+        background: rgba(16, 185, 129, 0.15) !important;
+      }
+      .chip-archived {
+        --mdc-chip-label-text-color: #fbbf24;
+        background: rgba(245, 158, 11, 0.15) !important;
+      }
+      .icon-star {
+        color: #fbbf24;
+      }
+      .icon-muted {
+        color: var(--color-text-muted);
+      }
+    `,
+  ],
 })
 export class DashboardComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
@@ -167,7 +189,7 @@ export class DashboardComponent implements OnInit {
           this.snackBar.open('Projet archivé.', 'OK', { duration: 3000 });
         },
         error: () => {
-          this.snackBar.open('Erreur lors de l\'archivage.', 'OK', { duration: 4000 });
+          this.snackBar.open("Erreur lors de l'archivage.", 'OK', { duration: 4000 });
         },
       });
     });

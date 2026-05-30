@@ -1,27 +1,55 @@
 /* =========== KEYFRAMES =========== */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fadeInRight {
-  from { opacity: 0; transform: translateX(40px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes orbFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%       { transform: translate(30px, -30px) scale(1.05); }
-  66%       { transform: translate(-20px, 20px) scale(0.96); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -30px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.96);
+  }
 }
 
 @keyframes pingPulse {
-  75%, 100% { transform: scale(2.5); opacity: 0; }
+  75%,
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* =========== ANIMATION CLASSES =========== */
@@ -226,9 +254,15 @@
   height: 12px;
   border-radius: 50%;
 
-  &--red    { background: #ff5f57; }
-  &--yellow { background: #ffbd2e; }
-  &--green  { background: #28c840; }
+  &--red {
+    background: #ff5f57;
+  }
+  &--yellow {
+    background: #ffbd2e;
+  }
+  &--green {
+    background: #28c840;
+  }
 }
 
 .terminal__filename {
@@ -270,12 +304,25 @@
   color: #c9d1d9;
 
   /* GitHub Dark syntax colours */
-  .t-comment { color: #8b949e; font-style: italic; }
-  .t-keyword  { color: #ff7b72; }
-  .t-string   { color: #a5d6ff; }
-  .t-attr     { color: #79c0ff; }
-  .t-value    { color: #7ee787; }
-  .t-number   { color: #f8e3a1; }
+  .t-comment {
+    color: #8b949e;
+    font-style: italic;
+  }
+  .t-keyword {
+    color: #ff7b72;
+  }
+  .t-string {
+    color: #a5d6ff;
+  }
+  .t-attr {
+    color: #79c0ff;
+  }
+  .t-value {
+    color: #7ee787;
+  }
+  .t-number {
+    color: #f8e3a1;
+  }
 }
 
 /* Blinking cursor */
@@ -345,7 +392,9 @@
     grid-template-columns: 1fr;
   }
 
-  .hero__terminal { display: none; }
+  .hero__terminal {
+    display: none;
+  }
 
   .stats__grid {
     grid-template-columns: repeat(2, 1fr);

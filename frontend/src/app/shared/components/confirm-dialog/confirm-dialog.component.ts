@@ -19,11 +19,7 @@ export interface ConfirmDialogData {
     <mat-dialog-content>{{ data.message }}</mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Annuler</button>
-      <button
-        mat-raised-button
-        [color]="data.confirmColor ?? 'primary'"
-        [mat-dialog-close]="true"
-      >
+      <button mat-raised-button [color]="data.confirmColor ?? 'primary'" [mat-dialog-close]="true">
         {{ data.confirmLabel ?? 'Confirmer' }}
       </button>
     </mat-dialog-actions>

@@ -1,10 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -56,11 +50,12 @@ export class LoginComponent implements OnInit {
       void this.router.navigate([this.returnUrl]);
       return;
     }
-    this.returnUrl = (this.route.snapshot.queryParams['returnUrl'] as string | undefined) ?? '/admin';
+    this.returnUrl =
+      (this.route.snapshot.queryParams['returnUrl'] as string | undefined) ?? '/admin';
   }
 
   protected togglePassword(): void {
-    this.hidePassword.update(v => !v);
+    this.hidePassword.update((v) => !v);
   }
 
   onSubmit(): void {

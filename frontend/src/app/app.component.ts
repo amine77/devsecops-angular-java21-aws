@@ -15,27 +15,29 @@ import { FooterComponent } from '@shared/components/footer/footer.component';
  * Raison : performance — Angular ne vérifie pas tout l'arbre de composants à chaque événement.
  */
 @Component({
-    selector: 'app-root',
-    imports: [RouterOutlet, NavbarComponent, FooterComponent],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-root',
+  imports: [RouterOutlet, NavbarComponent, FooterComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <app-navbar />
     <main class="main-content">
       <router-outlet />
     </main>
     <app-footer />
   `,
-    styles: [`
-    :host {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
+  styles: [
+    `
+      :host {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
 
-    .main-content {
-      flex: 1;
-      padding-top: 64px; /* Hauteur de la navbar fixe */
-    }
-  `]
+      .main-content {
+        flex: 1;
+        padding-top: 64px; /* Hauteur de la navbar fixe */
+      }
+    `,
+  ],
 })
 export class AppComponent {}

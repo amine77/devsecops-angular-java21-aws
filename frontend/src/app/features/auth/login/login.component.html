@@ -1,5 +1,4 @@
 <div class="login-page">
-
   <!-- Animated background orbs -->
   <div class="login-bg" aria-hidden="true">
     <div class="login-orb login-orb--1"></div>
@@ -7,15 +6,18 @@
   </div>
 
   <mat-card class="login-card">
-
     <mat-card-header>
       <!-- Security shield icon -->
       <div class="login-shield" aria-hidden="true">
         <svg width="32" height="36" viewBox="0 0 20 22" fill="none">
-          <path d="M10 1L2 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5L10 1z"
-            fill="rgba(59,130,246,0.2)" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round"/>
-          <path d="M7 11l2 2 4-4" stroke="#3b82f6" stroke-width="1.8"
-            stroke-linecap="round" stroke-linejoin="round"/>
+          <path
+            d="M10 1L2 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5L10 1z"
+            fill="rgba(59,130,246,0.2)"
+            stroke="#3b82f6"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          />
+          <path d="M7 11l2 2 4-4" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </div>
       <mat-card-title>Connexion</mat-card-title>
@@ -23,7 +25,6 @@
     </mat-card-header>
 
     <mat-card-content>
-
       @if (errorMessage()) {
         <div class="login-alert" role="alert">
           <mat-icon>warning</mat-icon>
@@ -32,16 +33,9 @@
       }
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
-
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Email</mat-label>
-          <input
-            matInput
-            type="email"
-            formControlName="email"
-            placeholder="admin@portfolio.dev"
-            autocomplete="email"
-          />
+          <input matInput type="email" formControlName="email" placeholder="admin@portfolio.dev" autocomplete="email" />
           <mat-icon matPrefix>email</mat-icon>
           @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('required')) {
             <mat-error>L'email est obligatoire.</mat-error>
@@ -77,13 +71,7 @@
           }
         </mat-form-field>
 
-        <button
-          mat-raised-button
-          color="primary"
-          type="submit"
-          class="login-submit"
-          [disabled]="isLoading()"
-        >
+        <button mat-raised-button color="primary" type="submit" class="login-submit" [disabled]="isLoading()">
           @if (isLoading()) {
             <mat-progress-spinner mode="indeterminate" diameter="18" />
             Connexion en cours...
@@ -91,7 +79,6 @@
             Se connecter
           }
         </button>
-
       </form>
     </mat-card-content>
 
@@ -101,6 +88,5 @@
         Retour au portfolio
       </a>
     </mat-card-actions>
-
   </mat-card>
 </div>

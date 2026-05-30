@@ -3,16 +3,13 @@ import { Routes } from '@angular/router';
 export const portfolioRoutes: Routes = [
   {
     path: '',
-    loadComponent: () =>
-      import('./home/home.component').then((m) => m.HomeComponent),
+    loadComponent: () => import('./home/home.component').then((m) => m.HomeComponent),
     title: 'Portfolio DevSecOps',
   },
   {
     path: 'projects',
     loadComponent: () =>
-      import('./projects/project-list/project-list.component').then(
-        (m) => m.ProjectListComponent
-      ),
+      import('./projects/project-list/project-list.component').then((m) => m.ProjectListComponent),
     title: 'Projets — Portfolio',
   },
   {
@@ -25,8 +22,7 @@ export const portfolioRoutes: Routes = [
   },
   {
     path: 'skills',
-    loadComponent: () =>
-      import('./skills/skills.component').then((m) => m.SkillsComponent),
+    loadComponent: () => import('./skills/skills.component').then((m) => m.SkillsComponent),
     title: 'Compétences — Portfolio',
   },
 ];

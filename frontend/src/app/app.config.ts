@@ -34,13 +34,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideAnimations(),
-    provideRouter(
-      routes,
-      withComponentInputBinding(),
-      withViewTransitions()
-    ),
-    provideHttpClient(
-      withInterceptors([jwtInterceptor, errorInterceptor])
-    ),
+    provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
+    provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
   ],
 };

@@ -75,7 +75,9 @@
   }
 }
 
-.toolbar-spacer { flex: 1; }
+.toolbar-spacer {
+  flex: 1;
+}
 
 .navbar__actions {
   display: flex;
@@ -85,6 +87,11 @@
 }
 
 @media (max-width: 768px) {
-  .navbar__title { display: none; }
-  .navbar__links { margin-left: var(--spacing-xs); gap: 0; }
+  .navbar__title {
+    display: none;
+  }
+  .navbar__links {
+    margin-left: var(--spacing-xs);
+    gap: 0;
+  }
 }

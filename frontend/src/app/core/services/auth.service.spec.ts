@@ -28,7 +28,9 @@ describe('AuthService', () => {
     setItem: jest.fn(),
     getItem: jest.fn().mockReturnValue(null),
     clear: jest.fn(),
-    get userKey() { return 'portfolio_user'; },
+    get userKey() {
+      return 'portfolio_user';
+    },
   };
 
   beforeEach(() => {
@@ -37,10 +39,7 @@ describe('AuthService', () => {
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, RouterTestingModule],
-      providers: [
-        AuthService,
-        { provide: StorageService, useValue: mockStorageService },
-      ],
+      providers: [AuthService, { provide: StorageService, useValue: mockStorageService }],
     });
     service = TestBed.inject(AuthService);
     storageService = TestBed.inject(StorageService) as jest.Mocked<StorageService>;
@@ -77,10 +76,7 @@ describe('AuthService', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [HttpClientTestingModule, RouterTestingModule],
-        providers: [
-          AuthService,
-          { provide: StorageService, useValue: mockStorageService },
-        ],
+        providers: [AuthService, { provide: StorageService, useValue: mockStorageService }],
       });
       const freshService = TestBed.inject(AuthService);
       TestBed.inject(HttpTestingController).verify();
@@ -131,11 +127,13 @@ describe('AuthService', () => {
       expect(service.currentUser()).toEqual(mockUser);
     });
 
-    it('devrait propager l\'erreur HTTP sans modifier l\'état', () => {
+    it("devrait propager l'erreur HTTP sans modifier l'état", () => {
       let caughtError: unknown;
-      service
-        .login({ email: 'bad@test.com', password: 'wrong' })
-        .subscribe({ error: (err) => { caughtError = err; } });
+      service.login({ email: 'bad@test.com', password: 'wrong' }).subscribe({
+        error: (err) => {
+          caughtError = err;
+        },
+      });
 
       const req = httpMock.expectOne((r) => r.url.includes('/auth/login'));
       req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
@@ -146,7 +144,7 @@ describe('AuthService', () => {
       expect(caughtError).toBeDefined();
     });
 
-    it('ne devrait pas modifier l\'état si response.success est false', () => {
+    it("ne devrait pas modifier l'état si response.success est false", () => {
       const failureResponse: ApiResponse<AuthResponse> = {
         success: false,
         message: 'Credentials invalides',

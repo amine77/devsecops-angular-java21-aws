@@ -32,7 +32,6 @@ import { Skill } from '@shared/models/skill.model';
   template: `
     <div class="section">
       <div class="container container--narrow">
-
         <div class="form-header">
           <a routerLink="/admin" mat-icon-button matTooltip="Retour">
             <mat-icon>arrow_back</mat-icon>
@@ -41,7 +40,6 @@ import { Skill } from '@shared/models/skill.model';
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="project-form">
-
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Titre *</mat-label>
             <input matInput formControlName="title" placeholder="Mon super projet" />
@@ -114,58 +112,71 @@ import { Skill } from '@shared/models/skill.model';
               {{ isLoading() ? 'Sauvegarde...' : 'Sauvegarder' }}
             </button>
           </div>
-
         </form>
       </div>
     </div>
   `,
-  styles: [`
-    .container--narrow { max-width: 720px; }
-    .form-header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    .project-form {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .full-width { width: 100%; }
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-    .skills-section { margin: 0.5rem 0; }
-    .skills-label {
-      font-size: 0.875rem;
-      color: var(--color-text-secondary);
-      margin-bottom: 0.5rem;
-    }
-    .skills-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .form-error-banner {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      background: rgba(239,68,68,.12);
-      border: 1px solid rgba(239,68,68,.3);
-      color: #fca5a5;
-      font-size: 0.875rem;
-    }
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 0.5rem;
-    }
-    @media (max-width: 600px) {
-      .form-row { grid-template-columns: 1fr; }
-    }
-  `],
+  styles: [
+    `
+      .container--narrow {
+        max-width: 720px;
+      }
+      .form-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      .project-form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .full-width {
+        width: 100%;
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+      .skills-section {
+        margin: 0.5rem 0;
+      }
+      .skills-label {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        margin-bottom: 0.5rem;
+      }
+      .skills-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .form-error-banner {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+        font-size: 0.875rem;
+      }
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+      }
+      @media (max-width: 600px) {
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    `,
+  ],
 })
 export class ProjectFormComponent implements OnInit {
   @Input() id?: string;
@@ -181,17 +192,19 @@ export class ProjectFormComponent implements OnInit {
   protected readonly allSkills = signal<Skill[]>([]);
   private readonly selectedSkillIds = signal<number[]>([]);
 
-  protected get isEditMode(): boolean { return !!this.id; }
+  protected get isEditMode(): boolean {
+    return !!this.id;
+  }
 
   protected readonly form = this.fb.group({
-    title:       ['', [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
+    title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
     description: ['', [Validators.required, Validators.minLength(10)]],
-    summary:     [''],
-    githubUrl:   [''],
-    demoUrl:     [''],
-    imageUrl:    [''],
-    featured:    [false],
-    sortOrder:   [0],
+    summary: [''],
+    githubUrl: [''],
+    demoUrl: [''],
+    imageUrl: [''],
+    featured: [false],
+    sortOrder: [0],
   });
 
   ngOnInit(): void {
@@ -200,9 +213,14 @@ export class ProjectFormComponent implements OnInit {
     if (this.id) {
       this.projectService.getProjectById(Number(this.id)).subscribe((p) => {
         this.form.patchValue({
-          title: p.title, description: p.description, summary: p.summary ?? '',
-          githubUrl: p.githubUrl ?? '', demoUrl: p.demoUrl ?? '',
-          imageUrl: p.imageUrl ?? '', featured: p.featured, sortOrder: p.sortOrder,
+          title: p.title,
+          description: p.description,
+          summary: p.summary ?? '',
+          githubUrl: p.githubUrl ?? '',
+          demoUrl: p.demoUrl ?? '',
+          imageUrl: p.imageUrl ?? '',
+          featured: p.featured,
+          sortOrder: p.sortOrder,
         });
         this.selectedSkillIds.set(p.skills.map((s) => s.id));
       });
@@ -214,9 +232,7 @@ export class ProjectFormComponent implements OnInit {
   }
 
   protected onSkillChange(id: number, selected: boolean): void {
-    this.selectedSkillIds.update((ids) =>
-      selected ? [...ids, id] : ids.filter((i) => i !== id)
-    );
+    this.selectedSkillIds.update((ids) => (selected ? [...ids, id] : ids.filter((i) => i !== id)));
   }
 
   protected isInvalid(field: string): boolean {
@@ -225,7 +241,10 @@ export class ProjectFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
 
     this.isLoading.set(true);
     this.errorMessage.set(null);

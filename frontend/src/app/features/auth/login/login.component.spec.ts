@@ -81,7 +81,7 @@ describe('LoginComponent', () => {
   });
 
   describe('Gestion des erreurs', () => {
-    it('devrait afficher un message d\'erreur pour 401', () => {
+    it("devrait afficher un message d'erreur pour 401", () => {
       mockAuthService.login.mockReturnValue(
         throwError(() => new HttpErrorResponse({ status: 401 }))
       );
@@ -93,9 +93,7 @@ describe('LoginComponent', () => {
     });
 
     it('devrait afficher un message réseau pour erreur 0', () => {
-      mockAuthService.login.mockReturnValue(
-        throwError(() => new HttpErrorResponse({ status: 0 }))
-      );
+      mockAuthService.login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
 
       component['loginForm'].patchValue({ email: 'test@test.com', password: 'password123' });
       component.onSubmit();
@@ -103,7 +101,7 @@ describe('LoginComponent', () => {
       expect(component['errorMessage']()).toContain('inaccessible');
     });
 
-    it('devrait désactiver le loading en cas d\'erreur', () => {
+    it("devrait désactiver le loading en cas d'erreur", () => {
       mockAuthService.login.mockReturnValue(
         throwError(() => new HttpErrorResponse({ status: 500 }))
       );
@@ -132,7 +130,7 @@ describe('LoginComponent', () => {
       expect(component['loginForm'].get('email')?.hasError('email')).toBe(true);
     });
 
-    it('ne devrait pas avoir d\'erreur avec un email valide', () => {
+    it("ne devrait pas avoir d'erreur avec un email valide", () => {
       component['loginForm'].get('email')?.markAsTouched();
       component['loginForm'].patchValue({ email: 'test@test.com' });
       expect(component['loginForm'].get('email')?.errors).toBeNull();
@@ -156,7 +154,7 @@ describe('LoginComponent', () => {
       expect(component['loginForm'].get('password')?.hasError('minlength')).toBe(true);
     });
 
-    it('ne devrait pas avoir d\'erreur avec un password valide', () => {
+    it("ne devrait pas avoir d'erreur avec un password valide", () => {
       component['loginForm'].get('password')?.markAsTouched();
       component['loginForm'].patchValue({ password: 'validpassword' });
       expect(component['loginForm'].get('password')?.errors).toBeNull();
@@ -164,7 +162,7 @@ describe('LoginComponent', () => {
   });
 
   describe('Redirection si déjà authentifié', () => {
-    it('devrait rediriger vers /admin si l\'utilisateur est déjà connecté', () => {
+    it("devrait rediriger vers /admin si l'utilisateur est déjà connecté", () => {
       mockAuthService.isAuthenticated.mockReturnValue(true);
       const router = TestBed.inject(Router);
       const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
@@ -174,7 +172,7 @@ describe('LoginComponent', () => {
       expect(navigateSpy).toHaveBeenCalledWith(['/admin']);
     });
 
-    it('ne devrait pas rediriger si l\'utilisateur n\'est pas connecté', () => {
+    it("ne devrait pas rediriger si l'utilisateur n'est pas connecté", () => {
       mockAuthService.isAuthenticated.mockReturnValue(false);
       const router = TestBed.inject(Router);
       const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);

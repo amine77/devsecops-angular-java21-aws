@@ -5,7 +5,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { authGuard, adminGuard } from './auth.guard';
 import { AuthService } from '@core/services/auth.service';
 
-describe('Guards d\'authentification', () => {
+describe("Guards d'authentification", () => {
   let router: Router;
   let navigateSpy: jest.SpyInstance;
 
@@ -20,9 +20,7 @@ describe('Guards d\'authentification', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [RouterTestingModule],
-      providers: [
-        { provide: AuthService, useValue: mockAuthService },
-      ],
+      providers: [{ provide: AuthService, useValue: mockAuthService }],
     });
 
     router = TestBed.inject(Router);
@@ -32,12 +30,10 @@ describe('Guards d\'authentification', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('authGuard', () => {
-    it('devrait retourner true si l\'utilisateur est authentifié', () => {
+    it("devrait retourner true si l'utilisateur est authentifié", () => {
       mockAuthService.isAuthenticated.mockReturnValue(true);
 
-      const result = TestBed.runInInjectionContext(() =>
-        authGuard(mockRoute, mockState)
-      );
+      const result = TestBed.runInInjectionContext(() => authGuard(mockRoute, mockState));
 
       expect(result).toBe(true);
       expect(navigateSpy).not.toHaveBeenCalled();
@@ -46,9 +42,7 @@ describe('Guards d\'authentification', () => {
     it('devrait retourner false et rediriger vers /auth/login si non authentifié', () => {
       mockAuthService.isAuthenticated.mockReturnValue(false);
 
-      const result = TestBed.runInInjectionContext(() =>
-        authGuard(mockRoute, mockState)
-      );
+      const result = TestBed.runInInjectionContext(() => authGuard(mockRoute, mockState));
 
       expect(result).toBe(false);
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login'], {
@@ -56,7 +50,7 @@ describe('Guards d\'authentification', () => {
       });
     });
 
-    it('devrait inclure l\'URL courante comme returnUrl', async () => {
+    it("devrait inclure l'URL courante comme returnUrl", async () => {
       mockAuthService.isAuthenticated.mockReturnValue(false);
       const customState = { url: '/admin/projects/edit/42' } as RouterStateSnapshot;
 
@@ -69,12 +63,10 @@ describe('Guards d\'authentification', () => {
   });
 
   describe('adminGuard', () => {
-    it('devrait retourner true si l\'utilisateur est admin', () => {
+    it("devrait retourner true si l'utilisateur est admin", () => {
       mockAuthService.isAdmin.mockReturnValue(true);
 
-      const result = TestBed.runInInjectionContext(() =>
-        adminGuard(mockRoute, mockState)
-      );
+      const result = TestBed.runInInjectionContext(() => adminGuard(mockRoute, mockState));
 
       expect(result).toBe(true);
       expect(navigateSpy).not.toHaveBeenCalled();
@@ -84,9 +76,7 @@ describe('Guards d\'authentification', () => {
       mockAuthService.isAdmin.mockReturnValue(false);
       mockAuthService.isAuthenticated.mockReturnValue(false);
 
-      const result = TestBed.runInInjectionContext(() =>
-        adminGuard(mockRoute, mockState)
-      );
+      const result = TestBed.runInInjectionContext(() => adminGuard(mockRoute, mockState));
 
       expect(result).toBe(false);
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login'], {
@@ -98,9 +88,7 @@ describe('Guards d\'authentification', () => {
       mockAuthService.isAdmin.mockReturnValue(false);
       mockAuthService.isAuthenticated.mockReturnValue(true);
 
-      const result = TestBed.runInInjectionContext(() =>
-        adminGuard(mockRoute, mockState)
-      );
+      const result = TestBed.runInInjectionContext(() => adminGuard(mockRoute, mockState));
 
       expect(result).toBe(false);
       expect(navigateSpy).toHaveBeenCalledWith(['/']);

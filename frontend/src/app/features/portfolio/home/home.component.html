@@ -1,6 +1,5 @@
 <!-- ========== HERO SECTION ========== -->
 <section class="hero">
-
   <!-- Animated gradient orbs -->
   <div class="hero__bg" aria-hidden="true">
     <div class="hero__orb hero__orb--1"></div>
@@ -9,10 +8,8 @@
   </div>
 
   <div class="container">
-
     <!-- Left: Content -->
     <div class="hero__content">
-
       <!-- Availability badge -->
       <div class="hero__availability animate-in">
         <span class="status-dot" aria-hidden="true"></span>
@@ -29,20 +26,28 @@
       </p>
 
       <p class="hero__description animate-in" style="--delay: 300ms">
-        Je construis des applications cloud native, sécurisées et scalables —
-        du code propre jusqu'à l'infrastructure as code.
+        Je construis des applications cloud native, sécurisées et scalables — du code propre jusqu'à l'infrastructure as
+        code.
       </p>
 
       <div class="hero__actions animate-in" style="--delay: 400ms">
         <a routerLink="/portfolio/projects" class="btn btn-primary">
           Voir mes projets
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </a>
-        <a routerLink="/portfolio/skills" class="btn btn-outline">
-          Mes compétences
-        </a>
+        <a routerLink="/portfolio/skills" class="btn btn-outline"> Mes compétences </a>
       </div>
 
       <!-- Tech stack badges with stagger -->
@@ -52,7 +57,6 @@
           <span class="badge badge-blue hero__badge" [style.--badge-delay]="i * 60 + 'ms'">{{ tech }}</span>
         }
       </div>
-
     </div>
 
     <!-- Right: Terminal code block -->
@@ -96,7 +100,6 @@
           <span class="t-attr">memory</span>: <span class="t-string">"512Mi"</span>
           <span class="t-attr">cpu</span>: <span class="t-string">"500m"</span><span class="t-cursor"></span></code></pre>
     </div>
-
   </div>
 </section>
 
@@ -104,9 +107,7 @@
 <section class="section featured">
   <div class="container">
     <h2 class="section-title">Projets en vedette</h2>
-    <p class="section-subtitle">
-      Des projets concrets démontrant mes compétences fullstack et DevOps
-    </p>
+    <p class="section-subtitle">Des projets concrets démontrant mes compétences fullstack et DevOps</p>
 
     @if (isLoading()) {
       <app-loading-spinner message="Chargement des projets..." />
@@ -118,9 +119,7 @@
     } @else if (featuredProjects().length === 0) {
       <div class="empty-state">
         <p>Aucun projet en vedette pour le moment.</p>
-        <a routerLink="/portfolio/projects" class="btn btn-outline">
-          Voir tous les projets
-        </a>
+        <a routerLink="/portfolio/projects" class="btn btn-outline"> Voir tous les projets </a>
       </div>
     } @else {
       <div class="grid-projects">
@@ -130,9 +129,7 @@
       </div>
 
       <div class="featured__cta">
-        <a routerLink="/portfolio/projects" class="btn btn-outline">
-          Voir tous les projets →
-        </a>
+        <a routerLink="/portfolio/projects" class="btn btn-outline"> Voir tous les projets → </a>
       </div>
     }
   </div>

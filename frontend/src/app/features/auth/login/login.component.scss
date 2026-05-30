@@ -1,6 +1,11 @@
 @keyframes orbFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%       { transform: translate(20px, -20px) scale(1.06); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, -20px) scale(1.06);
+  }
 }
 
 /* =========== PAGE =========== */
@@ -73,7 +78,9 @@
     margin-top: var(--spacing-sm);
   }
 
-  mat-card-subtitle { text-align: center; }
+  mat-card-subtitle {
+    text-align: center;
+  }
 }
 
 /* =========== SHIELD =========== */
@@ -111,9 +118,13 @@
 }
 
 /* =========== FORM =========== */
-.full-width { width: 100%; }
+.full-width {
+  width: 100%;
+}
 
-.login-footer { justify-content: center; }
+.login-footer {
+  justify-content: center;
+}
 
 .login-submit {
   width: 100%;
@@ -124,5 +135,7 @@
   justify-content: center;
   gap: var(--spacing-sm);
 
-  mat-progress-spinner { display: inline-flex; }
+  mat-progress-spinner {
+    display: inline-flex;
+  }
 }
