@@ -121,7 +121,7 @@ jobs:
             --output-file ../sbom-frontend-cyclonedx.json \
             --spec-version 1.5 \
             --flatten-components \
-            --package-lock-only
+            --ignore-npm-errors
 
       - name: Upload SBOM frontend
         uses: actions/upload-artifact@v4
