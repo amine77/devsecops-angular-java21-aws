@@ -120,7 +120,8 @@ jobs:
             --output-format JSON \
             --output-file ../sbom-frontend-cyclonedx.json \
             --spec-version 1.5 \
-            --flatten-components
+            --flatten-components \
+            --package-lock-only
 
       - name: Upload SBOM frontend
         uses: actions/upload-artifact@v4
