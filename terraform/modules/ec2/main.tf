@@ -140,20 +140,37 @@ resource "aws_instance" "main" {
   key_name               = var.key_name
   iam_instance_profile   = aws_iam_instance_profile.ec2.name
 
-  # Root volume : 20 GB gp3 (plus performant que gp2 à même coût)
+  # Root volume
+  # - Docker Compose (Phase 6) : 20GB suffisent
+  # - K3s (Phase 20) : 28GB pour OS + SWAP file 4GB + images containers K3s/ArgoCD
+  #   Note : Free Tier = 30GB EBS, donc 28GB laisse 2GB de marge
   root_block_device {
     volume_type           = "gp3"
-    volume_size           = 20
-    encrypted             = true # Chiffrement at-rest
+    volume_size           = var.deployment_mode == "k3s" ? 28 : 20
+    encrypted             = true
     delete_on_termination = true
     tags = {
       Name = "${var.name_prefix}-root-volume"
     }
   }
 
-  # User data : script de bootstrap (exécuté au premier démarrage)
-  # templatefile() injecte les variables Terraform dans le script shell
-  user_data = templatefile("${path.module}/user-data.sh.tpl", {
+  # User data : script de bootstrap sélectionné selon deployment_mode
+  #   "docker" → user-data.sh.tpl    : Docker Compose (Phase 6 — Free Tier)
+  #   "k3s"   → user-data-k3s.sh.tpl : K3s + ArgoCD (Phase 20 — Free Tier avec SWAP)
+  user_data = var.deployment_mode == "k3s" ? templatefile("${path.module}/user-data-k3s.sh.tpl", {
+    aws_region             = var.aws_region
+    ecr_backend_url        = var.ecr_backend_url
+    ecr_frontend_url       = var.ecr_frontend_url
+    rds_host               = var.rds_host
+    rds_port               = var.rds_port
+    db_name                = var.db_name
+    db_username            = var.db_username
+    db_password            = var.db_password
+    jwt_secret             = var.jwt_secret
+    environment            = var.environment
+    github_repo            = var.github_repo
+    argocd_admin_password  = var.argocd_admin_password
+  }) : templatefile("${path.module}/user-data.sh.tpl", {
     aws_region       = var.aws_region
     ecr_backend_url  = var.ecr_backend_url
     ecr_frontend_url = var.ecr_frontend_url

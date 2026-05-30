@@ -127,6 +127,13 @@ module "ec2" {
   db_password = var.db_password
   jwt_secret  = var.jwt_secret
 
+  # Phase 20 — K3s GitOps (Free Tier Kubernetes)
+  # deployment_mode = "k3s"   → K3s + ArgoCD + SWAP 4GB
+  # deployment_mode = "docker" → Docker Compose (comportement Phase 6)
+  deployment_mode       = var.deployment_mode
+  github_repo           = var.github_repo
+  argocd_admin_password = var.argocd_admin_password
+
   depends_on = [module.rds]
 }
 

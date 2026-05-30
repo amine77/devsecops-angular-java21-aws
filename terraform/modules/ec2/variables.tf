@@ -19,9 +19,33 @@ variable "security_group_id" {
 }
 
 variable "instance_type" {
-  description = "EC2 instance type (t2.micro = Free Tier)"
+  description = "EC2 instance type (t3.micro = Free Tier, meilleur réseau que t2.micro)"
   type        = string
-  default     = "t2.micro"
+  default     = "t3.micro"
+}
+
+variable "deployment_mode" {
+  description = "Mode de déploiement : 'docker' (Compose, Phase 6) ou 'k3s' (Kubernetes, Phase 20)"
+  type        = string
+  default     = "k3s"
+
+  validation {
+    condition     = contains(["docker", "k3s"], var.deployment_mode)
+    error_message = "deployment_mode doit être 'docker' ou 'k3s'."
+  }
+}
+
+variable "github_repo" {
+  description = "URL GitHub du repo pour ArgoCD (mode k3s uniquement)"
+  type        = string
+  default     = "https://github.com/amine77/devsecops-angular-java21-aws.git"
+}
+
+variable "argocd_admin_password" {
+  description = "Mot de passe admin ArgoCD (mode k3s uniquement)"
+  type        = string
+  sensitive   = true
+  default     = ""
 }
 
 variable "key_name" {

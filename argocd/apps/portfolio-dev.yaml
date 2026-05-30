@@ -23,12 +23,14 @@ spec:
     targetRevision: main
     path: helm/portfolio             # ← Chart Helm (Phase 19)
     helm:
-      # valueFiles sont mergés dans l'ordre : values.yaml PUIS values-dev.yaml
-      # values-dev.yaml contient le tag SHA mis à jour par ci-gitops.yml
+      # valueFiles mergés dans l'ordre :
+      #   1. values.yaml      → valeurs par défaut (2 replicas, resources)
+      #   2. values-k3s.yaml  → contraintes t3.micro (1 replica, Xmx256m, Traefik)
+      #   3. values-dev.yaml  → tag SHA mis à jour par ci-gitops.yml
       valueFiles:
         - values.yaml
+        - values-k3s.yaml
         - values-dev.yaml
-      # Désactiver le release name prefix dans les noms de ressources
       releaseName: portfolio
 
   # -----------------------------------------------------------------------

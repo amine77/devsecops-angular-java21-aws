@@ -239,3 +239,39 @@ variable "jwt_secret" {
     error_message = "JWT secret must be at least 32 characters (256 bits for HS256)."
   }
 }
+
+# =============================================================================
+# PHASE 20 — K3s GitOps (Free Tier Kubernetes)
+# =============================================================================
+
+variable "deployment_mode" {
+  description = <<-EOT
+    Mode de déploiement de l'EC2 :
+      "docker" → Docker Compose (Phase 6 — simple, stable)
+      "k3s"    → K3s + ArgoCD GitOps (Phase 20 — Kubernetes Free Tier avec SWAP)
+  EOT
+  type    = string
+  default = "k3s"
+
+  validation {
+    condition     = contains(["docker", "k3s"], var.deployment_mode)
+    error_message = "deployment_mode doit être 'docker' ou 'k3s'."
+  }
+}
+
+variable "github_repo" {
+  description = "URL du dépôt GitHub pour ArgoCD (mode k3s uniquement)"
+  type        = string
+  default     = "https://github.com/amine77/devsecops-angular-java21-aws.git"
+}
+
+variable "argocd_admin_password" {
+  description = <<-EOT
+    Mot de passe admin ArgoCD (mode k3s uniquement).
+    Affiché dans l'UI ArgoCD et nécessaire pour argocd CLI login.
+    Generate: openssl rand -base64 16
+  EOT
+  type      = string
+  sensitive = true
+  default   = ""
+}

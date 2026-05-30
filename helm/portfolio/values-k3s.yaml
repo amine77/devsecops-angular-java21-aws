@@ -1,0 +1,71 @@
+# =============================================================================
+# VALUES K3S — Override pour déploiement sur EC2 t3.micro Free Tier
+# =============================================================================
+# Utilisé avec ArgoCD sur K3s single-node (1GB RAM + 4GB SWAP).
+# Surcharge values.yaml avec des contraintes mémoire strictes.
+#
+# Fusionné par ArgoCD : values.yaml + values-k3s.yaml
+# (values-k3s.yaml prend la priorité sur les valeurs en conflit)
+# =============================================================================
+
+backend:
+  image:
+    tag: latest          # ← CI-GITOPS remplace par sha-XXXXXXX
+  replicas: 1            # 1 seul replica — RAM insuffisante pour 2
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "384Mi"    # Spring Boot avec -Xmx256m + Metaspace ~100MB
+      cpu: "500m"
+
+  # JVM flags contraints pour t3.micro
+  # -Xmx256m          : heap max 256MB (vs 512MB par défaut)
+  # -Xms64m           : heap initial minimal (évite la réservation immédiate)
+  # -XX:MaxMetaspaceSize=120m : limite Metaspace (classes chargées)
+  # -Xss256k          : stack threads réduit (vs 512k par défaut)
+  # -XX:+UseG1GC      : GC le plus adapté aux petites heaps
+  # -XX:MaxGCPauseMillis=200 : GC pause max (acceptable sur SWAP)
+  config:
+    SPRING_PROFILES_ACTIVE: "prod"
+    SPRING_KAFKA_LISTENER_AUTO_STARTUP: "false"
+    SPRING_KAFKA_ADMIN_AUTO_CREATE: "false"
+    SERVER_PORT: "8080"
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus,metrics"
+    MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+    MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "always"
+    JWT_EXPIRATION_MS: "86400000"
+    JAVA_TOOL_OPTIONS: >-
+      -Xmx256m
+      -Xms64m
+      -XX:MaxMetaspaceSize=120m
+      -Xss256k
+      -XX:+UseG1GC
+      -XX:MaxGCPauseMillis=200
+      -XX:+ExitOnOutOfMemoryError
+      -Djava.security.egd=file:/dev/./urandom
+
+frontend:
+  image:
+    tag: latest          # ← CI-GITOPS remplace par sha-XXXXXXX
+  replicas: 1
+
+ingress:
+  # K3s embarque Traefik (pas NGINX Ingress)
+  className: traefik
+  host: portfolio.local  # ← Remplacer par l'Elastic IP ou domaine réel
+  annotations:
+    # Annotations Traefik (différentes de NGINX)
+    traefik.ingress.kubernetes.io/router.entrypoints: "web"
+    # Rewrite /api/* → /* pour le backend
+    traefik.ingress.kubernetes.io/router.middlewares: "portfolio-dev-strip-api@kubernetescrd"
+  tls:
+    enabled: false       # HTTP uniquement (TLS via cert-manager à ajouter après)
+
+# Pas d'HPA ni PDB sur une instance single-node
+hpa:
+  enabled: false
+
+pdb:
+  enabled: false

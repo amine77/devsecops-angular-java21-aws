@@ -370,6 +370,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── PHASE17-Design-UX-AI.md
 │   ├── PHASE18-ArgoCD-GitOps.md
 │   ├── PHASE19-Helm.md
+│   ├── PHASE20-FreeTier-K3s.md
 │   └── FINOPS-Cost-Analysis.md
 │
 ├── k8s/                                  # Manifests Kubernetes — GitOps (Phase 18)
@@ -398,6 +399,32 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │
 └── Makefile                              # Raccourcis : make up/down/test/test-load/...
 ```
+
+---
+
+## ☁️ Phase 20 — Free Tier Kubernetes : EC2 t3.micro + SWAP + K3s
+
+Déploiement Kubernetes **~$0/mois** sur AWS Free Tier (12 premiers mois) grâce à un SWAP
+de 4GB qui compense la RAM limitée du t3.micro (1GB).
+
+```
+EC2 t3.micro (1GB RAM + 4GB SWAP EBS)
+  K3s single-node + Traefik + ArgoCD (~200MB) + Spring Boot (-Xmx256m)
+  → Application publique sur http://<Elastic-IP>
+  → ArgoCD UI sur http://<Elastic-IP>:30080
+
+Coût : ~$0/mois (Free Tier 12 mois) → ~$23/mois ensuite
+```
+
+```bash
+# Déploiement complet en 3 commandes
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+# (éditer les secrets)
+terraform -chdir=terraform apply
+# Attendre ~10 min → accéder à http://<IP>
+```
+
+→ Voir [docs/PHASE20-FreeTier-K3s.md](docs/PHASE20-FreeTier-K3s.md) pour le guide complet.
 
 ---
 
