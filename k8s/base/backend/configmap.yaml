@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portfolio-backend-config
+  labels:
+    app: portfolio-backend
+data:
+  # Profil Spring actif
+  SPRING_PROFILES_ACTIVE: "prod"
+  # Kafka désactivé par défaut (activé en overlay si nécessaire)
+  SPRING_KAFKA_LISTENER_AUTO_STARTUP: "false"
+  SPRING_KAFKA_ADMIN_AUTO_CREATE: "false"
+  # JVM tuning (évite -XX:TieredStopAtLevel=1 qui casse BCrypt)
+  JAVA_TOOL_OPTIONS: >-
+    -XX:+UseG1GC
+    -XX:MaxGCPauseMillis=200
+    -Djava.security.egd=file:/dev/./urandom
+  # Serveur
+  SERVER_PORT: "8080"
+  # Actuator
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus,metrics"
+  MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "always"
+  # Logs JSON structurés (pour CloudWatch/Loki)
+  LOGGING_PATTERN_CONSOLE: ""
+  # JWT expiration 24h
+  JWT_EXPIRATION_MS: "86400000"

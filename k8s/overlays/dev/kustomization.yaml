@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# =============================================================================
+# OVERLAY DEV — portfolio-dev
+# =============================================================================
+# Namespace dédié, 1 replica, images ECR avec tag SHA.
+# Ce fichier est mis à jour automatiquement par le workflow GitOps ci-gitops.yml
+# après chaque push vers main : `kustomize edit set image ...`
+# ArgoCD détecte le changement de tag et re-synchronise le cluster.
+# =============================================================================
+
+namespace: portfolio-dev
+
+bases:
+  - ../../base
+
+# ---------------------------------------------------------------------------
+# Images — mises à jour par le workflow GitOps (ne pas modifier manuellement)
+# ---------------------------------------------------------------------------
+images:
+  - name: portfolio-backend
+    newName: ACCOUNT_ID.dkr.ecr.eu-west-3.amazonaws.com/portfolio-backend
+    newTag: latest                # ← CI remplace cette valeur : sha-XXXXXXX
+
+  - name: portfolio-frontend
+    newName: ACCOUNT_ID.dkr.ecr.eu-west-3.amazonaws.com/portfolio-frontend
+    newTag: latest                # ← CI remplace cette valeur : sha-XXXXXXX
+
+# ---------------------------------------------------------------------------
+# Patches
+# ---------------------------------------------------------------------------
+patches:
+  # 1 replica en dev (économie de ressources)
+  - path: patches/replicas.yaml
+    target:
+      kind: Deployment
+      labelSelector: "component=backend"
+  - path: patches/replicas.yaml
+    target:
+      kind: Deployment
+      labelSelector: "component=frontend"
+
+  # Host dev sur l'Ingress
+  - path: patches/ingress-host.yaml
+
+# ---------------------------------------------------------------------------
+# Labels communs à tous les objets de cet overlay
+# ---------------------------------------------------------------------------
+commonLabels:
+  environment: dev
+  managed-by: argocd

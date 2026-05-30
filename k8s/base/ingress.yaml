@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portfolio-ingress
+  labels:
+    app: portfolio
+  annotations:
+    # NGINX Ingress Controller
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Timeout pour Spring Boot (démarrage lent)
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # Réécriture /api → / sur le backend
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    # CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    # TLS redirect (activé en prod via overlay)
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+    - host: portfolio.local       # Surchargé par l'overlay (dev/prod)
+      http:
+        paths:
+          # API backend — /api/* → backend:80 (avec rewrite)
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: portfolio-backend
+                port:
+                  number: 80
+          # Frontend Angular — tout le reste → frontend:80
+          - path: /()(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: portfolio-frontend
+                port:
+                  number: 80

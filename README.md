@@ -19,6 +19,7 @@ et développement assisté par IA (Claude Code + MCP).
 | Tests | JUnit 5 + Mockito (47 tests), Jest (53 tests), Cypress E2E (20 specs), k6 load tests (3 scénarios) |
 | Infrastructure | AWS — EC2, RDS, ECR, VPC, CloudWatch, Lambda, S3, API Gateway, SES via Terraform |
 | CI/CD | GitHub Actions — build, test, SAST (CodeQL), Trivy, OWASP DC, deploy |
+| **GitOps** | **ArgoCD — App of Apps · Kustomize overlays dev/prod · modèle pull** |
 | **IA & Outillage** | **Claude Code CLI · 21st Magic MCP · Model Context Protocol** |
 
 ---
@@ -367,10 +368,63 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── PHASE15-Lambda-Serverless.md
 │   ├── PHASE16-Security-Avancee.md
 │   ├── PHASE17-Design-UX-AI.md
+│   ├── PHASE18-ArgoCD-GitOps.md
 │   └── FINOPS-Cost-Analysis.md
+│
+├── k8s/                                  # Manifests Kubernetes — GitOps (Phase 18)
+│   ├── base/                             # Ressources communes (Deployment, Service, Ingress)
+│   │   ├── backend/
+│   │   ├── frontend/
+│   │   └── kustomization.yaml
+│   └── overlays/
+│       ├── dev/                          # 1 replica, tag SHA auto-mis à jour par CI
+│       └── prod/                         # 3 replicas, TLS, sync manuelle ArgoCD
+│
+├── argocd/                               # Applications ArgoCD — GitOps
+│   ├── apps/
+│   │   ├── app-of-apps.yaml             # Bootstrap : gère toutes les Applications
+│   │   ├── portfolio-dev.yaml           # App dev (sync auto)
+│   │   └── portfolio-prod.yaml          # App prod (sync manuelle)
+│   └── install/README.md               # Guide d'installation ArgoCD
 │
 └── Makefile                              # Raccourcis : make up/down/test/test-load/...
 ```
+
+---
+
+## ⎈ Phase 18 — GitOps avec ArgoCD
+
+Déploiement Kubernetes en **modèle pull** : ArgoCD surveille ce dépôt Git et réconcilie
+automatiquement l'état du cluster avec les manifests Kustomize.
+
+### Pattern App of Apps
+
+```
+kubectl apply -f argocd/apps/app-of-apps.yaml
+    └── ArgoCD lit argocd/apps/
+        ├── portfolio-dev.yaml  → k8s/overlays/dev/  (sync automatique)
+        └── portfolio-prod.yaml → k8s/overlays/prod/ (sync manuelle)
+```
+
+### Workflow GitOps (ci-gitops.yml)
+
+```
+push main → Build + Push ECR → kustomize edit set image sha-XXXX → git commit
+                                                                         ↓
+                                                         ArgoCD détecte le diff (~3min)
+                                                                         ↓
+                                                            Rolling update 0-downtime
+```
+
+| Fichier | Rôle |
+|---|---|
+| `k8s/base/` | Manifests Deployment, Service, ConfigMap, Ingress |
+| `k8s/overlays/dev/` | 1 replica, tag SHA auto-mis à jour par CI |
+| `k8s/overlays/prod/` | 3 replicas backend, 2 frontend, TLS, sync manuelle |
+| `argocd/apps/` | App of Apps + Applications dev et prod |
+| `.github/workflows/ci-gitops.yml` | Build → ECR → update manifest → commit |
+
+→ Voir [docs/PHASE18-ArgoCD-GitOps.md](docs/PHASE18-ArgoCD-GitOps.md) pour l'installation complète.
 
 ---
 

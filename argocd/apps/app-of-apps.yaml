@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: portfolio-app-of-apps
+  namespace: argocd
+  labels:
+    app: portfolio
+    pattern: app-of-apps
+  # Finalizer : ArgoCD supprime les ressources enfants quand cette Application est supprimée
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  # -----------------------------------------------------------------------
+  # Projet ArgoCD (RBAC)
+  # -----------------------------------------------------------------------
+  project: default
+
+  # -----------------------------------------------------------------------
+  # Source : ce dépôt Git, dossier argocd/apps/
+  # ArgoCD surveille ce dossier pour détecter de nouvelles Applications enfants
+  # -----------------------------------------------------------------------
+  source:
+    repoURL: https://github.com/amine77/devsecops-angular-java21-aws.git
+    targetRevision: main
+    path: argocd/apps
+    # Exclure ce fichier lui-même pour éviter une boucle infinie
+    directory:
+      exclude: "app-of-apps.yaml"
+
+  # -----------------------------------------------------------------------
+  # Destination : dans le même cluster, namespace argocd
+  # (les Applications enfants déploient dans leurs propres namespaces)
+  # -----------------------------------------------------------------------
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  # -----------------------------------------------------------------------
+  # Politique de synchronisation
+  # -----------------------------------------------------------------------
+  syncPolicy:
+    automated:
+      prune: true          # Supprime les Applications qui n'existent plus dans Git
+      selfHeal: true       # Réconcilie si quelqu'un modifie manuellement le cluster
+    syncOptions:
+      - CreateNamespace=true

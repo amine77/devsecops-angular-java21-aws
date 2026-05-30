@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: portfolio-dev
+  namespace: argocd
+  labels:
+    app: portfolio
+    environment: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Notifications (optionnel — nécessite ArgoCD Notifications installé)
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: portfolio-deployments
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: portfolio-deployments
+spec:
+  project: default
+
+  # -----------------------------------------------------------------------
+  # Source : overlay dev dans ce dépôt
+  # -----------------------------------------------------------------------
+  source:
+    repoURL: https://github.com/amine77/devsecops-angular-java21-aws.git
+    targetRevision: main
+    path: k8s/overlays/dev          # ← ArgoCD surveille ce dossier
+    # Kustomize intégré dans ArgoCD — pas de plugin externe requis
+    kustomize:
+      version: v5.3.0
+
+  # -----------------------------------------------------------------------
+  # Destination : cluster local, namespace portfolio-dev
+  # -----------------------------------------------------------------------
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: portfolio-dev
+
+  # -----------------------------------------------------------------------
+  # Sync policy : automatique en dev
+  # Chaque push sur main → ArgoCD détecte le changement de tag → déploie
+  # -----------------------------------------------------------------------
+  syncPolicy:
+    automated:
+      prune: true          # Supprime les ressources retirées de Git
+      selfHeal: true       # Annule les changements manuels sur le cluster
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+
+  # -----------------------------------------------------------------------
+  # Health checks additionnels
+  # -----------------------------------------------------------------------
+  ignoreDifferences:
+    # Ignorer les mutations webhook (certains admission controllers modifient les specs)
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration

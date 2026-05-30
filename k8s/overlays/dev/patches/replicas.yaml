@@ -1,0 +1,6 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: placeholder     # Surchargé par le labelSelector dans kustomization.yaml
+spec:
+  replicas: 1           # 1 replica en dev

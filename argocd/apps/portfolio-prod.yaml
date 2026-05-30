@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: portfolio-prod
+  namespace: argocd
+  labels:
+    app: portfolio
+    environment: prod
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: portfolio-deployments
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: portfolio-deployments
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: portfolio-alerts
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/amine77/devsecops-angular-java21-aws.git
+    targetRevision: main
+    path: k8s/overlays/prod
+    kustomize:
+      version: v5.3.0
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: portfolio-prod
+
+  # -----------------------------------------------------------------------
+  # Sync policy : MANUELLE en prod
+  # Le tag est mis à jour par le workflow de promotion (dev → prod),
+  # mais ArgoCD attend une approbation manuelle avant de déployer.
+  # Désactiver automated pour la prod = protection contre les déploiements
+  # accidentels.
+  # -----------------------------------------------------------------------
+  syncPolicy:
+    # automated: (commenté intentionnellement — sync manuel requis en prod)
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 2m
+
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration

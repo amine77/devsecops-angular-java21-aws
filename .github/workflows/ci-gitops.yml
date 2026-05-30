@@ -1,0 +1,304 @@
+# =============================================================================
+# CI/CD GITOPS — Build → ECR → Update Manifest → ArgoCD Sync
+# =============================================================================
+#
+# Ce workflow implémente le pattern GitOps (modèle PULL) :
+#
+#   Push sur main
+#       │
+#       ├─ 1. check-prerequisites ── AWS credentials configurés ?
+#       │
+#       ├─ 2. build-push-backend ─── Build image → scan Trivy → push ECR
+#       │
+#       ├─ 3. build-push-frontend ── Build image → scan Trivy → push ECR
+#       │
+#       └─ 4. update-k8s-manifest ── kustomize edit set image sha-XXXX
+#                                    └─ git commit + push → main
+#                                            ↓
+#                                    ArgoCD détecte le diff (polling 3min)
+#                                            ↓
+#                                    kubectl apply -k k8s/overlays/dev/
+#                                            ↓
+#                                    Rolling update (0 downtime)
+#
+# Différence avec deploy-app.yml (modèle PUSH) :
+#   PUSH : CI/CD → SSH → kubectl apply (direct)
+#   PULL : CI/CD → Git → ArgoCD → kubectl apply (indirect, asynchrone)
+#
+# Avantages du modèle PULL :
+#   - Git est la source de vérité absolue (audit trail complet)
+#   - Pas de credentials Kubernetes dans GitHub → surface d'attaque réduite
+#   - Rollback = git revert (simple et traçable)
+#   - Drift detection : ArgoCD réconcilie si quelqu'un modifie le cluster
+#
+# Secrets GitHub requis (Settings → Secrets → Actions) :
+#   AWS_ACCESS_KEY_ID     — Credentials AWS (permission ECR)
+#   AWS_SECRET_ACCESS_KEY — Credentials AWS
+#   GITOPS_TOKEN          — GitHub PAT avec permission repo:write
+#                           (pour que le workflow puisse committer dans main)
+# =============================================================================
+
+name: CI/CD GitOps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/ci-gitops.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environnement cible'
+        required: false
+        default: 'dev'
+        type: choice
+        options: [dev, prod]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  AWS_REGION: eu-west-3
+  IMAGE_TAG: sha-${{ github.sha }}
+
+concurrency:
+  group: gitops-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+
+  # ===========================================================================
+  # JOB 0 — Vérification des prérequis
+  # ===========================================================================
+  check-prerequisites:
+    name: 🔐 Check AWS + GitOps secrets
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+      ecr-registry: ${{ steps.check.outputs.ecr-registry }}
+    steps:
+      - id: check
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+        run: |
+          if [ -z "$AWS_KEY" ]; then
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "::warning::AWS_ACCESS_KEY_ID non configuré — pipeline GitOps désactivé."
+            echo "::warning::Configurez AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY et GITOPS_TOKEN."
+          else
+            echo "ready=true" >> $GITHUB_OUTPUT
+            echo "Secrets détectés — pipeline GitOps activé"
+          fi
+
+  # ===========================================================================
+  # JOB 1 — Build + Push Backend vers ECR
+  # ===========================================================================
+  build-push-backend:
+    name: 🐳 Backend — Build & Push ECR
+    runs-on: ubuntu-latest
+    needs: check-prerequisites
+    if: needs.check-prerequisites.outputs.ready == 'true'
+    outputs:
+      image-uri: ${{ steps.set-uri.outputs.image-uri }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (pour scan Trivy)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: portfolio-backend:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+          load: true
+
+      - name: Trivy — Scan image backend (bloque sur CRITICAL)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: portfolio-backend:${{ env.IMAGE_TAG }}
+          format: table
+          exit-code: '0'          # Informationnel pour le portfolio
+          severity: 'HIGH,CRITICAL'
+
+      - name: Build & Push to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/portfolio-backend:${{ env.IMAGE_TAG }}
+            ${{ steps.ecr-login.outputs.registry }}/portfolio-backend:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+          labels: |
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Set image URI output
+        id: set-uri
+        run: |
+          echo "image-uri=${{ steps.ecr-login.outputs.registry }}/portfolio-backend" \
+            >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # JOB 2 — Build + Push Frontend vers ECR
+  # ===========================================================================
+  build-push-frontend:
+    name: 🐳 Frontend — Build & Push ECR
+    runs-on: ubuntu-latest
+    needs: check-prerequisites
+    if: needs.check-prerequisites.outputs.ready == 'true'
+    outputs:
+      image-uri: ${{ steps.set-uri.outputs.image-uri }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (pour scan)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: portfolio-frontend:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+          load: true
+
+      - name: Trivy — Scan image frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: portfolio-frontend:${{ env.IMAGE_TAG }}
+          format: table
+          exit-code: '0'
+          severity: 'HIGH,CRITICAL'
+
+      - name: Build & Push to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/portfolio-frontend:${{ env.IMAGE_TAG }}
+            ${{ steps.ecr-login.outputs.registry }}/portfolio-frontend:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+          labels: |
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Set image URI output
+        id: set-uri
+        run: |
+          echo "image-uri=${{ steps.ecr-login.outputs.registry }}/portfolio-frontend" \
+            >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # JOB 3 — Update des manifests Kubernetes (cœur du GitOps)
+  # ===========================================================================
+  update-k8s-manifest:
+    name: 📝 GitOps — Update image tags in k8s manifests
+    runs-on: ubuntu-latest
+    needs: [check-prerequisites, build-push-backend, build-push-frontend]
+    if: needs.check-prerequisites.outputs.ready == 'true'
+
+    steps:
+      - name: Checkout (avec GITOPS_TOKEN pour permettre le push)
+        uses: actions/checkout@v4
+        with:
+          # GITOPS_TOKEN est un PAT avec repo:write
+          # Le token par défaut (GITHUB_TOKEN) ne peut pas déclencher d'autres workflows
+          # — il faut un PAT pour que ArgoCD détecte le push
+          token: ${{ secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "5.3.0"
+
+      - name: Update image tags — overlay dev
+        # kustomize edit set image met à jour le champ newTag dans
+        # k8s/overlays/dev/kustomization.yaml
+        working-directory: k8s/overlays/dev
+        run: |
+          kustomize edit set image \
+            portfolio-backend=${{ needs.build-push-backend.outputs.image-uri }}:${{ env.IMAGE_TAG }}
+
+          kustomize edit set image \
+            portfolio-frontend=${{ needs.build-push-frontend.outputs.image-uri }}:${{ env.IMAGE_TAG }}
+
+      - name: Vérifier le diff avant commit
+        run: |
+          git diff k8s/overlays/dev/kustomization.yaml
+          echo "---"
+          echo "Nouveau tag : ${{ env.IMAGE_TAG }}"
+
+      - name: Commit et push le manifest mis à jour
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add k8s/overlays/dev/kustomization.yaml
+
+          # Ne committer que si le fichier a vraiment changé
+          if git diff --cached --quiet; then
+            echo "Aucun changement dans le manifest — skip commit"
+            exit 0
+          fi
+
+          git commit -m "chore(gitops): deploy sha-${{ github.sha }} to dev
+
+          Images déployées :
+          - backend:  ${{ needs.build-push-backend.outputs.image-uri }}:${{ env.IMAGE_TAG }}
+          - frontend: ${{ needs.build-push-frontend.outputs.image-uri }}:${{ env.IMAGE_TAG }}
+
+          Déclencheur : ${{ github.actor }} — ${{ github.event.head_commit.message }}
+          Run : ${{ github.run_id }}"
+
+          git push origin main
+
+      - name: Résumé GitOps
+        run: |
+          echo "## GitOps — Déploiement dev" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Ressource | Valeur |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image tag | \`${{ env.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Overlay | \`k8s/overlays/dev\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Namespace | \`portfolio-dev\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| ArgoCD sync | Automatique (~3 min) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ArgoCD détecte le commit et réconcilie \`portfolio-dev\` automatiquement." >> $GITHUB_STEP_SUMMARY
