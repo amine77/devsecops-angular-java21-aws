@@ -67,9 +67,11 @@ jobs:
             -B
 
       - name: Rename SBOM for upload
+        # CycloneDX Maven Plugin 2.8.x écrit dans target/classes/META-INF/sbom/
+        # (embedded dans le JAR), pas dans target/ directement.
         run: |
-          cp backend/target/bom.json sbom-backend-cyclonedx.json
-          cp backend/target/bom.xml  sbom-backend-cyclonedx.xml
+          cp backend/target/classes/META-INF/sbom/bom.json sbom-backend-cyclonedx.json
+          cp backend/target/classes/META-INF/sbom/bom.xml  sbom-backend-cyclonedx.xml
 
       - name: Upload SBOM backend
         uses: actions/upload-artifact@v4
