@@ -56,11 +56,11 @@ describe('Guards d\'authentification', () => {
       });
     });
 
-    it('devrait inclure l\'URL courante comme returnUrl', () => {
+    it('devrait inclure l\'URL courante comme returnUrl', async () => {
       mockAuthService.isAuthenticated.mockReturnValue(false);
       const customState = { url: '/admin/projects/edit/42' } as RouterStateSnapshot;
 
-      TestBed.runInInjectionContext(() => authGuard(mockRoute, customState));
+      await TestBed.runInInjectionContext(() => authGuard(mockRoute, customState));
 
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login'], {
         queryParams: { returnUrl: '/admin/projects/edit/42' },
@@ -106,11 +106,11 @@ describe('Guards d\'authentification', () => {
       expect(navigateSpy).toHaveBeenCalledWith(['/']);
     });
 
-    it('ne devrait pas rediriger vers /auth/login si authentifié mais pas admin', () => {
+    it('ne devrait pas rediriger vers /auth/login si authentifié mais pas admin', async () => {
       mockAuthService.isAdmin.mockReturnValue(false);
       mockAuthService.isAuthenticated.mockReturnValue(true);
 
-      TestBed.runInInjectionContext(() => adminGuard(mockRoute, mockState));
+      await TestBed.runInInjectionContext(() => adminGuard(mockRoute, mockState));
 
       expect(navigateSpy).not.toHaveBeenCalledWith(
         expect.arrayContaining(['/auth/login']),

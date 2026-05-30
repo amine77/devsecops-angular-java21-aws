@@ -135,7 +135,7 @@ describe('AuthService', () => {
       let caughtError: unknown;
       service
         .login({ email: 'bad@test.com', password: 'wrong' })
-        .subscribe({ error: (err) => (caughtError = err) });
+        .subscribe({ error: (err) => { caughtError = err; } });
 
       const req = httpMock.expectOne((r) => r.url.includes('/auth/login'));
       req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
