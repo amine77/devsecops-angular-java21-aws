@@ -20,7 +20,7 @@
 # ===========================================================================
 # STAGE 1 : BUILD ANGULAR
 # ===========================================================================
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /build
 
@@ -49,7 +49,7 @@ FROM nginx:1.27-alpine AS runtime
 # Métadonnées
 LABEL maintainer="amine.charrad@gmail.com"
 LABEL version="1.0.0"
-LABEL description="Portfolio Frontend — Angular 18 + NGINX"
+LABEL description="Portfolio Frontend — Angular 20 + NGINX"
 
 # Supprimer la configuration NGINX par défaut
 RUN rm /etc/nginx/conf.d/default.conf
