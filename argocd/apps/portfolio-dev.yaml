@@ -21,10 +21,15 @@ spec:
   source:
     repoURL: https://github.com/amine77/devsecops-angular-java21-aws.git
     targetRevision: main
-    path: k8s/overlays/dev          # ← ArgoCD surveille ce dossier
-    # Kustomize intégré dans ArgoCD — pas de plugin externe requis
-    kustomize:
-      version: v5.3.0
+    path: helm/portfolio             # ← Chart Helm (Phase 19)
+    helm:
+      # valueFiles sont mergés dans l'ordre : values.yaml PUIS values-dev.yaml
+      # values-dev.yaml contient le tag SHA mis à jour par ci-gitops.yml
+      valueFiles:
+        - values.yaml
+        - values-dev.yaml
+      # Désactiver le release name prefix dans les noms de ressources
+      releaseName: portfolio
 
   # -----------------------------------------------------------------------
   # Destination : cluster local, namespace portfolio-dev

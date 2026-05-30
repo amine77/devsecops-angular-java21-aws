@@ -1,0 +1,40 @@
+🚀 Portfolio DevSecOps déployé avec succès !
+
+Release : {{ .Release.Name }}
+Namespace : {{ .Release.Namespace }}
+
+=== Accès à l'application ===
+
+{{- if .Values.ingress.enabled }}
+  URL : http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.host }}
+{{- else }}
+  Port-forward :
+    kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "portfolio.fullname" . }}-frontend 8080:80
+    → http://localhost:8080
+{{- end }}
+
+=== Composants déployés ===
+
+{{- if .Values.backend.enabled }}
+  ✅ Backend  : {{ include "portfolio.backendImage" . }} ({{ .Values.backend.replicas }} replica(s))
+{{- end }}
+{{- if .Values.frontend.enabled }}
+  ✅ Frontend : {{ include "portfolio.frontendImage" . }} ({{ .Values.frontend.replicas }} replica(s))
+{{- end }}
+{{- if .Values.hpa.enabled }}
+  ✅ HPA backend  : {{ .Values.hpa.backend.minReplicas }}-{{ .Values.hpa.backend.maxReplicas }} replicas
+  ✅ HPA frontend : {{ .Values.hpa.frontend.minReplicas }}-{{ .Values.hpa.frontend.maxReplicas }} replicas
+{{- end }}
+{{- if .Values.pdb.enabled }}
+  ✅ PodDisruptionBudget activé (HA protégée)
+{{- end }}
+
+=== Vérification ===
+
+  kubectl get pods -n {{ .Release.Namespace }}
+  kubectl get ingress -n {{ .Release.Namespace }}
+
+=== Rollback ===
+
+  helm rollback {{ .Release.Name }} [REVISION]
+  helm history {{ .Release.Name }}

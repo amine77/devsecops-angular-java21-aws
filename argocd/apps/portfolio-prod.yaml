@@ -18,9 +18,12 @@ spec:
   source:
     repoURL: https://github.com/amine77/devsecops-angular-java21-aws.git
     targetRevision: main
-    path: k8s/overlays/prod
-    kustomize:
-      version: v5.3.0
+    path: helm/portfolio             # ← Chart Helm (Phase 19)
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      releaseName: portfolio
 
   destination:
     server: https://kubernetes.default.svc

@@ -19,7 +19,7 @@ et développement assisté par IA (Claude Code + MCP).
 | Tests | JUnit 5 + Mockito (47 tests), Jest (53 tests), Cypress E2E (20 specs), k6 load tests (3 scénarios) |
 | Infrastructure | AWS — EC2, RDS, ECR, VPC, CloudWatch, Lambda, S3, API Gateway, SES via Terraform |
 | CI/CD | GitHub Actions — build, test, SAST (CodeQL), Trivy, OWASP DC, deploy |
-| **GitOps** | **ArgoCD — App of Apps · Kustomize overlays dev/prod · modèle pull** |
+| **GitOps** | **ArgoCD — App of Apps · Helm Chart · Kustomize overlays · modèle pull** |
 | **IA & Outillage** | **Claude Code CLI · 21st Magic MCP · Model Context Protocol** |
 
 ---
@@ -369,6 +369,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── PHASE16-Security-Avancee.md
 │   ├── PHASE17-Design-UX-AI.md
 │   ├── PHASE18-ArgoCD-GitOps.md
+│   ├── PHASE19-Helm.md
 │   └── FINOPS-Cost-Analysis.md
 │
 ├── k8s/                                  # Manifests Kubernetes — GitOps (Phase 18)
@@ -380,6 +381,14 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │       ├── dev/                          # 1 replica, tag SHA auto-mis à jour par CI
 │       └── prod/                         # 3 replicas, TLS, sync manuelle ArgoCD
 │
+├── helm/                                 # Helm Chart (Phase 19)
+│   └── portfolio/
+│       ├── Chart.yaml                    # Métadonnées SemVer
+│       ├── values.yaml                   # Valeurs par défaut
+│       ├── values-dev.yaml               # Overrides dev (tag SHA auto)
+│       ├── values-prod.yaml              # Overrides prod (HPA, PDB, TLS)
+│       └── templates/                    # 9 templates (backend, frontend, ingress, hpa, pdb)
+│
 ├── argocd/                               # Applications ArgoCD — GitOps
 │   ├── apps/
 │   │   ├── app-of-apps.yaml             # Bootstrap : gère toutes les Applications
@@ -389,6 +398,30 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │
 └── Makefile                              # Raccourcis : make up/down/test/test-load/...
 ```
+
+---
+
+## 🎯 Phase 19 — Helm Charts
+
+Packaging Kubernetes de l'application sous forme de **Helm Chart** avec templating
+complet, gestion des releases, HPA/PDB conditionnels, et intégration ArgoCD native.
+
+```bash
+helm upgrade --install portfolio helm/portfolio/ \
+  -f helm/portfolio/values.yaml \
+  -f helm/portfolio/values-dev.yaml \
+  --namespace portfolio-dev --create-namespace --atomic
+```
+
+| Fichier | Rôle |
+|---|---|
+| `helm/portfolio/Chart.yaml` | Métadonnées — nom, version SemVer |
+| `helm/portfolio/values.yaml` | Valeurs par défaut — 2 replicas, probes, resources |
+| `helm/portfolio/values-dev.yaml` | Dev : 1 replica, tag SHA auto-mis à jour par CI |
+| `helm/portfolio/values-prod.yaml` | Prod : 3+2 replicas, TLS, HPA, PDB |
+| `helm/portfolio/templates/` | 9 templates — backend, frontend, ingress, hpa, pdb |
+
+→ Voir [docs/PHASE19-Helm.md](docs/PHASE19-Helm.md) pour les commandes et la promotion dev→prod.
 
 ---
 

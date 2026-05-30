@@ -1,0 +1,40 @@
+# =============================================================================
+# VALUES DEV — Override pour l'environnement de développement
+# =============================================================================
+# Ce fichier est mergé avec values.yaml par ArgoCD/Helm.
+# Le tag image est mis à jour automatiquement par le workflow ci-gitops.yml
+# via la commande : yq e '.backend.image.tag = "sha-XXXX"' -i values-dev.yaml
+# =============================================================================
+
+global:
+  imageRegistry: "ACCOUNT_ID.dkr.ecr.eu-west-3.amazonaws.com"
+
+backend:
+  image:
+    tag: latest        # ← CI-GITOPS-TAG-BACKEND (remplacé par sha-XXXXXXX)
+  replicas: 1          # 1 replica suffit en dev
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "384Mi"
+      cpu: "300m"
+
+frontend:
+  image:
+    tag: latest        # ← CI-GITOPS-TAG-FRONTEND (remplacé par sha-XXXXXXX)
+  replicas: 1
+
+ingress:
+  host: portfolio-dev.local
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  tls:
+    enabled: false
+
+hpa:
+  enabled: false
+
+pdb:
+  enabled: false

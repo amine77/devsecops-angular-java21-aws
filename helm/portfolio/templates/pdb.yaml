@@ -1,0 +1,33 @@
+{{- if .Values.pdb.enabled }}
+# PDB Backend
+{{- if .Values.backend.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "portfolio.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "portfolio.backendLabels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.backend.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "portfolio.backendSelectorLabels" . | nindent 6 }}
+{{- end }}
+---
+# PDB Frontend
+{{- if .Values.frontend.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "portfolio.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "portfolio.frontendLabels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.frontend.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "portfolio.frontendSelectorLabels" . | nindent 6 }}
+{{- end }}
+{{- end }}

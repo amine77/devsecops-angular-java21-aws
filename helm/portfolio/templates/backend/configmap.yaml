@@ -1,0 +1,13 @@
+{{- if .Values.backend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "portfolio.backendConfigMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "portfolio.backendLabels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.backend.config }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}

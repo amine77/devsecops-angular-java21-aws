@@ -228,8 +228,8 @@ jobs:
   # ===========================================================================
   # JOB 3 — Update des manifests Kubernetes (cœur du GitOps)
   # ===========================================================================
-  update-k8s-manifest:
-    name: 📝 GitOps — Update image tags in k8s manifests
+  update-helm-values:
+    name: 📝 GitOps — Update image tags in Helm values-dev.yaml
     runs-on: ubuntu-latest
     needs: [check-prerequisites, build-push-backend, build-push-frontend]
     if: needs.check-prerequisites.outputs.ready == 'true'
@@ -238,67 +238,57 @@ jobs:
       - name: Checkout (avec GITOPS_TOKEN pour permettre le push)
         uses: actions/checkout@v4
         with:
-          # GITOPS_TOKEN est un PAT avec repo:write
-          # Le token par défaut (GITHUB_TOKEN) ne peut pas déclencher d'autres workflows
-          # — il faut un PAT pour que ArgoCD détecte le push
+          # GITOPS_TOKEN : PAT avec repo:write
+          # GITHUB_TOKEN ne peut pas déclencher d'autres workflows (protection GitHub)
           token: ${{ secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 1
 
-      - name: Setup Kustomize
-        uses: imranismail/setup-kustomize@v2
-        with:
-          kustomize-version: "5.3.0"
+      - name: Install yq (mise à jour YAML ciblée sans écraser les commentaires)
+        uses: mikefarah/yq@v4.44.3
 
-      - name: Update image tags — overlay dev
-        # kustomize edit set image met à jour le champ newTag dans
-        # k8s/overlays/dev/kustomization.yaml
-        working-directory: k8s/overlays/dev
+      - name: Update image tags — helm/portfolio/values-dev.yaml
+        # yq met à jour uniquement les champs .backend.image.tag et .frontend.image.tag
+        # sans toucher au reste du fichier (commentaires, structure préservés)
         run: |
-          kustomize edit set image \
-            portfolio-backend=${{ needs.build-push-backend.outputs.image-uri }}:${{ env.IMAGE_TAG }}
+          yq e '.backend.image.tag = "${{ env.IMAGE_TAG }}"'  -i helm/portfolio/values-dev.yaml
+          yq e '.frontend.image.tag = "${{ env.IMAGE_TAG }}"' -i helm/portfolio/values-dev.yaml
 
-          kustomize edit set image \
-            portfolio-frontend=${{ needs.build-push-frontend.outputs.image-uri }}:${{ env.IMAGE_TAG }}
+          echo "=== values-dev.yaml après mise à jour ==="
+          grep -A2 "image:" helm/portfolio/values-dev.yaml
 
-      - name: Vérifier le diff avant commit
-        run: |
-          git diff k8s/overlays/dev/kustomization.yaml
-          echo "---"
-          echo "Nouveau tag : ${{ env.IMAGE_TAG }}"
-
-      - name: Commit et push le manifest mis à jour
+      - name: Commit et push les values mis à jour
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add k8s/overlays/dev/kustomization.yaml
+          git add helm/portfolio/values-dev.yaml
 
-          # Ne committer que si le fichier a vraiment changé
           if git diff --cached --quiet; then
-            echo "Aucun changement dans le manifest — skip commit"
+            echo "Aucun changement dans values-dev.yaml — skip commit"
             exit 0
           fi
 
-          git commit -m "chore(gitops): deploy sha-${{ github.sha }} to dev
+          git commit -m "chore(gitops): deploy ${{ env.IMAGE_TAG }} to dev
 
-          Images déployées :
-          - backend:  ${{ needs.build-push-backend.outputs.image-uri }}:${{ env.IMAGE_TAG }}
-          - frontend: ${{ needs.build-push-frontend.outputs.image-uri }}:${{ env.IMAGE_TAG }}
+          Helm values mis à jour :
+          - backend.image.tag:  ${{ env.IMAGE_TAG }}
+          - frontend.image.tag: ${{ env.IMAGE_TAG }}
 
-          Déclencheur : ${{ github.actor }} — ${{ github.event.head_commit.message }}
+          Déclencheur : ${{ github.actor }}
           Run : ${{ github.run_id }}"
 
           git push origin main
 
       - name: Résumé GitOps
         run: |
-          echo "## GitOps — Déploiement dev" >> $GITHUB_STEP_SUMMARY
+          echo "## GitOps — Helm Deploy dev" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Ressource | Valeur |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Image tag | \`${{ env.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Overlay | \`k8s/overlays/dev\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Values file | \`helm/portfolio/values-dev.yaml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Chart | \`helm/portfolio/\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Namespace | \`portfolio-dev\` |" >> $GITHUB_STEP_SUMMARY
           echo "| ArgoCD sync | Automatique (~3 min) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "ArgoCD détecte le commit et réconcilie \`portfolio-dev\` automatiquement." >> $GITHUB_STEP_SUMMARY
+          echo "ArgoCD détecte le commit sur values-dev.yaml et déclenche \`helm upgrade\`." >> $GITHUB_STEP_SUMMARY

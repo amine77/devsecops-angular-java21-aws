@@ -1,0 +1,33 @@
+apiVersion: v2
+name: portfolio
+description: >
+  Portfolio DevSecOps — Angular 20 + Spring Boot Java 21 + AWS.
+  Helm chart pour le déploiement Kubernetes via ArgoCD GitOps.
+
+type: application
+
+# Version du chart (SemVer) — incrémenter à chaque changement de template
+version: 1.0.0
+
+# Version de l'application déployée
+appVersion: "1.0.0"
+
+keywords:
+  - portfolio
+  - devsecops
+  - angular
+  - spring-boot
+  - kubernetes
+
+home: https://github.com/amine77/devsecops-angular-java21-aws
+
+sources:
+  - https://github.com/amine77/devsecops-angular-java21-aws
+
+maintainers:
+  - name: Amine Charrad
+    email: amine.charrad@gmail.com
+
+annotations:
+  # Catégorie ArgoCD pour le filtrage dans l'UI
+  artifacthub.io/category: integration-delivery

@@ -1,0 +1,57 @@
+# =============================================================================
+# VALUES PROD — Override pour l'environnement de production
+# =============================================================================
+# Promu manuellement depuis dev après validation.
+# Sync ArgoCD manuelle (pas de sync automatique en prod).
+# =============================================================================
+
+global:
+  imageRegistry: "ACCOUNT_ID.dkr.ecr.eu-west-3.amazonaws.com"
+
+backend:
+  image:
+    tag: latest        # ← Promu manuellement depuis dev
+  replicas: 3
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+frontend:
+  image:
+    tag: latest        # ← Promu manuellement depuis dev
+  replicas: 2
+
+ingress:
+  host: portfolio.amine-charrad.dev
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  tls:
+    enabled: true
+    secretName: portfolio-tls-cert
+    issuer: letsencrypt-prod
+
+# HPA activé en prod — scale automatique selon la charge
+hpa:
+  enabled: true
+  backend:
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  frontend:
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 80
+
+# PDB en prod — garantit la disponibilité pendant les mises à jour
+pdb:
+  enabled: true
+  backend:
+    minAvailable: 1
+  frontend:
+    minAvailable: 1
