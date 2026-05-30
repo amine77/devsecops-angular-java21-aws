@@ -77,6 +77,12 @@ jobs:
         #   mais le jacoco.xml EST généré avant ce check — on laisse tourner les étapes suivantes
         continue-on-error: true
 
+      - name: Backend — copier les dépendances Maven (sonar.java.libraries)
+        working-directory: backend
+        run: mvn dependency:copy-dependencies -DoutputDirectory=target/dependency -q -B
+        # Nécessaire pour sonar-scanner CLI : sans les JARs, l'analyse Java est moins précise
+        # (warning "sonar.java.libraries is empty" dans SonarCloud)
+
       - name: Frontend — install deps + couverture Jest (lcov)
         working-directory: frontend
         run: |

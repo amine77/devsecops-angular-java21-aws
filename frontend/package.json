@@ -28,6 +28,10 @@
     "@angular/platform-browser": "^20.3.23",
     "@angular/platform-browser-dynamic": "^20.3.23",
     "@angular/router": "^20.3.23",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/roboto": "^5.2.10",
+    "material-icons": "^1.13.14",
     "rxjs": "~7.8.0",
     "tslib": "^2.6.0",
     "zone.js": "~0.15.1"
