@@ -38,7 +38,7 @@ export class HomeComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
 
   protected readonly techStack = [
-    'Angular 18', 'Spring Boot', 'Java 21', 'PostgreSQL',
+    'Angular 20', 'Spring Boot', 'Java 21', 'PostgreSQL',
     'Docker', 'Kubernetes', 'Helm', 'Terraform', 'AWS', 'GitHub Actions',
   ];
 
@@ -50,6 +50,12 @@ export class HomeComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.loadFeaturedProjects();
+  }
+
+  protected retryLoad(): void {
+    this.error.set(null);
+    this.isLoading.set(true);
     this.loadFeaturedProjects();
   }
 

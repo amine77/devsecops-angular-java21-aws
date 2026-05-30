@@ -1,60 +1,102 @@
 <!-- ========== HERO SECTION ========== -->
 <section class="hero">
+
+  <!-- Animated gradient orbs -->
+  <div class="hero__bg" aria-hidden="true">
+    <div class="hero__orb hero__orb--1"></div>
+    <div class="hero__orb hero__orb--2"></div>
+    <div class="hero__orb hero__orb--3"></div>
+  </div>
+
   <div class="container">
+
+    <!-- Left: Content -->
     <div class="hero__content">
-      <span class="hero__tag badge badge-blue">Disponible pour de nouveaux projets</span>
-      <h1 class="hero__title">
+
+      <!-- Availability badge -->
+      <div class="hero__availability animate-in">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="badge badge-green">Disponible pour de nouveaux projets</span>
+      </div>
+
+      <h1 class="hero__title animate-in" style="--delay: 100ms">
         Fullstack <span class="hero__accent">DevSecOps</span><br />
         Engineer
       </h1>
-      <p class="hero__subtitle">
+
+      <p class="hero__subtitle animate-in" style="--delay: 200ms">
         Angular · Spring Boot Java 21 · Kubernetes · AWS · Terraform
       </p>
-      <p class="hero__description">
-        Je construis des applications cloud native, sécurisées et scalables — du code
-        propre jusqu'à l'infrastructure as code.
+
+      <p class="hero__description animate-in" style="--delay: 300ms">
+        Je construis des applications cloud native, sécurisées et scalables —
+        du code propre jusqu'à l'infrastructure as code.
       </p>
-      <div class="hero__actions">
+
+      <div class="hero__actions animate-in" style="--delay: 400ms">
         <a routerLink="/portfolio/projects" class="btn btn-primary">
           Voir mes projets
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
         </a>
         <a routerLink="/portfolio/skills" class="btn btn-outline">
           Mes compétences
         </a>
       </div>
 
-      <!-- Stack technique visible immédiatement -->
-      <div class="hero__stack">
+      <!-- Tech stack badges with stagger -->
+      <div class="hero__stack animate-in" style="--delay: 500ms">
         <span class="hero__stack-label">Stack :</span>
-        @for (tech of techStack; track tech) {
-          <span class="badge badge-blue">{{ tech }}</span>
+        @for (tech of techStack; track tech; let i = $index) {
+          <span class="badge badge-blue hero__badge" [style.--badge-delay]="i * 60 + 'ms'">{{ tech }}</span>
         }
       </div>
+
     </div>
 
-    <!-- Code snippet décoratif -->
-    <div class="hero__code" aria-hidden="true">
-      <pre class="code-block"><code>// Infrastructure as Code
-resource "aws_instance" "app" &#123;
-  ami           = "ami-12345"
-  instance_type = "t2.micro"
-  tags = &#123;
-    Name = "portfolio-ec2"
+    <!-- Right: Terminal code block -->
+    <div class="hero__terminal animate-in-right" style="--delay: 250ms" aria-hidden="true">
+      <div class="terminal__chrome">
+        <div class="terminal__dots">
+          <span class="terminal__dot terminal__dot--red"></span>
+          <span class="terminal__dot terminal__dot--yellow"></span>
+          <span class="terminal__dot terminal__dot--green"></span>
+        </div>
+        <span class="terminal__filename">infrastructure.tf</span>
+        <div class="terminal__tabs">
+          <span class="terminal__tab terminal__tab--active">terraform</span>
+          <span class="terminal__tab">kubernetes</span>
+        </div>
+      </div>
+
+      <pre class="terminal__body"><code><span class="t-comment">// Infrastructure as Code — AWS eu-west-3</span>
+
+<span class="t-keyword">resource</span> <span class="t-string">"aws_instance"</span> <span class="t-string">"app"</span> &#123;
+  <span class="t-attr">ami</span>           = <span class="t-string">"ami-0c55b159cbfafe1f0"</span>
+  <span class="t-attr">instance_type</span> = <span class="t-string">"t3.micro"</span>
+  <span class="t-attr">tags</span> = &#123;
+    <span class="t-attr">Name</span>        = <span class="t-string">"portfolio-ec2"</span>
+    <span class="t-attr">Environment</span> = <span class="t-string">"production"</span>
+    <span class="t-attr">ManagedBy</span>   = <span class="t-string">"terraform"</span>
   &#125;
 &#125;
 
-// Kubernetes Deployment
-apiVersion: apps/v1
-kind: Deployment
-spec:
-  replicas: 1
-  containers:
-    - name: backend
-      image: ecr.aws/portfolio:v1
-      resources:
-        limits:
-          memory: "300Mi"</code></pre>
+<span class="t-comment">---</span>
+<span class="t-attr">apiVersion</span>: <span class="t-value">apps/v1</span>
+<span class="t-keyword">kind</span>: <span class="t-value">Deployment</span>
+<span class="t-attr">metadata</span>:
+  <span class="t-attr">name</span>: <span class="t-value">portfolio-backend</span>
+<span class="t-attr">spec</span>:
+  <span class="t-attr">replicas</span>: <span class="t-number">3</span>
+  <span class="t-attr">containers</span>:
+    - <span class="t-attr">image</span>: <span class="t-string">ecr.aws/portfolio:latest</span>
+      <span class="t-attr">resources</span>:
+        <span class="t-attr">limits</span>:
+          <span class="t-attr">memory</span>: <span class="t-string">"512Mi"</span>
+          <span class="t-attr">cpu</span>: <span class="t-string">"500m"</span><span class="t-cursor"></span></code></pre>
     </div>
+
   </div>
 </section>
 
@@ -71,7 +113,7 @@ spec:
     } @else if (error()) {
       <div class="error-state">
         <p>{{ error() }}</p>
-        <button class="btn btn-outline" (click)="ngOnInit()">Réessayer</button>
+        <button class="btn btn-outline" (click)="retryLoad()">Réessayer</button>
       </div>
     } @else if (featuredProjects().length === 0) {
       <div class="empty-state">

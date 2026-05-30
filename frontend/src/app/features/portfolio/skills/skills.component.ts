@@ -23,7 +23,7 @@ import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skil
     imports: [LoadingSpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-    <div class="section">
+    <div class="section skills-page">
       <div class="container">
         <h1 class="section-title">Compétences</h1>
         <p class="section-subtitle">Technologies et outils maîtrisés</p>
@@ -34,19 +34,24 @@ import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skil
           @for (group of skillGroups(); track group.category) {
             <div class="skill-group">
               <h2 class="skill-group__title">
+                <span class="skill-group__icon" aria-hidden="true">{{ categoryIcon(group.category) }}</span>
                 {{ categoryLabel(group.category) }}
               </h2>
               <div class="grid-skills">
                 @for (skill of group.skills; track skill.id) {
                   <div class="skill-card card">
-                    <div class="skill-card__name">{{ skill.name }}</div>
-                    <div class="skill-card__level" [attr.aria-label]="'Niveau ' + skill.level + ' sur 5'">
-                      @for (i of [1,2,3,4,5]; track i) {
-                        <span
-                          class="skill-card__dot"
-                          [class.skill-card__dot--active]="i <= skill.level"
-                        ></span>
-                      }
+                    <div class="skill-card__header">
+                      <span class="skill-card__name">{{ skill.name }}</span>
+                      <span class="skill-card__pct">{{ skill.level * 20 }}%</span>
+                    </div>
+                    <div class="skill-card__bar-track"
+                         role="progressbar"
+                         [attr.aria-valuenow]="skill.level * 20"
+                         aria-valuemin="0"
+                         aria-valuemax="100"
+                         [attr.aria-label]="skill.name + ' — niveau ' + skill.level + ' sur 5'">
+                      <div class="skill-card__bar-fill"
+                           [style.width.%]="skill.level * 20"></div>
                     </div>
                   </div>
                 }
@@ -60,35 +65,53 @@ import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skil
     styles: [`
     .skill-group {
       margin-bottom: var(--spacing-2xl);
-      &__title {
-        font-size: var(--font-size-xl);
-        color: var(--color-accent);
-        margin-bottom: var(--spacing-lg);
-        font-family: var(--font-mono);
-        &::before { content: '// '; color: var(--color-text-muted); }
-      }
+    }
+    .skill-group__title {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      font-size: var(--font-size-xl);
+      color: var(--color-text-primary);
+      margin-bottom: var(--spacing-lg);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    .skill-group__icon {
+      font-size: 1.25rem;
     }
     .skill-card {
       padding: var(--spacing-md);
       display: flex;
       flex-direction: column;
       gap: var(--spacing-sm);
-      &__name {
-        font-weight: 600;
-        font-size: var(--font-size-sm);
-        color: var(--color-text-primary);
-      }
-      &__level {
-        display: flex;
-        gap: 4px;
-      }
-      &__dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--color-bg-tertiary);
-        &--active { background: var(--color-accent); }
-      }
+    }
+    .skill-card__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .skill-card__name {
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      color: var(--color-text-primary);
+    }
+    .skill-card__pct {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+      color: var(--color-accent);
+      font-weight: 600;
+    }
+    .skill-card__bar-track {
+      height: 4px;
+      background: var(--color-bg-tertiary);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .skill-card__bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-accent), #818cf8);
+      border-radius: var(--radius-full);
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
   `]
 })
@@ -121,5 +144,17 @@ export class SkillsComponent implements OnInit {
 
   protected categoryLabel(cat: SkillCategory): string {
     return SKILL_CATEGORY_LABELS[cat] ?? cat;
+  }
+
+  private static readonly CATEGORY_ICONS: Record<SkillCategory, string> = {
+    BACKEND:  '⚙️',
+    FRONTEND: '🎨',
+    DEVOPS:   '🔄',
+    CLOUD:    '☁️',
+    OTHER:    '🔧',
+  };
+
+  protected categoryIcon(cat: SkillCategory): string {
+    return SkillsComponent.CATEGORY_ICONS[cat] ?? '🔧';
   }
 }

@@ -1,7 +1,8 @@
 # Portfolio DevSecOps — Angular 20 + Spring Boot Java 21 + AWS
 
 Application full-stack démontrant une pipeline DevSecOps complète : du développement local
-jusqu'au déploiement AWS, avec observabilité, messaging, cache, et tests à tous les niveaux.
+jusqu'au déploiement AWS, avec observabilité, messaging, cache, tests à tous les niveaux,
+et développement assisté par IA (Claude Code + MCP).
 
 ## Stack technique
 
@@ -18,6 +19,7 @@ jusqu'au déploiement AWS, avec observabilité, messaging, cache, et tests à to
 | Tests | JUnit 5 + Mockito (47 tests), Jest (53 tests), Cypress E2E (20 specs), k6 load tests (3 scénarios) |
 | Infrastructure | AWS — EC2, RDS, ECR, VPC, CloudWatch, Lambda, S3, API Gateway, SES via Terraform |
 | CI/CD | GitHub Actions — build, test, SAST (CodeQL), Trivy, OWASP DC, deploy |
+| **IA & Outillage** | **Claude Code CLI · 21st Magic MCP · Model Context Protocol** |
 
 ---
 
@@ -363,10 +365,49 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── PHASE13-Cypress-E2E.md
 │   ├── PHASE14-k6-Load-Tests.md
 │   ├── PHASE15-Lambda-Serverless.md
+│   ├── PHASE16-Security-Avancee.md
+│   ├── PHASE17-Design-UX-AI.md
 │   └── FINOPS-Cost-Analysis.md
 │
 └── Makefile                              # Raccourcis : make up/down/test/test-load/...
 ```
+
+---
+
+## 🤖 Phase 17 — Design UX & Développement Assisté par IA
+
+Refonte visuelle complète des 8 composants Angular avec **Claude Code** (CLI IA d'Anthropic)
+et **21st Magic MCP** (serveur Model Context Protocol pour la génération de composants UI).
+
+### Outils IA utilisés
+
+| Outil | Rôle | Protocole |
+|-------|------|-----------|
+| **Claude Code** | Assistant IA dans le terminal — lit, comprend et modifie la codebase | Propriétaire Anthropic |
+| **21st Magic MCP** | Bibliothèque de composants UI interrogeable par un agent IA | Model Context Protocol |
+| **Claude Code Skills** | Instructions spécialisées (angular, ui-ux-designer, magic-ui-generator) | Fichiers `.md` locaux |
+
+### Model Context Protocol (MCP)
+
+MCP est un protocole open-source créé par Anthropic permettant à un LLM d'appeler
+des outils externes via une interface standardisée. Un serveur MCP expose des **tools**
+qu'un agent IA peut invoquer — exactement comme une API REST mais depuis une conversation IA.
+
+```bash
+# Ajouter le serveur 21st Magic à Claude Code
+claude mcp add @21st-dev/magic --api-key <API_KEY>
+
+# Les tools disponibles :
+# mcp__magic__21st_magic_component_inspiration  → cherche des composants UI
+# mcp__magic__21st_magic_component_builder      → génère un composant personnalisé
+# mcp__magic__logo_search                       → logos SVG (TSX/JSX/SVG)
+```
+
+### Composants redessinés
+
+`Home` · `Navbar` · `Footer` · `ProjectCard` · `ProjectList` · `Skills` · `ProjectDetail` · `Login`
+
+→ Voir [docs/PHASE17-Design-UX-AI.md](docs/PHASE17-Design-UX-AI.md) pour le détail complet.
 
 ---
 

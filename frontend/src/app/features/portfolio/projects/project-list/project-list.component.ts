@@ -17,17 +17,29 @@ import { Project } from '@shared/models/project.model';
     imports: [ProjectCardComponent, LoadingSpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-    <div class="section">
+    <div class="section projects-page">
       <div class="container">
-        <h1 class="section-title">Mes projets</h1>
-        <p class="section-subtitle">
-          Tous mes projets — du développement à l'infrastructure
-        </p>
+
+        <!-- Page header -->
+        <div class="projects-header">
+          <div>
+            <h1 class="section-title" style="text-align:left; margin-bottom: 0.5rem">Mes projets</h1>
+            <p class="section-subtitle" style="text-align:left; margin-bottom: 0">
+              Applications cloud native · Infrastructure as Code · DevSecOps
+            </p>
+          </div>
+          @if (pageData() && !isLoading()) {
+            <span class="projects-count badge badge-blue">
+              {{ pageData()!.totalElements }} projet{{ pageData()!.totalElements > 1 ? 's' : '' }}
+            </span>
+          }
+        </div>
 
         @if (isLoading()) {
           <app-loading-spinner message="Chargement des projets..." [fullPage]="true" />
         } @else if (error()) {
           <div class="error-state">
+            <div class="error-state__icon" aria-hidden="true">⚠</div>
             <p>{{ error() }}</p>
             <button class="btn btn-outline" (click)="loadProjects()">Réessayer</button>
           </div>
@@ -36,38 +48,58 @@ import { Project } from '@shared/models/project.model';
             @for (project of pageData()?.content ?? []; track project.id) {
               <app-project-card [project]="project" />
             } @empty {
-              <p class="empty-message">Aucun projet pour le moment.</p>
+              <div class="empty-state">
+                <p>Aucun projet pour le moment.</p>
+              </div>
             }
           </div>
 
-          <!-- Pagination -->
           @if (pageData() && pageData()!.totalPages > 1) {
             <nav class="pagination" aria-label="Pagination des projets">
-              <button
-                class="btn btn-ghost"
-                [disabled]="pageData()!.first"
-                (click)="prevPage()"
-              >
+              <button class="btn btn-ghost" [disabled]="pageData()!.first" (click)="prevPage()">
                 ← Précédent
               </button>
               <span class="pagination__info">
                 Page {{ (pageData()?.page ?? 0) + 1 }} / {{ pageData()?.totalPages }}
               </span>
-              <button
-                class="btn btn-ghost"
-                [disabled]="pageData()!.last"
-                (click)="nextPage()"
-              >
+              <button class="btn btn-ghost" [disabled]="pageData()!.last" (click)="nextPage()">
                 Suivant →
               </button>
             </nav>
           }
         }
+
       </div>
     </div>
   `,
     styles: [`
-    .error-state, .empty-message {
+    .projects-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: var(--spacing-2xl);
+      gap: var(--spacing-md);
+    }
+    .projects-count {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-sm);
+      padding: 0.375rem 0.875rem;
+      flex-shrink: 0;
+    }
+    .error-state {
+      text-align: center;
+      padding: var(--spacing-3xl);
+      color: var(--color-text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+    .error-state__icon {
+      font-size: 2.5rem;
+      color: var(--color-warning);
+    }
+    .empty-state {
       text-align: center;
       padding: var(--spacing-3xl);
       color: var(--color-text-secondary);
@@ -78,10 +110,14 @@ import { Project } from '@shared/models/project.model';
       justify-content: center;
       gap: var(--spacing-lg);
       margin-top: var(--spacing-2xl);
-      &__info {
-        font-size: var(--font-size-sm);
-        color: var(--color-text-secondary);
-      }
+    }
+    .pagination__info {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-secondary);
+      font-family: var(--font-mono);
+    }
+    @media (max-width: 640px) {
+      .projects-header { flex-direction: column; align-items: flex-start; }
     }
   `]
 })
