@@ -59,7 +59,8 @@ jobs:
       - name: Generate SBOM — CycloneDX (JSON + XML)
         working-directory: backend
         run: |
-          mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom \
+          mvn package org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom \
+            -DskipTests \
             -DschemaVersion=1.5 \
             -DincludeLicenseText=false \
             -DoutputFormat=all \
@@ -102,7 +103,7 @@ jobs:
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -147,12 +148,13 @@ jobs:
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Lambda dependencies
         run: |
-          cd lambdas/weekly-report  && npm ci --omit=dev
-          cd lambdas/contact-form   && npm ci --omit=dev
+          cd lambdas/weekly-report  && npm ci --omit=dev && cd ../..
+          cd lambdas/contact-form   && npm ci --omit=dev && cd ../..
+          cd lambdas/image-resize   && npm ci --omit=dev && cd ../..
 
       - name: Trivy SBOM — Lambdas (CycloneDX JSON)
         uses: aquasecurity/trivy-action@master

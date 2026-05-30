@@ -79,11 +79,38 @@ concurrency:
 jobs:
 
   # ===========================================================================
+  # JOB 0 : VÉRIFICATION DES PRÉREQUIS
+  # Skip proprement les jobs ECR/deploy si les secrets AWS ne sont pas configurés.
+  # Un job "skipped" (gris) est préférable à un job "failed" (rouge) pour un
+  # portfolio qui n'a pas encore de compte AWS actif.
+  # ===========================================================================
+  check-prerequisites:
+    name: 🔐 Vérification des secrets AWS
+    runs-on: ubuntu-latest
+    outputs:
+      aws-ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          if [ -z "$AWS_KEY" ]; then
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "::warning::Secrets AWS non configurés (AWS_ACCESS_KEY_ID manquant)."
+            echo "::warning::Configurez AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / EC2_SSH_PRIVATE_KEY pour activer le déploiement ECR."
+          else
+            echo "ready=true" >> $GITHUB_OUTPUT
+            echo "AWS credentials détectés — déploiement activé"
+          fi
+
+  # ===========================================================================
   # JOB 1 : BUILD + PUSH BACKEND → ECR
   # ===========================================================================
   build-push-backend:
     name: 🐳 Backend — Build & Push ECR
     runs-on: ubuntu-latest
+    needs: check-prerequisites
+    if: needs.check-prerequisites.outputs.aws-ready == 'true'
     permissions:
       contents: read
       security-events: write
@@ -179,6 +206,8 @@ jobs:
   build-push-frontend:
     name: 🐳 Frontend — Build & Push ECR
     runs-on: ubuntu-latest
+    needs: check-prerequisites
+    if: needs.check-prerequisites.outputs.aws-ready == 'true'
     permissions:
       contents: read
       security-events: write
@@ -261,7 +290,8 @@ jobs:
   deploy:
     name: 🚀 Deploy to EC2
     runs-on: ubuntu-latest
-    needs: [build-push-backend, build-push-frontend]
+    needs: [check-prerequisites, build-push-backend, build-push-frontend]
+    if: needs.check-prerequisites.outputs.aws-ready == 'true'
     environment:
       # Crée un environnement GitHub pour approval, historique, URL
       name: ${{ github.event.inputs.environment || 'dev' }}
