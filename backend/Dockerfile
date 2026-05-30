@@ -67,7 +67,7 @@ RUN java -Djarmode=tools -jar target/*.jar extract --layers --launcher --destina
 # eclipse-temurin = image officielle OpenJDK par Adoptium (recommandée par Spring)
 # alpine = distribution Linux minimale (~5MB)
 # ===========================================================================
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM eclipse-temurin:25-jre-alpine AS runtime
 
 # Métadonnées de l'image (bonne pratique)
 LABEL maintainer="amine.charrad@gmail.com"
