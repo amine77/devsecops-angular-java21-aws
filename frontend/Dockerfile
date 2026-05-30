@@ -44,7 +44,7 @@ RUN npm run build
 # STAGE 2 : NGINX RUNTIME
 # nginx:alpine = ~25MB (vs ~130MB pour nginx:latest)
 # ===========================================================================
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.31-alpine AS runtime
 
 # Métadonnées
 LABEL maintainer="amine.charrad@gmail.com"
