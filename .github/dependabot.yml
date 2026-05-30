@@ -1,0 +1,217 @@
+# =============================================================================
+# DEPENDABOT — Mises à jour automatiques des dépendances
+# =============================================================================
+# Dependabot ouvre des PRs automatiques quand des nouvelles versions sont
+# disponibles pour les dépendances Maven, npm, Docker et GitHub Actions.
+#
+# Stratégie adoptée :
+#   - Maven & npm frontend : weekly (lundi matin) — projet actif
+#   - Lambdas npm          : monthly — moins critique, stable
+#   - Docker base images   : weekly — sécurité des images de base
+#   - GitHub Actions       : weekly — vulnérabilités dans les actions tierces
+#   - Terraform providers  : monthly — changements moins fréquents
+#
+# Les PRs Dependabot sont étiquetées "dependencies" + écosystème.
+# =============================================================================
+
+version: 2
+
+updates:
+
+  # ---------------------------------------------------------------------------
+  # BACKEND — Maven (Spring Boot, dépendances Java)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "maven"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "java"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    open-pull-requests-limit: 5
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+          - "org.springframework:*"
+      testing:
+        patterns:
+          - "org.testcontainers:*"
+          - "org.junit*"
+      security:
+        patterns:
+          - "io.jsonwebtoken:*"
+          - "org.springframework.security:*"
+
+  # ---------------------------------------------------------------------------
+  # FRONTEND — npm (Angular 20, Angular Material, Jest)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "angular"
+      - "frontend"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    open-pull-requests-limit: 5
+    groups:
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@angular-eslint/*"
+      angular-material:
+        patterns:
+          - "@angular/material"
+          - "@angular/cdk"
+      testing:
+        patterns:
+          - "jest*"
+          - "@types/jest"
+          - "jest-preset-angular"
+          - "cypress"
+          - "jest-junit"
+      typescript-eslint:
+        patterns:
+          - "@typescript-eslint/*"
+          - "typescript"
+
+  # ---------------------------------------------------------------------------
+  # LAMBDA weekly-report — npm
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/lambdas/weekly-report"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "lambda"
+    commit-message:
+      prefix: "chore(deps)"
+    open-pull-requests-limit: 3
+
+  # ---------------------------------------------------------------------------
+  # LAMBDA image-resize — npm (sharp)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/lambdas/image-resize"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "lambda"
+    commit-message:
+      prefix: "chore(deps)"
+    open-pull-requests-limit: 3
+
+  # ---------------------------------------------------------------------------
+  # LAMBDA contact-form — npm
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/lambdas/contact-form"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "lambda"
+    commit-message:
+      prefix: "chore(deps)"
+    open-pull-requests-limit: 3
+
+  # ---------------------------------------------------------------------------
+  # DOCKER — Images de base (backend + frontend)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "frontend"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # ---------------------------------------------------------------------------
+  # GITHUB ACTIONS — Actions tierces (vulnérabilités de supply chain)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci)"
+    open-pull-requests-limit: 5
+    groups:
+      actions-core:
+        patterns:
+          - "actions/*"
+      docker-actions:
+        patterns:
+          - "docker/*"
+      security-actions:
+        patterns:
+          - "aquasecurity/*"
+          - "github/codeql-action"
+          - "semgrep/*"
+          - "gitleaks/*"
+          - "sigstore/*"
+          - "ossf/*"
+          - "SonarSource/*"
+
+  # ---------------------------------------------------------------------------
+  # TERRAFORM — Providers AWS
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "terraform"
+    directory: "/terraform"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      timezone: "Europe/Paris"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "infrastructure"
+    commit-message:
+      prefix: "chore(deps)"
+    open-pull-requests-limit: 3

@@ -47,6 +47,9 @@ TF_VARS          ?= $(TF_DIR)/terraform.tfvars
         clean clean-containers clean-volumes clean-images \
         db-connect shell-backend shell-frontend \
         trivy-scan security-check test-dast test-dast-baseline \
+        sbom sbom-backend sbom-frontend sbom-lambdas \
+        sonar-backend sonar-frontend \
+        cosign-verify scorecard \
         status health \
         tf-init tf-validate tf-plan tf-apply tf-destroy tf-output tf-fmt \
         lambda-build lambda-build-weekly-report lambda-build-image-resize lambda-build-contact-form \
@@ -510,6 +513,118 @@ ses-verify: ## Vérifie les 2 adresses email dans SES (sandbox uniquement)
 	aws ses verify-email-identity --email-address $(SENDER_EMAIL)    --region $(AWS_REGION)
 	aws ses verify-email-identity --email-address $(RECIPIENT_EMAIL) --region $(AWS_REGION)
 	@echo "$(YELLOW)⚠ Ouvre les emails de vérification reçus et clique sur les liens$(RESET)"
+
+# =============================================================================
+# PHASE 16 — SÉCURITÉ AVANCÉE
+# SonarCloud · SBOM · Cosign · OpenSSF
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# SBOM — Software Bill of Materials (CycloneDX)
+# ---------------------------------------------------------------------------
+sbom: sbom-backend sbom-frontend sbom-lambdas ## Génère le SBOM complet (backend + frontend + lambdas)
+	@echo "$(GREEN)✔ SBOMs générés$(RESET)"
+	@echo "  Backend  : backend/target/bom.json"
+	@echo "  Frontend : frontend/sbom-cyclonedx.json"
+	@echo "  Lambdas  : sbom-lambdas.json"
+
+sbom-backend: ## Génère le SBOM CycloneDX du backend Maven (bom.json + bom.xml)
+	@echo "$(CYAN)▶ SBOM backend (CycloneDX)...$(RESET)"
+	@command -v mvn >/dev/null 2>&1 || (echo "$(RED)✘ Maven requis$(RESET)" && exit 1)
+	cd backend && mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom \
+		-DschemaVersion=1.5 \
+		-DoutputFormat=all \
+		-B -q
+	@echo "$(GREEN)✔ SBOM backend : backend/target/bom.json$(RESET)"
+
+sbom-frontend: ## Génère le SBOM CycloneDX du frontend Angular (npm)
+	@echo "$(CYAN)▶ SBOM frontend (CycloneDX npm)...$(RESET)"
+	@command -v node >/dev/null 2>&1 || (echo "$(RED)✘ Node.js requis$(RESET)" && exit 1)
+	cd frontend && npx --yes @cyclonedx/cyclonedx-npm \
+		--output-format JSON \
+		--output-file sbom-cyclonedx.json \
+		--spec-version 1.5 \
+		--flatten-components
+	@echo "$(GREEN)✔ SBOM frontend : frontend/sbom-cyclonedx.json$(RESET)"
+
+sbom-lambdas: ## Génère le SBOM des Lambdas via Trivy
+	@echo "$(CYAN)▶ SBOM lambdas (Trivy CycloneDX)...$(RESET)"
+	@command -v trivy >/dev/null 2>&1 || (echo "$(RED)✘ Trivy requis$(RESET)" && exit 1)
+	@mkdir -p reports
+	trivy fs --format cyclonedx \
+		--output reports/sbom-lambdas.json \
+		./lambdas
+	@echo "$(GREEN)✔ SBOM lambdas : reports/sbom-lambdas.json$(RESET)"
+
+# ---------------------------------------------------------------------------
+# SONARCLOUD — Analyse qualité locale (nécessite SONAR_TOKEN)
+# ---------------------------------------------------------------------------
+sonar-backend: ## Lance l'analyse SonarCloud du backend (SONAR_TOKEN requis)
+	@echo "$(CYAN)▶ SonarCloud — Backend Java 21...$(RESET)"
+	@test -n "$(SONAR_TOKEN)" || (echo "$(RED)✘ SONAR_TOKEN non défini. Export SONAR_TOKEN=<token>$(RESET)" && exit 1)
+	@test -n "$(SONAR_ORGANIZATION)" || (echo "$(RED)✘ SONAR_ORGANIZATION non défini$(RESET)" && exit 1)
+	cd backend && mvn sonar:sonar -B \
+		-Dsonar.projectKey=portfolio-backend \
+		-Dsonar.organization=$(SONAR_ORGANIZATION) \
+		-Dsonar.host.url=https://sonarcloud.io \
+		-Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+		-Dsonar.token=$(SONAR_TOKEN)
+	@echo "$(GREEN)✔ Analyse SonarCloud backend soumise$(RESET)"
+
+sonar-frontend: ## Lance l'analyse SonarCloud du frontend (SONAR_TOKEN_FRONTEND requis)
+	@echo "$(CYAN)▶ SonarCloud — Frontend Angular 20...$(RESET)"
+	@test -n "$(SONAR_TOKEN_FRONTEND)" || (echo "$(RED)✘ SONAR_TOKEN_FRONTEND non défini$(RESET)" && exit 1)
+	@command -v sonar-scanner >/dev/null 2>&1 || \
+		(echo "$(YELLOW)⚠ sonar-scanner non installé. Installation : npm i -g sonar-scanner$(RESET)"; \
+		 echo "$(YELLOW)  Ou utiliser le workflow GitHub Actions .github/workflows/sonarcloud.yml$(RESET)"; exit 1)
+	cd frontend && sonar-scanner \
+		-Dsonar.projectKey=portfolio-frontend \
+		-Dsonar.organization=$(SONAR_ORGANIZATION) \
+		-Dsonar.host.url=https://sonarcloud.io \
+		-Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+		-Dsonar.token=$(SONAR_TOKEN_FRONTEND)
+	@echo "$(GREEN)✔ Analyse SonarCloud frontend soumise$(RESET)"
+
+# ---------------------------------------------------------------------------
+# COSIGN — Vérification de signature d'image (SLSA)
+# ---------------------------------------------------------------------------
+cosign-verify: ## Vérifie la signature Cosign d'une image (IMAGE=portfolio-backend:latest)
+	@echo "$(CYAN)▶ Vérification signature Cosign...$(RESET)"
+	@command -v cosign >/dev/null 2>&1 || \
+		(echo "$(YELLOW)⚠ cosign non installé. Installation : https://docs.sigstore.dev/cosign/system_config/installation/$(RESET)" && exit 1)
+	@test -n "$(IMAGE)" || (echo "$(RED)✘ IMAGE non défini. Usage : make cosign-verify IMAGE=portfolio-backend:latest$(RESET)" && exit 1)
+	cosign verify \
+		--certificate-identity-regexp "https://github.com/.*" \
+		--certificate-oidc-issuer https://token.actions.githubusercontent.com \
+		$(IMAGE)
+	@echo "$(GREEN)✔ Signature valide$(RESET)"
+
+# ---------------------------------------------------------------------------
+# OPENSSF SCORECARD — Évaluation bonnes pratiques
+# ---------------------------------------------------------------------------
+scorecard: ## Lance OpenSSF Scorecard sur le dépôt local
+	@echo "$(CYAN)▶ OpenSSF Scorecard...$(RESET)"
+	@command -v scorecard >/dev/null 2>&1 || \
+		(echo "$(YELLOW)⚠ scorecard non installé.$(RESET)" && \
+		 echo "$(YELLOW)  Installation : go install sigs.k8s.io/release-utils/cmd/scorecard@latest$(RESET)" && \
+		 echo "$(YELLOW)  Ou utiliser le workflow GitHub Actions : .github/workflows/sbom-supply-chain.yml$(RESET)" && exit 1)
+	scorecard --local . --format table
+	@echo "$(GREEN)✔ Scorecard terminé$(RESET)"
+
+# ---------------------------------------------------------------------------
+# PHASE 16 — Tout d'un coup
+# ---------------------------------------------------------------------------
+security-phase16: sbom trivy-scan ## Phase 16 complète en local (SBOM + Trivy)
+	@echo ""
+	@echo "$(BOLD)$(GREEN)╔══════════════════════════════════════════╗$(RESET)"
+	@echo "$(BOLD)$(GREEN)║  Phase 16 — Security Avancée : OK        ║$(RESET)"
+	@echo "$(BOLD)$(GREEN)╚══════════════════════════════════════════╝$(RESET)"
+	@echo ""
+	@echo "  SonarCloud  : make sonar-backend SONAR_TOKEN=<token> SONAR_ORGANIZATION=<org>"
+	@echo "  SBOM        : backend/target/bom.json · frontend/sbom-cyclonedx.json"
+	@echo "  Trivy       : make trivy-scan"
+	@echo "  Gitleaks    : gitleaks detect --config .gitleaks.toml"
+	@echo ""
 
 inspect-network: ## Inspecte le réseau Docker du projet
 	docker network inspect portfolio-network

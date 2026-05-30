@@ -1,0 +1,153 @@
+# =============================================================================
+# GITLEAKS — Configuration custom pour le portfolio DevSecOps
+# =============================================================================
+# Étend la configuration par défaut de Gitleaks avec des règles d'exclusion
+# adaptées aux données de test et à la documentation du portfolio.
+#
+# Gitleaks scanne l'historique Git complet à la recherche de secrets accidentels
+# (tokens API, clés privées, mots de passe, etc.)
+#
+# IMPORTANT : Les exclusions ci-dessous ne couvrent QUE les faux positifs
+# identifiés dans les données de test. Ne jamais committer de vrais secrets.
+#
+# Documentation : https://github.com/gitleaks/gitleaks
+# =============================================================================
+
+title = "Portfolio DevSecOps — Gitleaks Custom Config"
+
+# Étend la configuration par défaut (contient ~150 règles pour tokens courants)
+[extend]
+useDefault = true
+
+# =============================================================================
+# ALLOWLIST GLOBALE — Exclusions de faux positifs documentés
+# =============================================================================
+[allowlist]
+  description = "Données de test, documentation et exemples du portfolio"
+
+  # Chemins toujours exclus (documentation + tests)
+  paths = [
+    # Documentation — les exemples de config contiennent des valeurs factices
+    '''(?i)docs/''',
+    '''(?i).*\.md$''',
+    # Fichiers de configuration d'exemple (pas les vrais .tfvars)
+    '''terraform/terraform\.tfvars\.example''',
+    # Rapports générés (ZAP, Trivy, JaCoCo) — pas du code source
+    '''(?i)reports/''',
+    '''(?i)zap/reports/''',
+    '''(?i)target/''',
+    '''(?i)coverage/''',
+    # Fichiers de lock npm/Maven (pas de secrets, mais contiennent des hashes)
+    '''package-lock\.json$''',
+  ]
+
+  # Patterns regex toujours exclus (données de test documentées)
+  regexes = [
+    # Mot de passe de test admin — présent dans les fixtures de test JUnit
+    # et les scripts Cypress. Valeur factice, jamais utilisée en production.
+    '''Admin@2024!''',
+
+    # Email admin de test — utilisé dans les tests d'authentification
+    '''admin@portfolio\.dev''',
+
+    # Email de test générique Cypress/k6
+    '''test@example\.com''',
+    '''user@example\.com''',
+
+    # Clé JWT de test (64 octets Base64 factice utilisée dans application-test.properties)
+    '''dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tdGVzdGluZy1vbmx5LW5vdC1mb3ItcHJvZA==''',
+
+    # Hash BCrypt généré pour les tests (pas un secret)
+    '''\$2[aby]\$[0-9]{2}\$[A-Za-z0-9./]{53}''',
+  ]
+
+  # Mots-clés déclenchant une exclusion (contexte de test évident)
+  stopwords = [
+    "example",
+    "placeholder",
+    "changeme",
+    "TODO",
+    "FIXME",
+    "your-token-here",
+    "your-key-here",
+    "xxxxxxxx",
+    "test-only",
+    "REPLACE_ME",
+  ]
+
+# =============================================================================
+# RÈGLES SUPPLÉMENTAIRES — Patterns spécifiques au projet
+# =============================================================================
+
+# Détecte les vraies clés AWS mal committées (en plus des règles par défaut)
+[[rules]]
+  id = "aws-access-key-id-hardcoded"
+  description = "Clé d'accès AWS hardcodée dans le code source (hors .tfvars.example)"
+  regex = '''(?i)(aws_access_key_id|AWS_ACCESS_KEY_ID)\s*=\s*["']?(AKIA[0-9A-Z]{16})["']?'''
+  tags = ["aws", "credentials", "high"]
+  severity = "HIGH"
+
+  [rules.allowlist]
+    paths = [
+      '''terraform/terraform\.tfvars\.example''',
+      '''docs/''',
+      '''.*\.md$''',
+    ]
+
+[[rules]]
+  id = "aws-secret-access-key-hardcoded"
+  description = "Secret Access Key AWS hardcodé"
+  regex = '''(?i)(aws_secret_access_key|AWS_SECRET_ACCESS_KEY)\s*=\s*["']?([A-Za-z0-9/+=]{40})["']?'''
+  tags = ["aws", "credentials", "critical"]
+  severity = "CRITICAL"
+
+  [rules.allowlist]
+    paths = [
+      '''terraform/terraform\.tfvars\.example''',
+      '''docs/''',
+      '''.*\.md$''',
+    ]
+
+# Détecte les JWT secrets hardcodés (longueur > 32 chars, pas dans les tests)
+[[rules]]
+  id = "jwt-secret-hardcoded"
+  description = "JWT secret key hardcodée dans le code source"
+  regex = '''(?i)(jwt[._-]?secret|JWT_SECRET)\s*[=:]\s*["']([A-Za-z0-9+/=_\-]{32,})["']'''
+  tags = ["jwt", "credentials", "high"]
+  severity = "HIGH"
+
+  [rules.allowlist]
+    paths = [
+      '''src/test/''',
+      '''src/main/resources/application-test''',
+      '''docs/''',
+      '''.*\.md$''',
+    ]
+    regexes = [
+      # Valeur placeholder évidente
+      '''your-secret-key''',
+      '''changeme''',
+      '''replace-me''',
+    ]
+
+# Détecte les mots de passe de base de données hardcodés (hors application-test)
+[[rules]]
+  id = "db-password-hardcoded"
+  description = "Mot de passe de base de données hardcodé"
+  regex = '''(?i)(db[._-]?password|database[._-]?password|DB_PASSWORD|POSTGRES_PASSWORD)\s*[=:]\s*["']([^'"]{8,})["']'''
+  tags = ["database", "credentials", "medium"]
+  severity = "MEDIUM"
+
+  [rules.allowlist]
+    paths = [
+      '''src/test/''',
+      '''docker/docker-compose''',
+      '''docs/''',
+      '''.*\.md$''',
+      '''terraform/terraform\.tfvars\.example''',
+    ]
+    regexes = [
+      '''postgres_password''',
+      '''portfolio_password''',
+      '''changeme''',
+    ]
