@@ -1,19 +1,16 @@
 # =============================================================================
 # SONARCLOUD — Analyse qualité + Quality Gate
 # =============================================================================
-# Un seul projet couvre tout le monorepo : Java 21 + TypeScript/Angular 20
-#
 # Projet SonarCloud : amine77_devsecops-angular-java21-aws
 # Dashboard        : https://sonarcloud.io/summary/overall?id=amine77_devsecops-angular-java21-aws
 #
 # Prérequis secret GitHub :
-#   SONAR_TOKEN — généré sur sonarcloud.io → My Account → Security → Generate Token
+#   SONAR_TOKEN — sonarcloud.io → My Account → Security → Generate Token
 #
 # Ce que remonte ce workflow :
-#   - Coverage backend  : JaCoCo XML (mvn verify)
-#   - Coverage frontend : lcov.info  (jest --coverage)
-#   - Bugs / Vulnerabilities / Code Smells
-#   - Security Hotspots
+#   - Coverage backend  : JaCoCo XML (tests unitaires, hors *IT.java Testcontainers)
+#   - Coverage frontend : lcov.info (jest --coverage)
+#   - Bugs / Vulnerabilities / Code Smells / Security Hotspots
 #   - Quality Gate (bloque la PR si non passé)
 # =============================================================================
 
@@ -67,12 +64,15 @@ jobs:
           key: sonar-${{ runner.os }}
           restore-keys: sonar-
 
-      - name: Backend — build + tests + couverture JaCoCo
+      - name: Backend — tests unitaires + couverture JaCoCo
         working-directory: backend
-        run: mvn verify -B -Dcheckstyle.skip=true
-        # continue-on-error : le scan Sonar se lance même si des tests échouent
-        # (on veut voir la couverture partielle, pas bloquer l'analyse)
-        continue-on-error: true
+        run: |
+          mvn verify -B \
+            -Dcheckstyle.skip=true \
+            -Dexcludes="**/*IT.java" \
+            -Dmaven.test.failure.ignore=true
+        # -Dexcludes="**/*IT.java"         : saute les tests Testcontainers (besoin Docker + services)
+        # -Dmaven.test.failure.ignore=true : génère quand même le rapport JaCoCo si des tests échouent
 
       - name: Frontend — install deps + couverture Jest (lcov)
         working-directory: frontend
@@ -80,6 +80,18 @@ jobs:
           npm ci
           npm run test:ci
         continue-on-error: true
+
+      - name: Diagnostic — vérifier que les fichiers de couverture existent
+        run: |
+          echo "=== JaCoCo XML (backend) ==="
+          find backend/target -name "jacoco.xml" 2>/dev/null && echo "✔ jacoco.xml trouvé" || echo "✘ jacoco.xml ABSENT"
+
+          echo "=== lcov.info (frontend) ==="
+          find frontend/coverage -name "lcov.info" 2>/dev/null && echo "✔ lcov.info trouvé" || echo "✘ lcov.info ABSENT"
+
+          echo "=== Tailles ==="
+          ls -lh backend/target/site/jacoco/jacoco.xml 2>/dev/null || true
+          ls -lh frontend/coverage/lcov.info 2>/dev/null || true
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
