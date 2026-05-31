@@ -54,6 +54,16 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = [var.allowed_ssh_cidr]
   }
 
+  # Port 30080 — ArgoCD UI (NodePort K3s)
+  # Restreindre à ton IP en production ! Laisser 0.0.0.0/0 expose l'UI publiquement.
+  ingress {
+    description = "ArgoCD UI NodePort (K3s Phase 20) — restrict to your IP in prod"
+    from_port   = 30080
+    to_port     = 30080
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]   # Même restriction que SSH
+  }
+
   # Port 8080 Spring Boot — accessible depuis le réseau VPC uniquement
   # (NGINX sur le même hôte proxie vers localhost:8080 → pas besoin de l'exposer)
   # Décommenter si tu veux accéder directement au backend depuis internet (dev only)

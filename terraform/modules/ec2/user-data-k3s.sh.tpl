@@ -65,7 +65,9 @@ dnf install -y \
   tar \
   openssl \
   aws-cli \
+  httpd-tools \
   --quiet
+# httpd-tools : fournit htpasswd — requis pour hasher le mot de passe ArgoCD (BCrypt)
 
 # =============================================================================
 # ÉTAPE 2 — SWAP 4GB
@@ -268,12 +270,13 @@ server:
     limits:
       memory: "128Mi"
       cpu: "200m"
-  # Désactiver TLS interne (géré par Traefik)
+  # --insecure : ArgoCD tourne en HTTP (port 8080) — TLS géré par Traefik en amont
   extraArgs:
     - --insecure
   service:
     type: NodePort
-    nodePortHttps: 30080
+    nodePortHttp: 30080      # HTTP (port interne 80) exposé sur NodePort 30080
+    # nodePortHttps ne s'applique pas en mode --insecure
 
 # ---- Application Controller ----
 controller:
