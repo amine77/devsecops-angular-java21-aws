@@ -138,6 +138,27 @@ module "ec2" {
 }
 
 # =============================================================================
+# MODULE 6 bis — SECRETS MANAGER (Phase 21 — External Secrets Operator)
+# =============================================================================
+# Stocke les secrets applicatifs dans AWS Secrets Manager.
+# External Secrets Operator (ESO) les synchronise dans des K8s Secrets.
+# Résultat : zéro secret en clair dans Git ou terraform.tfvars en prod.
+module "secrets_manager" {
+  source = "./modules/secrets-manager"
+
+  name_prefix  = local.name_prefix
+  environment  = var.environment
+  rds_host     = module.rds.host
+  rds_port     = module.rds.port
+  db_name      = module.rds.db_name
+  db_username  = var.db_username
+  db_password  = var.db_password
+  jwt_secret   = var.jwt_secret
+
+  depends_on = [module.rds]
+}
+
+# =============================================================================
 # MODULE 6 — CLOUDWATCH (Observabilité + Alertes)
 # =============================================================================
 module "cloudwatch" {

@@ -371,6 +371,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── PHASE18-ArgoCD-GitOps.md
 │   ├── PHASE19-Helm.md
 │   ├── PHASE20-FreeTier-K3s.md
+│   ├── PHASE21-ExternalSecrets.md
 │   └── FINOPS-Cost-Analysis.md
 │
 ├── k8s/                                  # Manifests Kubernetes — GitOps (Phase 18)
@@ -399,6 +400,25 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │
 └── Makefile                              # Raccourcis : make up/down/test/test-load/...
 ```
+
+---
+
+## 🔑 Phase 21 — External Secrets Operator
+
+Zéro secret en clair dans Git ou user_data. **AWS Secrets Manager → ESO → Kubernetes Secrets**
+avec synchronisation automatique toutes les heures et audit trail CloudTrail.
+
+```
+AWS Secrets Manager (portfolio/dev JSON)
+    ↓ IAM Instance Profile (sans credentials exposés)
+External Secrets Operator (K3s, namespace external-secrets)
+    ↓ SyncWaves ArgoCD : wave 0 (ESO) → wave 1 (Store) → wave 2 (Secrets)
+Kubernetes Secret "portfolio-secrets" (auto-créé + auto-mis à jour)
+    ↓
+Spring Boot (db-password, jwt-secret montés via secretKeyRef)
+```
+
+→ Voir [docs/PHASE21-ExternalSecrets.md](docs/PHASE21-ExternalSecrets.md)
 
 ---
 

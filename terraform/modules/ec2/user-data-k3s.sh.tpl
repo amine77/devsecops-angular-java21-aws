@@ -211,23 +211,32 @@ echo "0 */6 * * * root /usr/local/bin/refresh-ecr-token.sh >> /var/log/ecr-refre
   >> /etc/cron.d/ecr-token-refresh
 
 # =============================================================================
-# ÉTAPE 7 — Secrets Kubernetes (DB, JWT, Redis)
+# ÉTAPE 7 — Secrets Kubernetes
 # =============================================================================
-echo "=== [7/9] Création secrets portfolio ==="
-
-# Créer le secret dans les deux namespaces
-for NS in portfolio-dev portfolio-prod; do
-  kubectl create secret generic portfolio-secrets \
-    --namespace="$NS" \
-    --from-literal=db-url="jdbc:postgresql://$RDS_HOST:$RDS_PORT/$DB_NAME" \
-    --from-literal=db-username="$DB_USERNAME" \
-    --from-literal=db-password="$DB_PASSWORD" \
-    --from-literal=jwt-secret="$JWT_SECRET" \
-    --from-literal=redis-host="localhost" \
-    --dry-run=client -o yaml | kubectl apply -f -
-done
-
-echo "Secrets créés avec succès"
+# Phase 21 (External Secrets Operator) :
+#   Les secrets portfolio-secrets sont désormais créés AUTOMATIQUEMENT
+#   par ESO depuis AWS Secrets Manager (portfolio/dev et portfolio/prod).
+#
+#   Flux :
+#     AWS Secrets Manager (portfolio/dev JSON)
+#         ↓ synchronisation toutes les 1h
+#     External Secrets Operator (dans K3s)
+#         ↓ crée/met à jour
+#     Kubernetes Secret "portfolio-secrets" dans portfolio-dev
+#         ↓ monté dans les pods
+#     Spring Boot (db-url, db-password, jwt-secret, redis-host)
+#
+#   Avantages :
+#     ✅ Zéro secret en clair dans user_data ou Git
+#     ✅ Rotation automatique sans redéploiement
+#     ✅ Audit trail CloudTrail
+#
+#   ESO est installé par ArgoCD (argocd/apps/external-secrets-operator.yaml).
+#   Les ressources ClusterSecretStore + ExternalSecret sont dans
+#   k8s/external-secrets/ (gérées par ArgoCD portfolio-secrets Application).
+echo "=== [7/9] Secrets gérés par ESO (External Secrets Operator) ==="
+echo "ESO synchronisera portfolio-secrets depuis AWS Secrets Manager (portfolio/dev)."
+echo "Aucune action manuelle requise — ArgoCD déploie ESO au démarrage."
 
 # =============================================================================
 # ÉTAPE 8 — Installation ArgoCD (lightweight)

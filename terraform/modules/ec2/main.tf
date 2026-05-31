@@ -97,6 +97,28 @@ resource "aws_iam_role_policy" "ecr_pull" {
   })
 }
 
+# --- Policy : AWS Secrets Manager (Phase 21 — External Secrets Operator) ---
+# ESO tourne dans K3s et utilise l'IAM Instance Profile pour lire les secrets.
+# On limite à portfolio/* — moindre privilège.
+resource "aws_iam_role_policy" "secrets_manager" {
+  name = "${var.name_prefix}-secrets-manager"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "SecretsManagerRead"
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:ListSecretVersionIds"
+      ]
+      Resource = "arn:aws:secretsmanager:${var.aws_region}:*:secret:portfolio/*"
+    }]
+  })
+}
+
 # --- Policy : CloudWatch Logs (logs applicatifs) ---
 resource "aws_iam_role_policy" "cloudwatch_logs" {
   name = "${var.name_prefix}-cloudwatch-logs"
