@@ -71,9 +71,13 @@ class ProjectServiceTest {
 
     @BeforeEach
     void setUp() {
-        // SecurityContextHolder requis : createProject() appelle getAuthentication().getName()
+        // SecurityContextHolder requis : createProject() caste getPrincipal() en User
+        com.portfolio.backend.entity.User mockUser = com.portfolio.backend.entity.User.builder()
+            .id(1L)
+            .email("admin@portfolio.dev")
+            .build();
         SecurityContext ctx = SecurityContextHolder.createEmptyContext();
-        ctx.setAuthentication(new UsernamePasswordAuthenticationToken("admin@portfolio.dev", null));
+        ctx.setAuthentication(new UsernamePasswordAuthenticationToken(mockUser, null, java.util.List.of()));
         SecurityContextHolder.setContext(ctx);
 
         testProject = Project.builder()

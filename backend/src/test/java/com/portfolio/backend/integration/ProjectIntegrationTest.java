@@ -2,8 +2,11 @@ package com.portfolio.backend.integration;
 
 import com.portfolio.backend.entity.Project;
 import com.portfolio.backend.entity.ProjectStatus;
+import com.portfolio.backend.entity.User;
 import com.portfolio.backend.repository.ProjectRepository;
+import com.portfolio.backend.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,9 +69,25 @@ class ProjectIntegrationTest {
     @Autowired
     private ProjectRepository projectRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = userRepository.save(User.builder()
+            .email("test@portfolio.dev")
+            .password("hashed_password")
+            .firstName("Test")
+            .lastName("User")
+            .build());
+    }
+
     @AfterEach
     void cleanup() {
         projectRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
@@ -81,6 +100,7 @@ class ProjectIntegrationTest {
             .status(ProjectStatus.ACTIVE)
             .featured(false)
             .sortOrder(1)
+            .user(testUser)
             .build();
 
         // WHEN
@@ -104,6 +124,7 @@ class ProjectIntegrationTest {
             .status(ProjectStatus.ACTIVE)
             .featured(false)
             .sortOrder(1)
+            .user(testUser)
             .build();
 
         Project archivedProject = Project.builder()
@@ -112,6 +133,7 @@ class ProjectIntegrationTest {
             .status(ProjectStatus.ARCHIVED)
             .featured(false)
             .sortOrder(2)
+            .user(testUser)
             .build();
 
         projectRepository.saveAll(List.of(activeProject, archivedProject));
@@ -135,6 +157,7 @@ class ProjectIntegrationTest {
             .status(ProjectStatus.ACTIVE)
             .featured(true)
             .sortOrder(1)
+            .user(testUser)
             .build();
 
         Project notFeatured = Project.builder()
@@ -143,6 +166,7 @@ class ProjectIntegrationTest {
             .status(ProjectStatus.ACTIVE)
             .featured(false)
             .sortOrder(2)
+            .user(testUser)
             .build();
 
         projectRepository.saveAll(List.of(featured, notFeatured));
