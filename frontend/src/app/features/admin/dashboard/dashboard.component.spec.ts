@@ -10,10 +10,27 @@ import { signal } from '@angular/core';
 import { DashboardComponent } from './dashboard.component';
 import { ProjectService } from '@core/services/project.service';
 import { AuthService } from '@core/services/auth.service';
+import { Project } from '@shared/models/project.model';
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let component: DashboardComponent;
+
+  const mockProject: Project = {
+    id: 1,
+    title: 'Test',
+    description: 'Desc',
+    summary: null,
+    githubUrl: null,
+    demoUrl: null,
+    imageUrl: null,
+    featured: false,
+    sortOrder: 1,
+    status: 'ACTIVE',
+    skills: [],
+    createdAt: '',
+    updatedAt: '',
+  };
 
   const mockProjectService = {
     getProjects: jest.fn(),
@@ -28,7 +45,7 @@ describe('DashboardComponent', () => {
 
   beforeEach(async () => {
     mockProjectService.getProjects.mockReturnValue(
-      of({ content: [], totalElements: 0, totalPages: 0, size: 50, number: 0 })
+      of({ content: [mockProject], totalElements: 1, totalPages: 1, size: 50, number: 0 })
     );
 
     await TestBed.configureTestingModule({
@@ -60,5 +77,28 @@ describe('DashboardComponent', () => {
   it('should load projects on init', () => {
     expect(mockProjectService.getProjects).toHaveBeenCalledWith(0, 50);
     expect(component['isLoading']()).toBe(false);
+    expect(component['projects']()).toHaveLength(1);
+  });
+
+  it('should open confirm dialog on confirmDelete', () => {
+    const openSpy = jest.spyOn(component['dialog'], 'open').mockReturnValue({
+      afterClosed: () => of(false),
+    } as never);
+
+    component.confirmDelete(mockProject);
+
+    expect(openSpy).toHaveBeenCalled();
+  });
+
+  it('should delete project when dialog confirmed', () => {
+    mockProjectService.deleteProject.mockReturnValue(of(void 0));
+    jest.spyOn(component['dialog'], 'open').mockReturnValue({
+      afterClosed: () => of(true),
+    } as never);
+
+    component.confirmDelete(mockProject);
+
+    expect(mockProjectService.deleteProject).toHaveBeenCalledWith(1);
+    expect(component['projects']()).toHaveLength(0);
   });
 });
