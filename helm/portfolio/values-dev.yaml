@@ -8,11 +8,10 @@
 
 global:
   imageRegistry: "ACCOUNT_ID.dkr.ecr.eu-west-3.amazonaws.com"
-
 backend:
   image:
-    tag: latest        # ← CI-GITOPS-TAG-BACKEND (remplacé par sha-XXXXXXX)
-  replicas: 1          # 1 replica suffit en dev
+    tag: sha-d60ad801699be3e9f24501bfd3034501c533959f # ← CI-GITOPS-TAG-BACKEND (remplacé par sha-XXXXXXX)
+  replicas: 1 # 1 replica suffit en dev
   resources:
     requests:
       memory: "128Mi"
@@ -20,21 +19,17 @@ backend:
     limits:
       memory: "384Mi"
       cpu: "300m"
-
 frontend:
   image:
-    tag: latest        # ← CI-GITOPS-TAG-FRONTEND (remplacé par sha-XXXXXXX)
+    tag: sha-d60ad801699be3e9f24501bfd3034501c533959f # ← CI-GITOPS-TAG-FRONTEND (remplacé par sha-XXXXXXX)
   replicas: 1
-
 ingress:
   host: portfolio-dev.local
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
   tls:
     enabled: false
-
 hpa:
   enabled: false
-
 pdb:
   enabled: false
