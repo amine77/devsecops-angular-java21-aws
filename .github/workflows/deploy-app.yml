@@ -356,11 +356,11 @@ jobs:
             aws ecr get-login-password --region "$AWS_REGION" \
               | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-            # Mettre à jour le tag dans docker-compose.yml
+            # Mettre à jour uniquement les images ECR (pas prometheus/grafana/redis)
             cd /opt/portfolio
             IMAGE_TAG="${{ env.IMAGE_TAG }}"
-            sudo sed -i "s|:sha-[a-f0-9]*\b|:${IMAGE_TAG}|g" docker-compose.yml
-            sudo sed -i "s|:latest\b|:${IMAGE_TAG}|g" docker-compose.yml
+            sudo sed -i "s|${ECR_REGISTRY}/portfolio-backend:[^ ]*|${ECR_REGISTRY}/portfolio-backend:${IMAGE_TAG}|g" docker-compose.yml
+            sudo sed -i "s|${ECR_REGISTRY}/portfolio-frontend:[^ ]*|${ECR_REGISTRY}/portfolio-frontend:${IMAGE_TAG}|g" docker-compose.yml
 
             echo "=== Pull nouvelles images ==="
             sudo docker compose pull
