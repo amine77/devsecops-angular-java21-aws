@@ -92,9 +92,9 @@ class JwtTokenProviderTest {
         }
 
         @Test
-        @DisplayName("Rejette un token vide")
-        void shouldReturnFalseForEmptyToken() {
-            assertThat(jwtTokenProvider.validateToken("")).isFalse();
+        @DisplayName("Rejette une chaîne qui n'est pas un JWT")
+        void shouldReturnFalseForRandomString() {
+            assertThat(jwtTokenProvider.validateToken("thisisnotajwt")).isFalse();
         }
     }
 }

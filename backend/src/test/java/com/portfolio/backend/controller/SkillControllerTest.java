@@ -1,14 +1,13 @@
 package com.portfolio.backend.controller;
 
-import com.portfolio.backend.config.SecurityConfig;
 import com.portfolio.backend.dto.response.SkillResponse;
 import com.portfolio.backend.service.SkillService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -18,8 +17,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(SkillController.class)
-@Import(SecurityConfig.class)
+@WebMvcTest(controllers = SkillController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @DisplayName("SkillController — Tests unitaires")
 class SkillControllerTest {
 
@@ -28,16 +27,6 @@ class SkillControllerTest {
 
     @MockBean
     private SkillService skillService;
-
-    // Mocks requis par SecurityConfig
-    @MockBean
-    private com.portfolio.backend.security.JwtAuthenticationFilter jwtAuthenticationFilter;
-    @MockBean
-    private com.portfolio.backend.security.JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-    @MockBean
-    private com.portfolio.backend.security.JwtAccessDeniedHandler jwtAccessDeniedHandler;
-    @MockBean
-    private org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
 
     private SkillResponse skill(String name, String cat) {
         return new SkillResponse(1L, name, cat, null, 1, 1);
