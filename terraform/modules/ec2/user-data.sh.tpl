@@ -40,7 +40,7 @@ ECR_REGISTRY=$(echo "$ECR_BACKEND_URL" | cut -d'/' -f1)
 # ÉTAPE 1 — Mise à jour système
 # =============================================================================
 echo "=== [1/7] Mise à jour système ==="
-dnf update -y --quiet
+dnf update -y --quiet --exclude=curl* --exclude=curl-minimal*
 
 # =============================================================================
 # ÉTAPE 2 — Installation Docker
