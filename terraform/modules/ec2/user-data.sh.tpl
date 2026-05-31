@@ -80,9 +80,9 @@ echo "ECR login OK"
 # ÉTAPE 4 — Pull des images
 # =============================================================================
 echo "=== [4/7] Pull des images Docker ==="
-docker pull "$ECR_BACKEND_URL:$IMAGE_TAG"
-docker pull "$ECR_FRONTEND_URL:$IMAGE_TAG"
-echo "Images pullées"
+# Images absentes au 1er démarrage (chicken-and-egg) — le service systemd réessaiera
+docker pull "$ECR_BACKEND_URL:$IMAGE_TAG" || echo "Image backend absente — sera pullée au démarrage du service"
+docker pull "$ECR_FRONTEND_URL:$IMAGE_TAG" || echo "Image frontend absente — sera pullée au démarrage du service"
 
 # =============================================================================
 # ÉTAPE 5 — docker-compose.yml de production
@@ -167,8 +167,8 @@ echo "docker-compose.yml créé"
 # =============================================================================
 echo "=== [6/7] Démarrage de la stack ==="
 cd /opt/portfolio
-docker compose up -d
-echo "Services démarrés"
+docker compose up -d || echo "Démarrage différé — images pas encore dans ECR, le service systemd les pullera"
+echo "Services configurés"
 
 # =============================================================================
 # ÉTAPE 7 — Service systemd pour redémarrage automatique
