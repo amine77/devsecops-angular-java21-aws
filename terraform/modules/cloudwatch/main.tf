@@ -142,8 +142,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
     widgets = [
       # ── EC2 CPU ──
       {
-        type       = "metric"
-        x          = 0; y = 0; width = 8; height = 6
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 8
+        height = 6
         properties = {
           title  = "EC2 — CPU Utilization (%)"
           view   = "timeSeries"
@@ -159,8 +162,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
       },
       # ── Mémoire EC2 (via CloudWatch Agent) ──
       {
-        type       = "metric"
-        x          = 8; y = 0; width = 8; height = 6
+        type   = "metric"
+        x      = 8
+        y      = 0
+        width  = 8
+        height = 6
         properties = {
           title  = "EC2 — Mémoire utilisée (%)"
           view   = "timeSeries"
@@ -173,8 +179,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
       },
       # ── Auth failures ──
       {
-        type       = "metric"
-        x          = 16; y = 0; width = 8; height = 6
+        type   = "metric"
+        x      = 16
+        y      = 0
+        width  = 8
+        height = 6
         properties = {
           title  = "Auth — Échecs / minute"
           view   = "timeSeries"
@@ -190,8 +199,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
       },
       # ── HTTP 5xx ──
       {
-        type       = "metric"
-        x          = 0; y = 6; width = 12; height = 6
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
         properties = {
           title  = "HTTP — Erreurs 5xx / minute"
           view   = "timeSeries"
@@ -207,8 +219,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
       },
       # ── Logs récents ──
       {
-        type       = "log"
-        x          = 12; y = 6; width = 12; height = 6
+        type   = "log"
+        x      = 12
+        y      = 6
+        width  = 12
+        height = 6
         properties = {
           title   = "Logs ERROR récents"
           query   = "SOURCE '/portfolio/backend' | fields @timestamp, message, requestId | filter level = 'ERROR' | sort @timestamp desc | limit 20"

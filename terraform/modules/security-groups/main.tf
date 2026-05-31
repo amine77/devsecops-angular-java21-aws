@@ -57,7 +57,7 @@ resource "aws_security_group" "ec2" {
   # Port 30080 — ArgoCD UI (NodePort K3s)
   # Restreindre à ton IP en production ! Laisser 0.0.0.0/0 expose l'UI publiquement.
   ingress {
-    description = "ArgoCD UI NodePort (K3s Phase 20) — restrict to your IP in prod"
+    description = "ArgoCD UI NodePort (K3s Phase 20) - restrict to your IP in prod"
     from_port   = 30080
     to_port     = 30080
     protocol    = "tcp"
@@ -105,7 +105,7 @@ resource "aws_security_group" "ec2" {
 # =============================================================================
 resource "aws_security_group" "rds" {
   name        = "${var.name_prefix}-rds-sg"
-  description = "Security group for RDS PostgreSQL — EC2 access only"
+  description = "Security group for RDS PostgreSQL - EC2 access only"
   vpc_id      = var.vpc_id
 
   # --- Ingress ---

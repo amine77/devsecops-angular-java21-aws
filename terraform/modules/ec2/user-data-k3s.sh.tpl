@@ -193,7 +193,7 @@ cat > /usr/local/bin/refresh-ecr-token.sh << 'CRON_EOF'
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 AWS_REGION=$(curl -sf http://169.254.169.254/latest/meta-data/placement/region || echo "eu-west-3")
 ECR_REGISTRY=$(aws ecr describe-registry --region "$AWS_REGION" \
-  --query 'registryId' --output text).dkr.ecr.${AWS_REGION}.amazonaws.com
+  --query 'registryId' --output text).dkr.ecr.$${AWS_REGION}.amazonaws.com
 ECR_TOKEN=$(aws ecr get-login-password --region "$AWS_REGION")
 
 for NS in argocd portfolio-dev portfolio-prod; do

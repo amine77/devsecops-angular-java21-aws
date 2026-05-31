@@ -48,7 +48,7 @@ data "aws_ami" "amazon_linux_2023" {
 
 resource "aws_iam_role" "ec2" {
   name        = "${var.name_prefix}-ec2-role"
-  description = "IAM role for EC2 portfolio server — ECR pull + CloudWatch logs"
+  description = "IAM role for EC2 portfolio server - ECR pull + CloudWatch logs"
 
   # Trust policy : seul EC2 peut assumer ce rôle
   assume_role_policy = jsonencode({
