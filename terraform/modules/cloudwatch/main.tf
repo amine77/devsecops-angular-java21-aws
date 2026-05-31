@@ -148,10 +148,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 8
         height = 6
         properties = {
-          title  = "EC2 — CPU Utilization (%)"
-          view   = "timeSeries"
-          period = 60
-          stat   = "Average"
+          title   = "EC2 - CPU Utilization (%)"
+          view    = "timeSeries"
+          region  = var.aws_region
+          period  = 60
+          stat    = "Average"
           metrics = [
             ["AWS/EC2", "CPUUtilization", "InstanceId", var.ec2_instance_id]
           ]
@@ -168,13 +169,17 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 8
         height = 6
         properties = {
-          title  = "EC2 — Mémoire utilisée (%)"
-          view   = "timeSeries"
-          period = 60
-          stat   = "Average"
+          title   = "EC2 - Memoire utilisee (%)"
+          view    = "timeSeries"
+          region  = var.aws_region
+          period  = 60
+          stat    = "Average"
           metrics = [
             ["CWAgent", "mem_used_percent", "host", "portfolio-ec2"]
           ]
+          annotations = {
+            horizontal = []
+          }
         }
       },
       # ── Auth failures ──
@@ -185,10 +190,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 8
         height = 6
         properties = {
-          title  = "Auth — Échecs / minute"
-          view   = "timeSeries"
-          period = 60
-          stat   = "Sum"
+          title   = "Auth - Echecs / minute"
+          view    = "timeSeries"
+          region  = var.aws_region
+          period  = 60
+          stat    = "Sum"
           metrics = [
             ["Portfolio/Security", "AuthLoginFailures"]
           ]
@@ -205,10 +211,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 12
         height = 6
         properties = {
-          title  = "HTTP — Erreurs 5xx / minute"
-          view   = "timeSeries"
-          period = 60
-          stat   = "Sum"
+          title   = "HTTP - Erreurs 5xx / minute"
+          view    = "timeSeries"
+          region  = var.aws_region
+          period  = 60
+          stat    = "Sum"
           metrics = [
             ["Portfolio/Application", "Http5xxErrors"]
           ]
