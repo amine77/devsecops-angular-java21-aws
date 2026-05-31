@@ -12,10 +12,19 @@ describe('HomeComponent', () => {
   let component: HomeComponent;
 
   const mockProject: Project = {
-    id: 1, title: 'Portfolio DevSecOps', description: 'Desc',
-    summary: 'Résumé', githubUrl: null, demoUrl: null, imageUrl: null,
-    featured: true, sortOrder: 1, status: 'ACTIVE', skills: [],
-    createdAt: '', updatedAt: '',
+    id: 1,
+    title: 'Portfolio DevSecOps',
+    description: 'Desc',
+    summary: 'Résumé',
+    githubUrl: null,
+    demoUrl: null,
+    imageUrl: null,
+    featured: true,
+    sortOrder: 1,
+    status: 'ACTIVE',
+    skills: [],
+    createdAt: '',
+    updatedAt: '',
   };
 
   const mockProjectService = {
