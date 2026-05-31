@@ -349,10 +349,8 @@ jobs:
 
             # Login ECR (token valide 12h, renouvellement à chaque déploiement)
             AWS_REGION="${{ env.AWS_REGION }}"
-            ECR_REGISTRY=$(aws ecr describe-repositories \
-              --region "$AWS_REGION" \
-              --query "repositories[0].repositoryUri" \
-              --output text | cut -d'/' -f1)
+            AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
             echo "=== Login ECR ==="
             aws ecr get-login-password --region "$AWS_REGION" \
