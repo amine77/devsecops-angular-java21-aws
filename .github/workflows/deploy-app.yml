@@ -362,8 +362,8 @@ jobs:
             sudo sed -i "s|${ECR_REGISTRY}/portfolio-backend:[^ ]*|${ECR_REGISTRY}/portfolio-backend:${IMAGE_TAG}|g" docker-compose.yml
             sudo sed -i "s|${ECR_REGISTRY}/portfolio-frontend:[^ ]*|${ECR_REGISTRY}/portfolio-frontend:${IMAGE_TAG}|g" docker-compose.yml
 
-            echo "=== Pull nouvelles images ==="
-            sudo docker compose pull
+            echo "=== Pull nouvelles images ECR ==="
+            sudo docker compose pull backend frontend
 
             echo "=== Restart backend (zero-downtime) ==="
             sudo docker compose up -d --no-deps backend
