@@ -74,8 +74,17 @@ class ProjectIntegrationTest {
 
     private User testUser;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     void setUp() {
+        // Supprimer dans l'ordre FK : project_skills → projects → users
+        // Nécessaire car Flyway V4 insère des données persistées entre les tests
+        jdbcTemplate.execute("DELETE FROM project_skills");
+        jdbcTemplate.execute("DELETE FROM projects");
+        jdbcTemplate.execute("DELETE FROM users");
+
         testUser = userRepository.save(User.builder()
             .email("test@portfolio.dev")
             .password("hashed_password")
@@ -86,8 +95,9 @@ class ProjectIntegrationTest {
 
     @AfterEach
     void cleanup() {
-        projectRepository.deleteAll();
-        userRepository.deleteAll();
+        jdbcTemplate.execute("DELETE FROM project_skills");
+        jdbcTemplate.execute("DELETE FROM projects");
+        jdbcTemplate.execute("DELETE FROM users");
     }
 
     @Test
