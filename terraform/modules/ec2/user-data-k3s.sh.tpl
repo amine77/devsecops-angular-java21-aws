@@ -57,9 +57,8 @@ ECR_REGISTRY=$(echo "$ECR_BACKEND_URL" | cut -d'/' -f1)
 # ÉTAPE 1 — Mise à jour système + dépendances
 # =============================================================================
 echo "=== [1/9] Mise à jour système ==="
-dnf update -y --quiet
+dnf update -y --quiet --exclude=curl* --exclude=curl-minimal*
 dnf install -y \
-  curl \
   git \
   jq \
   tar \
@@ -67,6 +66,7 @@ dnf install -y \
   aws-cli \
   httpd-tools \
   --quiet
+# curl-minimal est pré-installé sur AL2023 et suffit pour K3s — ne pas installer curl (conflit)
 # httpd-tools : fournit htpasswd — requis pour hasher le mot de passe ArgoCD (BCrypt)
 
 # =============================================================================
@@ -209,8 +209,9 @@ CRON_EOF
 chmod +x /usr/local/bin/refresh-ecr-token.sh
 
 # Cron toutes les 6h (token dure 12h, on rafraîchit à mi-parcours)
+mkdir -p /etc/cron.d
 echo "0 */6 * * * root /usr/local/bin/refresh-ecr-token.sh >> /var/log/ecr-refresh.log 2>&1" \
-  >> /etc/cron.d/ecr-token-refresh
+  > /etc/cron.d/ecr-token-refresh
 
 # =============================================================================
 # ÉTAPE 7 — Secrets Kubernetes
