@@ -386,14 +386,15 @@ jobs:
           MAX_RETRIES=10
           RETRY_INTERVAL=30
 
-          echo "=== Health check: http://$EC2_IP/health ==="
+          # Port 80 redirige vers HTTPS (301) — on accepte 200, 204 et 301
+          echo "=== Health check: http://$EC2_IP ==="
 
           for i in $(seq 1 $MAX_RETRIES); do
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
               --connect-timeout 5 --max-time 10 \
-              "http://$EC2_IP/health" 2>/dev/null || echo "000")
+              "http://$EC2_IP" 2>/dev/null || echo "000")
 
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "204" ]; then
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "204" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
               echo "✅ Health check OK (HTTP $HTTP_CODE) après $i tentative(s)"
               exit 0
             fi
