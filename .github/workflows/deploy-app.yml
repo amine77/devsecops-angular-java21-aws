@@ -359,21 +359,21 @@ jobs:
             # Mettre à jour le tag dans docker-compose.yml
             cd /opt/portfolio
             IMAGE_TAG="${{ env.IMAGE_TAG }}"
-            sed -i "s|:sha-[a-f0-9]*\b|:${IMAGE_TAG}|g" docker-compose.yml
-            sed -i "s|:latest\b|:${IMAGE_TAG}|g" docker-compose.yml
+            sudo sed -i "s|:sha-[a-f0-9]*\b|:${IMAGE_TAG}|g" docker-compose.yml
+            sudo sed -i "s|:latest\b|:${IMAGE_TAG}|g" docker-compose.yml
 
             echo "=== Pull nouvelles images ==="
-            docker compose pull
+            sudo docker compose pull
 
             echo "=== Restart backend (zero-downtime) ==="
-            docker compose up -d --no-deps backend
+            sudo docker compose up -d --no-deps backend
             sleep 5
 
             echo "=== Restart frontend ==="
-            docker compose up -d --no-deps frontend
+            sudo docker compose up -d --no-deps frontend
 
             echo "=== Services actifs ==="
-            docker compose ps
+            sudo docker compose ps
 
             echo "=== DEPLOY DONE: $(date) ==="
 
