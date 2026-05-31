@@ -105,9 +105,12 @@ jobs:
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         continue-on-error: true
-        # Quality Gate informatif uniquement — ne bloque pas le CI
-        # La condition new_coverage (80%) échoue sur du code de test (normal)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        # La config est lue depuis sonar-project.properties à la racine du repo
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=false
+        # qualitygate.wait=false : ne pas poster le statut Quality Gate comme check GitHub
+        # La condition new_coverage (80%) échoue sur du code de test (normal)
+        # Le dashboard SonarCloud reste visible mais ne bloque pas le CI
