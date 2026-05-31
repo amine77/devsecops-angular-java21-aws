@@ -1,13 +1,20 @@
 package com.portfolio.backend.controller;
 
+import com.portfolio.backend.config.SecurityConfig;
 import com.portfolio.backend.dto.response.SkillResponse;
+import com.portfolio.backend.exception.GlobalExceptionHandler;
+import com.portfolio.backend.observability.AppMetrics;
+import com.portfolio.backend.security.JwtAccessDeniedHandler;
+import com.portfolio.backend.security.JwtAuthenticationEntryPoint;
+import com.portfolio.backend.security.JwtTokenProvider;
 import com.portfolio.backend.service.SkillService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -17,9 +24,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = SkillController.class)
-@AutoConfigureMockMvc(addFilters = false)
-@DisplayName("SkillController — Tests unitaires")
+@WebMvcTest(SkillController.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class,
+    JwtAuthenticationEntryPoint.class, JwtAccessDeniedHandler.class})
+@DisplayName("SkillController — Tests Web Layer")
 class SkillControllerTest {
 
     @Autowired
@@ -27,6 +35,15 @@ class SkillControllerTest {
 
     @MockBean
     private SkillService skillService;
+
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private UserDetailsService userDetailsService;
+
+    @MockBean
+    private AppMetrics appMetrics;
 
     private SkillResponse skill(String name, String cat) {
         return new SkillResponse(1L, name, cat, null, 1, 1);
