@@ -77,10 +77,8 @@ npm start
 
 ### Comptes de démonstration
 
-| Rôle | Email | Mot de passe |
-|------|-------|-------------|
-| Admin | `admin@portfolio.dev` | `Admin@2024!` |
-| Utilisateur | `demo@portfolio.dev` | `Admin@2024!` |
+> Les credentials de démonstration sont disponibles sur demande.
+> Contactez-moi via [LinkedIn](https://www.linkedin.com/in/amine-c-ba36845a/) ou le formulaire de contact du portfolio.
 
 ---
 
