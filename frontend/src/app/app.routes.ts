@@ -37,6 +37,11 @@ export const routes: Routes = [
     loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
   },
   {
+    path: 'privacy',
+    loadComponent: () =>
+      import('./features/legal/privacy.component').then((m) => m.PrivacyComponent),
+  },
+  {
     path: '**',
     redirectTo: '/portfolio',
   },

@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-footer',
   standalone: true,
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <footer class="footer">
@@ -60,7 +62,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
         <div class="footer__bottom">
           <p class="footer__copy">
             Construit avec <span class="footer__heart">♥</span> par <strong>Amine Charrad</strong> —
-            2026
+            2026 ·
+            <a routerLink="/privacy" class="footer__legal-link">Politique de confidentialité</a>
           </p>
           <div class="footer__social">
             <a
@@ -172,6 +175,15 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       }
       .footer__social-link:hover {
         color: var(--color-text-primary);
+      }
+      .footer__legal-link {
+        color: var(--color-text-muted);
+        text-decoration: none;
+        font-size: var(--font-size-sm);
+        transition: color 150ms;
+      }
+      .footer__legal-link:hover {
+        color: var(--color-accent);
       }
       @media (max-width: 768px) {
         .footer__grid {
