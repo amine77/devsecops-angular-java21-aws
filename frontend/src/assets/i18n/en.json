@@ -1,0 +1,46 @@
+{
+  "nav.portfolio": "Portfolio",
+  "nav.projects": "Projects",
+  "nav.skills": "Skills",
+  "nav.login": "Login",
+  "nav.logout": "Logout",
+  "nav.dashboard": "Dashboard",
+
+  "home.available": "Available for new projects",
+  "home.title": "Amine CHARRAD",
+  "home.subtitle": "Fullstack DevSecOps Engineer",
+  "home.tagline": "Angular · Spring Boot Java 21 · Kubernetes · AWS · Terraform",
+  "home.description": "I build cloud-native, secure and scalable applications — from clean code to infrastructure as code.",
+  "home.cta.projects": "View my projects",
+  "home.cta.skills": "My skills",
+
+  "home.stat.experience": "Years of experience",
+  "home.stat.projects": "Projects delivered",
+  "home.stat.technologies": "Technologies mastered",
+  "home.stat.passion": "Passion for code",
+
+  "home.featured.title": "Featured Projects",
+  "home.featured.empty": "No featured projects at the moment.",
+  "home.featured.retry": "Retry",
+  "home.featured.error": "Unable to load projects.",
+  "home.featured.all": "View all projects",
+
+  "skills.title": "Skills",
+  "skills.loading": "Loading...",
+
+  "projects.title": "Projects",
+  "projects.empty": "No projects available.",
+
+  "footer.copy": "Built with ♥ by Amine Charrad — 2026",
+  "footer.privacy": "Privacy Policy",
+
+  "privacy.title": "Privacy Policy",
+  "privacy.back": "← Back to portfolio",
+
+  "auth.login.title": "Login",
+  "auth.login.subtitle": "Admin access — DevSecOps Portfolio",
+  "auth.login.email": "Email",
+  "auth.login.password": "Password",
+  "auth.login.submit": "Sign in",
+  "auth.login.back": "← Back to portfolio"
+}

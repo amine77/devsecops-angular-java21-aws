@@ -13,26 +13,25 @@
       <!-- Availability badge -->
       <div class="hero__availability animate-in">
         <span class="status-dot" aria-hidden="true"></span>
-        <span class="badge badge-green">Disponible pour de nouveaux projets</span>
+        <span class="badge badge-green">{{ 'home.available' | translate }}</span>
       </div>
 
       <h1 class="hero__title animate-in" style="--delay: 100ms">
         Amine <span class="hero__accent">CHARRAD</span><br />
-        Fullstack DevSecOps Engineer
+        {{ 'home.subtitle' | translate }}
       </h1>
 
       <p class="hero__subtitle animate-in" style="--delay: 200ms">
-        Angular · Spring Boot Java 21 · Kubernetes · AWS · Terraform
+        {{ 'home.tagline' | translate }}
       </p>
 
       <p class="hero__description animate-in" style="--delay: 300ms">
-        Je construis des applications cloud native, sécurisées et scalables — du code propre jusqu'à l'infrastructure as
-        code.
+        {{ 'home.description' | translate }}
       </p>
 
       <div class="hero__actions animate-in" style="--delay: 400ms">
         <a routerLink="/portfolio/projects" class="btn btn-primary">
-          Voir mes projets
+          {{ 'home.cta.projects' | translate }}
           <svg
             width="16"
             height="16"
@@ -47,7 +46,7 @@
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </a>
-        <a routerLink="/portfolio/skills" class="btn btn-outline"> Mes compétences </a>
+        <a routerLink="/portfolio/skills" class="btn btn-outline">{{ 'home.cta.skills' | translate }}</a>
       </div>
 
       <!-- Tech stack badges with stagger -->
@@ -106,20 +105,19 @@
 <!-- ========== FEATURED PROJECTS ========== -->
 <section class="section featured">
   <div class="container">
-    <h2 class="section-title">Projets en vedette</h2>
-    <p class="section-subtitle">Des projets concrets démontrant mes compétences fullstack et DevOps</p>
+    <h2 class="section-title">{{ 'home.featured.title' | translate }}</h2>
 
     @if (isLoading()) {
-      <app-loading-spinner message="Chargement des projets..." />
+      <app-loading-spinner [message]="'skills.loading' | translate" />
     } @else if (error()) {
       <div class="error-state">
-        <p>{{ error() }}</p>
-        <button class="btn btn-outline" (click)="retryLoad()">Réessayer</button>
+        <p>{{ 'home.featured.error' | translate }}</p>
+        <button class="btn btn-outline" (click)="retryLoad()">{{ 'home.featured.retry' | translate }}</button>
       </div>
     } @else if (featuredProjects().length === 0) {
       <div class="empty-state">
-        <p>Aucun projet en vedette pour le moment.</p>
-        <a routerLink="/portfolio/projects" class="btn btn-outline"> Voir tous les projets </a>
+        <p>{{ 'home.featured.empty' | translate }}</p>
+        <a routerLink="/portfolio/projects" class="btn btn-outline">{{ 'home.featured.all' | translate }}</a>
       </div>
     } @else {
       <div class="grid-projects">
@@ -129,7 +127,7 @@
       </div>
 
       <div class="featured__cta">
-        <a routerLink="/portfolio/projects" class="btn btn-outline"> Voir tous les projets → </a>
+        <a routerLink="/portfolio/projects" class="btn btn-outline">{{ 'home.featured.all' | translate }} →</a>
       </div>
     }
   </div>
@@ -139,10 +137,10 @@
 <section class="section stats">
   <div class="container">
     <div class="stats__grid">
-      @for (stat of stats; track stat.label) {
+      @for (stat of stats; track stat.key) {
         <div class="stat-card card">
           <div class="stat-card__value">{{ stat.value }}</div>
-          <div class="stat-card__label">{{ stat.label }}</div>
+          <div class="stat-card__label">{{ stat.key | translate }}</div>
         </div>
       }
     </div>

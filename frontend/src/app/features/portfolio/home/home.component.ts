@@ -5,6 +5,7 @@ import { ProjectCardComponent } from '@shared/components/project-card/project-ca
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { ProjectService } from '@core/services/project.service';
 import { Project } from '@shared/models/project.model';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 /**
  * Page d'accueil du portfolio.
@@ -25,7 +26,7 @@ import { Project } from '@shared/models/project.model';
  */
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, ProjectCardComponent, LoadingSpinnerComponent],
+  imports: [RouterLink, ProjectCardComponent, LoadingSpinnerComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
@@ -51,10 +52,10 @@ export class HomeComponent implements OnInit {
   ];
 
   protected readonly stats = [
-    { value: '5+', label: "Ans d'expérience" },
-    { value: '15+', label: 'Projets livrés' },
-    { value: '10+', label: 'Technologies maîtrisées' },
-    { value: '100%', label: 'Passion du code' },
+    { value: '5+', key: 'home.stat.experience' },
+    { value: '15+', key: 'home.stat.projects' },
+    { value: '10+', key: 'home.stat.technologies' },
+    { value: '100%', key: 'home.stat.passion' },
   ];
 
   ngOnInit(): void {

@@ -2,13 +2,23 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 
 import { AuthService } from '@core/services/auth.service';
+import { LANGUAGES, Language, LanguageService } from '@core/services/language.service';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    MatToolbarModule,
+    MatButtonModule,
+    MatMenuModule,
+    TranslatePipe,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <mat-toolbar class="navbar">
@@ -42,26 +52,56 @@ import { AuthService } from '@core/services/auth.service';
           mat-button
           class="nav-link"
         >
-          Portfolio
+          {{ 'nav.portfolio' | translate }}
         </a>
         <a routerLink="/portfolio/projects" routerLinkActive="active" mat-button class="nav-link">
-          Projets
+          {{ 'nav.projects' | translate }}
         </a>
         <a routerLink="/portfolio/skills" routerLinkActive="active" mat-button class="nav-link">
-          Compétences
+          {{ 'nav.skills' | translate }}
         </a>
       </nav>
 
       <span class="toolbar-spacer"></span>
 
+      <!-- Sélecteur de langue -->
+      <div
+        class="lang-selector"
+        [matMenuTriggerFor]="langMenu"
+        role="button"
+        tabindex="0"
+        aria-label="Changer la langue"
+      >
+        <span class="lang-flag">{{ langService.currentOption().flag }}</span>
+        <span class="lang-code">{{ langService.current().toUpperCase() }}</span>
+        <span class="lang-arrow" aria-hidden="true">▾</span>
+      </div>
+
+      <mat-menu #langMenu="matMenu" class="lang-menu">
+        @for (lang of languages; track lang.code) {
+          <button
+            mat-menu-item
+            (click)="setLang(lang.code)"
+            [class.lang-active]="lang.code === langService.current()"
+          >
+            <span class="lang-flag">{{ lang.flag }}</span>
+            <span>{{ lang.label }}</span>
+          </button>
+        }
+      </mat-menu>
+
       <div class="navbar__actions">
         @if (authService.isAuthenticated()) {
           @if (authService.isAdmin()) {
-            <a routerLink="/admin" mat-stroked-button color="primary">Dashboard</a>
+            <a routerLink="/admin" mat-stroked-button color="primary">
+              {{ 'nav.dashboard' | translate }}
+            </a>
           }
-          <button mat-button (click)="logout()">Déconnexion</button>
+          <button mat-button (click)="logout()">{{ 'nav.logout' | translate }}</button>
         } @else {
-          <a routerLink="/auth/login" mat-raised-button color="primary">Connexion</a>
+          <a routerLink="/auth/login" mat-raised-button color="primary">
+            {{ 'nav.login' | translate }}
+          </a>
         }
       </div>
     </mat-toolbar>
@@ -70,6 +110,12 @@ import { AuthService } from '@core/services/auth.service';
 })
 export class NavbarComponent {
   protected readonly authService = inject(AuthService);
+  protected readonly langService = inject(LanguageService);
+  protected readonly languages = LANGUAGES;
+
+  setLang(code: Language): void {
+    this.langService.setLanguage(code);
+  }
 
   logout(): void {
     this.authService.logout();
