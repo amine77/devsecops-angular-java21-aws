@@ -6,13 +6,13 @@ export type Language = 'fr' | 'en' | 'de';
 export interface LanguageOption {
   code: Language;
   label: string;
-  flag: string;
+  flagSrc: string;
 }
 
 export const LANGUAGES: LanguageOption[] = [
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'en', label: 'English', flag: '🇬🇧' },
-  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'fr', label: 'Français', flagSrc: 'assets/flags/fr.svg' },
+  { code: 'en', label: 'English', flagSrc: 'assets/flags/en.svg' },
+  { code: 'de', label: 'Deutsch', flagSrc: 'assets/flags/de.svg' },
 ];
 
 @Injectable({ providedIn: 'root' })

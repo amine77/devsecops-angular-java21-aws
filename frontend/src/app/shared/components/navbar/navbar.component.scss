@@ -108,8 +108,12 @@
 }
 
 .lang-flag {
-  font-size: 1.1rem;
-  line-height: 1;
+  width: 22px;
+  height: 16px;
+  border-radius: 2px;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
 }
 
 .lang-code {

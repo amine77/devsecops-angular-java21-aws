@@ -72,7 +72,11 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
         tabindex="0"
         aria-label="Changer la langue"
       >
-        <span class="lang-flag">{{ langService.currentOption().flag }}</span>
+        <img
+          class="lang-flag"
+          [src]="langService.currentOption().flagSrc"
+          [alt]="langService.currentOption().label"
+        />
         <span class="lang-code">{{ langService.current().toUpperCase() }}</span>
         <span class="lang-arrow" aria-hidden="true">▾</span>
       </div>
@@ -84,8 +88,8 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             (click)="setLang(lang.code)"
             [class.lang-active]="lang.code === langService.current()"
           >
-            <span class="lang-flag">{{ lang.flag }}</span>
-            <span>{{ lang.label }}</span>
+            <img class="lang-flag" [src]="lang.flagSrc" [alt]="lang.label" />
+            <span class="lang-name">{{ lang.label }}</span>
           </button>
         }
       </mat-menu>
