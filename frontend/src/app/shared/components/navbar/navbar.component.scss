@@ -95,7 +95,9 @@
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
   user-select: none;
   margin-right: var(--spacing-sm);
 
