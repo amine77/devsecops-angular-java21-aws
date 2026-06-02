@@ -77,7 +77,7 @@ resource "aws_lambda_function" "weekly_report" {
   function_name    = "${var.name_prefix}-weekly-report"
   role             = aws_iam_role.lambda.arn
   handler          = "index.handler"
-  runtime          = "nodejs20.x"
+  runtime          = "nodejs22.x"
   timeout          = 30
   memory_size      = 128
 

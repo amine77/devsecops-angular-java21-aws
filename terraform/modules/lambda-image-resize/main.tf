@@ -145,7 +145,7 @@ resource "aws_lambda_function" "image_resize" {
   function_name    = "${var.name_prefix}-image-resize"
   role             = aws_iam_role.lambda.arn
   handler          = "index.handler"
-  runtime          = "nodejs20.x"
+  runtime          = "nodejs22.x"
   timeout          = 60
   memory_size      = 512
 
