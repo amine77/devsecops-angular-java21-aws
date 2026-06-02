@@ -12,12 +12,14 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { ProjectService } from '@core/services/project.service';
 import { SkillService } from '@core/services/skill.service';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 import { Skill } from '@shared/models/skill.model';
 
 @Component({
   selector: 'app-project-form',
   standalone: true,
   imports: [
+    TranslatePipe,
     ReactiveFormsModule,
     RouterLink,
     MatFormFieldModule,
@@ -33,43 +35,45 @@ import { Skill } from '@shared/models/skill.model';
     <div class="section">
       <div class="container container--narrow">
         <div class="form-header">
-          <a routerLink="/admin" mat-icon-button matTooltip="Retour">
+          <a routerLink="/admin" mat-icon-button [matTooltip]="'admin.form.back' | translate">
             <mat-icon>arrow_back</mat-icon>
           </a>
-          <h1>{{ isEditMode ? 'Modifier le projet' : 'Nouveau projet' }}</h1>
+          <h1>
+            {{ (isEditMode ? 'admin.form.title.edit' : 'admin.form.title.create') | translate }}
+          </h1>
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="project-form">
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Titre *</mat-label>
+            <mat-label>{{ 'admin.form.field.title' | translate }}</mat-label>
             <input matInput formControlName="title" placeholder="Mon super projet" />
             @if (isInvalid('title')) {
-              <mat-error>Le titre est obligatoire (2-200 caractères)</mat-error>
+              <mat-error>{{ 'admin.form.field.title.error' | translate }}</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Résumé court</mat-label>
+            <mat-label>{{ 'admin.form.field.summary' | translate }}</mat-label>
             <input matInput formControlName="summary" placeholder="Affiché sur les cards..." />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Description complète *</mat-label>
+            <mat-label>{{ 'admin.form.field.description' | translate }}</mat-label>
             <textarea matInput formControlName="description" rows="6"></textarea>
             @if (isInvalid('description')) {
-              <mat-error>Description obligatoire (10-5000 caractères)</mat-error>
+              <mat-error>{{ 'admin.form.field.description.error' | translate }}</mat-error>
             }
           </mat-form-field>
 
           <div class="form-row">
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>URL GitHub</mat-label>
+              <mat-label>{{ 'admin.form.field.github' | translate }}</mat-label>
               <input matInput formControlName="githubUrl" placeholder="https://github.com/..." />
               <mat-icon matPrefix>code</mat-icon>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>URL Démo</mat-label>
+              <mat-label>{{ 'admin.form.field.demo' | translate }}</mat-label>
               <input matInput formControlName="demoUrl" placeholder="https://..." />
               <mat-icon matPrefix>open_in_new</mat-icon>
             </mat-form-field>
@@ -257,11 +261,11 @@ export class ProjectFormComponent implements OnInit {
 
     request$.subscribe({
       next: () => {
-        this.snackBar.open('Projet sauvegardé.', 'OK', { duration: 3000 });
+        this.snackBar.open('admin.form.saved' as any, 'OK', { duration: 3000 });
         void this.router.navigate(['/admin']);
       },
       error: () => {
-        this.errorMessage.set('Erreur lors de la sauvegarde.');
+        this.errorMessage.set('admin.form.error');
         this.isLoading.set(false);
       },
     });

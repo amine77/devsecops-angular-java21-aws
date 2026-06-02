@@ -10,11 +10,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { AuthService } from '@core/services/auth.service';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
+    TranslatePipe,
     ReactiveFormsModule,
     RouterLink,
     MatCardModule,

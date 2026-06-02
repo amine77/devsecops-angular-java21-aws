@@ -10,9 +10,9 @@ import { RouterLink } from '@angular/router';
     <div class="section">
       <div class="container container--narrow">
         <div class="privacy-header">
-          <a routerLink="/portfolio" class="back-link">← Retour au portfolio</a>
-          <h1 class="privacy-title">Politique de confidentialité</h1>
-          <p class="privacy-updated">Dernière mise à jour : juin 2026</p>
+          <a routerLink="/portfolio" class="back-link">{{ 'privacy.back' | translate }}</a>
+          <h1 class="privacy-title">{{ 'privacy.title' | translate }}</h1>
+          <p class="privacy-updated">{{ 'privacy.updated' | translate }}</p>
         </div>
 
         <div class="privacy-content">

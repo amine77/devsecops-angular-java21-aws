@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { ProjectService } from '@core/services/project.service';
 import { Project } from '@shared/models/project.model';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 /**
  * Détail d'un projet.
@@ -14,16 +15,18 @@ import { Project } from '@shared/models/project.model';
  */
 @Component({
   selector: 'app-project-detail',
-  imports: [RouterLink, LoadingSpinnerComponent],
+  imports: [RouterLink, LoadingSpinnerComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (isLoading()) {
-      <app-loading-spinner message="Chargement du projet..." [fullPage]="true" />
+      <app-loading-spinner [message]="'projects.detail.loading' | translate" [fullPage]="true" />
     } @else if (error()) {
       <div class="section container pd-error">
         <div class="pd-error__icon" aria-hidden="true">⚠</div>
         <p>{{ error() }}</p>
-        <a routerLink="/portfolio/projects" class="btn btn-outline">← Retour aux projets</a>
+        <a routerLink="/portfolio/projects" class="btn btn-outline">{{
+          'projects.back' | translate
+        }}</a>
       </div>
     } @else if (project()) {
       <!-- Hero header -->
@@ -44,7 +47,7 @@ import { Project } from '@shared/models/project.model';
             >
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
-            Retour aux projets
+            {{ 'projects.back' | translate }}
           </a>
           <h1 class="pd-hero__title">{{ project()!.title }}</h1>
           @if (project()!.summary) {
@@ -64,7 +67,7 @@ import { Project } from '@shared/models/project.model';
                   rel="noopener noreferrer"
                   class="btn btn-primary"
                 >
-                  Voir sur GitHub
+                  {{ 'projects.github' | translate }}
                 </a>
               }
               @if (project()!.demoUrl) {
@@ -74,7 +77,7 @@ import { Project } from '@shared/models/project.model';
                   rel="noopener noreferrer"
                   class="btn btn-outline"
                 >
-                  Voir la démo →
+                  {{ 'projects.demo' | translate }}
                 </a>
               }
             </div>
@@ -211,7 +214,7 @@ export class ProjectDetailComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        this.error.set('Projet introuvable.');
+        this.error.set('projects.detail.error');
         this.isLoading.set(false);
       },
     });

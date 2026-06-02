@@ -13,11 +13,13 @@ import { ProjectService } from '@core/services/project.service';
 import { AuthService } from '@core/services/auth.service';
 import { Project } from '@shared/models/project.model';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog.component';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    TranslatePipe,
     RouterLink,
     MatTableModule,
     MatButtonModule,
@@ -32,12 +34,12 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
       <div class="container">
         <div class="dashboard-header">
           <div>
-            <h1>Dashboard Admin</h1>
-            <p>Bienvenue, {{ authService.displayName() }}</p>
+            <h1>{{ 'admin.dashboard.title' | translate }}</h1>
+            <p>{{ 'admin.dashboard.welcome' | translate }} {{ authService.displayName() }}</p>
           </div>
           <a routerLink="/admin/projects/new" mat-raised-button color="primary">
             <mat-icon>add</mat-icon>
-            Nouveau projet
+            {{ 'admin.dashboard.new' | translate }}
           </a>
         </div>
 
@@ -49,21 +51,31 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
           <div class="mat-elevation-z2">
             <table mat-table [dataSource]="projects()" class="dashboard-table">
               <ng-container matColumnDef="title">
-                <th mat-header-cell *matHeaderCellDef>Titre</th>
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.title' | translate }}
+                </th>
                 <td mat-cell *matCellDef="let p">{{ p.title }}</td>
               </ng-container>
 
               <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Statut</th>
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.status' | translate }}
+                </th>
                 <td mat-cell *matCellDef="let p">
                   <mat-chip [class]="p.status === 'ACTIVE' ? 'chip-active' : 'chip-archived'">
-                    {{ p.status === 'ACTIVE' ? 'Actif' : 'Archivé' }}
+                    {{
+                      p.status === 'ACTIVE'
+                        ? ('admin.dashboard.status.active' | translate)
+                        : ('admin.dashboard.status.archived' | translate)
+                    }}
                   </mat-chip>
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="featured">
-                <th mat-header-cell *matHeaderCellDef>Vedette</th>
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.featured' | translate }}
+                </th>
                 <td mat-cell *matCellDef="let p">
                   <mat-icon [class]="p.featured ? 'icon-star' : 'icon-muted'">
                     {{ p.featured ? 'star' : 'star_border' }}
@@ -72,19 +84,21 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
               </ng-container>
 
               <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.actions' | translate }}
+                </th>
                 <td mat-cell *matCellDef="let p" class="actions-cell">
                   <a
                     [routerLink]="['/admin/projects', p.id, 'edit']"
                     mat-icon-button
-                    matTooltip="Modifier"
+                    matTooltip="{{ 'admin.dashboard.edit' | translate }}"
                     color="primary"
                   >
                     <mat-icon>edit</mat-icon>
                   </a>
                   <button
                     mat-icon-button
-                    matTooltip="Archiver"
+                    matTooltip="{{ 'admin.dashboard.archive' | translate }}"
                     color="warn"
                     (click)="confirmDelete(p)"
                   >
@@ -97,7 +111,9 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
               <tr mat-row *matRowDef="let row; columns: columns"></tr>
 
               <tr class="mat-row" *matNoDataRow>
-                <td class="mat-cell no-data" [attr.colspan]="columns.length">Aucun projet.</td>
+                <td class="mat-cell no-data" [attr.colspan]="columns.length">
+                  {{ 'admin.dashboard.empty' | translate }}
+                </td>
               </tr>
             </table>
           </div>
@@ -186,10 +202,10 @@ export class DashboardComponent implements OnInit {
       this.projectService.deleteProject(project.id).subscribe({
         next: () => {
           this.projects.update((list) => list.filter((p) => p.id !== project.id));
-          this.snackBar.open('Projet archivé.', 'OK', { duration: 3000 });
+          this.snackBar.open('admin.dashboard.archived.success' as any, 'OK', { duration: 3000 });
         },
         error: () => {
-          this.snackBar.open("Erreur lors de l'archivage.", 'OK', { duration: 4000 });
+          this.snackBar.open('admin.dashboard.archived.error' as any, 'OK', { duration: 4000 });
         },
       });
     });

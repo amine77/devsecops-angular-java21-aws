@@ -61,9 +61,10 @@ import { RouterLink } from '@angular/router';
 
         <div class="footer__bottom">
           <p class="footer__copy">
-            Construit avec <span class="footer__heart">♥</span> par <strong>Amine Charrad</strong> —
-            2026 ·
-            <a routerLink="/privacy" class="footer__legal-link">Politique de confidentialité</a>
+            {{ 'footer.copy' | translate }} ·
+            <a routerLink="/privacy" class="footer__legal-link">{{
+              'footer.privacy' | translate
+            }}</a>
           </p>
           <div class="footer__social">
             <!-- LinkedIn -->

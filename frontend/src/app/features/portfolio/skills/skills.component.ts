@@ -10,6 +10,7 @@ import {
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { SkillService } from '@core/services/skill.service';
 import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skill.model';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 /**
  * Page des compétences.
@@ -20,16 +21,16 @@ import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skil
  */
 @Component({
   selector: 'app-skills',
-  imports: [LoadingSpinnerComponent],
+  imports: [LoadingSpinnerComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="section skills-page">
       <div class="container">
-        <h1 class="section-title">Compétences</h1>
-        <p class="section-subtitle">Technologies et outils maîtrisés</p>
+        <h1 class="section-title">{{ 'skills.title' | translate }}</h1>
+        <p class="section-subtitle">{{ 'skills.subtitle' | translate }}</p>
 
         @if (isLoading()) {
-          <app-loading-spinner message="Chargement..." />
+          <app-loading-spinner [message]="'skills.loading' | translate" />
         } @else {
           @for (group of skillGroups(); track group.category) {
             <div class="skill-group">

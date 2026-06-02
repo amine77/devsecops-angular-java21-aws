@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { ProjectCardComponent } from '@shared/components/project-card/project-card.component';
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { ProjectService } from '@core/services/project.service';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 import { PageResponse } from '@shared/models/api-response.model';
 import { Project } from '@shared/models/project.model';
 
@@ -14,7 +15,7 @@ import { Project } from '@shared/models/project.model';
  */
 @Component({
   selector: 'app-project-list',
-  imports: [ProjectCardComponent, LoadingSpinnerComponent],
+  imports: [ProjectCardComponent, LoadingSpinnerComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="section projects-page">
@@ -23,10 +24,10 @@ import { Project } from '@shared/models/project.model';
         <div class="projects-header">
           <div>
             <h1 class="section-title" style="text-align:left; margin-bottom: 0.5rem">
-              Mes projets
+              {{ 'projects.title' | translate }}
             </h1>
             <p class="section-subtitle" style="text-align:left; margin-bottom: 0">
-              Applications cloud native · Infrastructure as Code · DevSecOps
+              {{ 'projects.subtitle' | translate }}
             </p>
           </div>
           @if (pageData() && !isLoading()) {
@@ -37,12 +38,14 @@ import { Project } from '@shared/models/project.model';
         </div>
 
         @if (isLoading()) {
-          <app-loading-spinner message="Chargement des projets..." [fullPage]="true" />
+          <app-loading-spinner [message]="'projects.loading' | translate" [fullPage]="true" />
         } @else if (error()) {
           <div class="error-state">
             <div class="error-state__icon" aria-hidden="true">⚠</div>
             <p>{{ error() }}</p>
-            <button class="btn btn-outline" (click)="loadProjects()">Réessayer</button>
+            <button class="btn btn-outline" (click)="loadProjects()">
+              {{ 'projects.retry' | translate }}
+            </button>
           </div>
         } @else {
           <div class="grid-projects">
@@ -50,7 +53,7 @@ import { Project } from '@shared/models/project.model';
               <app-project-card [project]="project" />
             } @empty {
               <div class="empty-state">
-                <p>Aucun projet pour le moment.</p>
+                <p>{{ 'projects.empty' | translate }}</p>
               </div>
             }
           </div>
@@ -58,13 +61,13 @@ import { Project } from '@shared/models/project.model';
           @if (pageData() && pageData()!.totalPages > 1) {
             <nav class="pagination" aria-label="Pagination des projets">
               <button class="btn btn-ghost" [disabled]="pageData()!.first" (click)="prevPage()">
-                ← Précédent
+                {{ 'projects.prev' | translate }}
               </button>
               <span class="pagination__info">
                 Page {{ (pageData()?.page ?? 0) + 1 }} / {{ pageData()?.totalPages }}
               </span>
               <button class="btn btn-ghost" [disabled]="pageData()!.last" (click)="nextPage()">
-                Suivant →
+                {{ 'projects.next' | translate }}
               </button>
             </nav>
           }

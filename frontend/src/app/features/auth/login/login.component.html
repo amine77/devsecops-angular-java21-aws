@@ -20,8 +20,8 @@
           <path d="M7 11l2 2 4-4" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </div>
-      <mat-card-title>Connexion</mat-card-title>
-      <mat-card-subtitle>Accès administration — DevSecOps Portfolio</mat-card-subtitle>
+      <mat-card-title>{{ 'auth.login.title' | translate }}</mat-card-title>
+      <mat-card-subtitle>{{ 'auth.login.subtitle' | translate }}</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
@@ -34,11 +34,11 @@
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
+          <mat-label>{{ 'auth.login.email' | translate }}</mat-label>
           <input matInput type="email" formControlName="email" placeholder="admin@portfolio.dev" autocomplete="email" />
           <mat-icon matPrefix>email</mat-icon>
           @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('required')) {
-            <mat-error>L'email est obligatoire.</mat-error>
+            <mat-error>{{ 'auth.login.email.required' | translate }}</mat-error>
           }
           @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('email')) {
             <mat-error>Format d'email invalide.</mat-error>
@@ -46,7 +46,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Mot de passe</mat-label>
+          <mat-label>{{ 'auth.login.password' | translate }}</mat-label>
           <input
             matInput
             [type]="hidePassword() ? 'password' : 'text'"
@@ -64,7 +64,7 @@
             <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
           @if (loginForm.get('password')?.touched && loginForm.get('password')?.hasError('required')) {
-            <mat-error>Le mot de passe est obligatoire.</mat-error>
+            <mat-error>{{ 'auth.login.password.required' | translate }}</mat-error>
           }
           @if (loginForm.get('password')?.touched && loginForm.get('password')?.hasError('minlength')) {
             <mat-error>Minimum 6 caractères.</mat-error>
