@@ -23,7 +23,7 @@ describe('PrivacyComponent', () => {
 
   it('should render the privacy policy title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Politique de confidentialité');
+    expect(compiled.querySelector('h1')?.textContent).toContain('privacy.title');
   });
 
   it('should contain a back link to /portfolio', () => {

@@ -35,6 +35,6 @@ describe('FooterComponent', () => {
 
   it('should render the privacy policy link', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Politique de confidentialité');
+    expect(compiled.textContent).toContain('footer.privacy');
   });
 });

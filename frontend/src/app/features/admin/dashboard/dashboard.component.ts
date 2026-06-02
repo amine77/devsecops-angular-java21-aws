@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ProjectService } from '@core/services/project.service';
 import { AuthService } from '@core/services/auth.service';
+import { LanguageService } from '@core/services/language.service';
 import { Project } from '@shared/models/project.model';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog.component';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
@@ -172,6 +173,7 @@ export class DashboardComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   protected readonly authService = inject(AuthService);
+  private readonly lang = inject(LanguageService);
 
   protected readonly columns = ['title', 'status', 'featured', 'actions'];
   protected readonly projects = signal<Project[]>([]);

@@ -12,6 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { ProjectService } from '@core/services/project.service';
 import { SkillService } from '@core/services/skill.service';
+import { LanguageService } from '@core/services/language.service';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 import { Skill } from '@shared/models/skill.model';
 
@@ -190,6 +191,7 @@ export class ProjectFormComponent implements OnInit {
   private readonly skillService = inject(SkillService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly lang = inject(LanguageService);
 
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
