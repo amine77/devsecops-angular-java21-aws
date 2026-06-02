@@ -27,10 +27,10 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
         justify-content: center;
         gap: var(--spacing-md);
         padding: var(--spacing-2xl);
+      }
 
-        &--full {
-          min-height: calc(100vh - var(--navbar-height));
-        }
+      .spinner-wrapper--full {
+        min-height: calc(100vh - var(--navbar-height));
       }
 
       .spinner-message {
