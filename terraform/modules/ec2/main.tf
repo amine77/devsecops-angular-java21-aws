@@ -223,6 +223,13 @@ resource "aws_instance" "main" {
     Environment = var.environment
     Role        = "application-server"
   }
+
+  lifecycle {
+    # Evite la recreation de l'EC2 quand Amazon Linux publie une nouvelle AMI
+    # ou quand user_data change. L'EC2 est gere manuellement (docker-compose,
+    # NGINX, Certbot). Une recreation perdrait toute la configuration.
+    ignore_changes = [ami, user_data]
+  }
 }
 
 # =============================================================================
