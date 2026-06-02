@@ -52,8 +52,8 @@ export class HomeComponent implements OnInit {
   ];
 
   protected readonly stats = [
-    { value: '5+', key: 'home.stat.experience' },
-    { value: '15+', key: 'home.stat.projects' },
+    { value: '10+', key: 'home.stat.experience' },
+    { value: '7+', key: 'home.stat.projects' },
     { value: '10+', key: 'home.stat.technologies' },
     { value: '100%', key: 'home.stat.passion' },
   ];
