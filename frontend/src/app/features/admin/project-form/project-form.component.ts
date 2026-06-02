@@ -9,6 +9,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ProjectService } from '@core/services/project.service';
 import { SkillService } from '@core/services/skill.service';
@@ -30,6 +31,7 @@ import { Skill } from '@shared/models/skill.model';
     MatCheckboxModule,
     MatChipsModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
