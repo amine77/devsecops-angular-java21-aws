@@ -204,10 +204,14 @@ export class DashboardComponent implements OnInit {
       this.projectService.deleteProject(project.id).subscribe({
         next: () => {
           this.projects.update((list) => list.filter((p) => p.id !== project.id));
-          this.snackBar.open('admin.dashboard.archived.success' as any, 'OK', { duration: 3000 });
+          this.snackBar.open(this.lang.translate('admin.dashboard.archived.success'), 'OK', {
+            duration: 3000,
+          });
         },
         error: () => {
-          this.snackBar.open('admin.dashboard.archived.error' as any, 'OK', { duration: 4000 });
+          this.snackBar.open(this.lang.translate('admin.dashboard.archived.error'), 'OK', {
+            duration: 4000,
+          });
         },
       });
     });

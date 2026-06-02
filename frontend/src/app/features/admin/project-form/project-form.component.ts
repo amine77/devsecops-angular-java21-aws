@@ -263,11 +263,11 @@ export class ProjectFormComponent implements OnInit {
 
     request$.subscribe({
       next: () => {
-        this.snackBar.open('admin.form.saved' as any, 'OK', { duration: 3000 });
+        this.snackBar.open(this.lang.translate('admin.form.saved'), 'OK', { duration: 3000 });
         void this.router.navigate(['/admin']);
       },
       error: () => {
-        this.errorMessage.set('admin.form.error');
+        this.errorMessage.set(this.lang.translate('admin.form.error'));
         this.isLoading.set(false);
       },
     });
