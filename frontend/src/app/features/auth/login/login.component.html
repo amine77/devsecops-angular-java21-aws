@@ -41,7 +41,7 @@
             <mat-error>{{ 'auth.login.email.required' | translate }}</mat-error>
           }
           @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('email')) {
-            <mat-error>Format d'email invalide.</mat-error>
+            <mat-error>{{ 'auth.login.email.invalid' | translate }}</mat-error>
           }
         </mat-form-field>
 
@@ -67,7 +67,7 @@
             <mat-error>{{ 'auth.login.password.required' | translate }}</mat-error>
           }
           @if (loginForm.get('password')?.touched && loginForm.get('password')?.hasError('minlength')) {
-            <mat-error>Minimum 6 caractères.</mat-error>
+            <mat-error>{{ 'auth.login.password.min.short' | translate }}</mat-error>
           }
         </mat-form-field>
 

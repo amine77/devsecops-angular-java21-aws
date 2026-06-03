@@ -31,13 +31,13 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                 />
               </svg>
             </div>
-            <p class="footer__brand-name">DevSecOps Portfolio</p>
-            <p class="footer__brand-sub">16 phases · Angular 20 · Java 21 · AWS</p>
+            <p class="footer__brand-name">{{ 'footer.brand' | translate }}</p>
+            <p class="footer__brand-sub">{{ 'footer.brand.sub' | translate }}</p>
           </div>
 
           <!-- Stack -->
           <div class="footer__col">
-            <p class="footer__col-title">Stack</p>
+            <p class="footer__col-title">{{ 'footer.col.stack' | translate }}</p>
             <ul class="footer__list">
               <li>Angular 20 + Material 3</li>
               <li>Spring Boot · Java 21</li>
@@ -49,7 +49,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 
           <!-- DevSecOps -->
           <div class="footer__col">
-            <p class="footer__col-title">DevSecOps</p>
+            <p class="footer__col-title">{{ 'footer.col.devsecops' | translate }}</p>
             <ul class="footer__list">
               <li>GitHub Actions CI/CD</li>
               <li>SonarCloud · OWASP ZAP</li>

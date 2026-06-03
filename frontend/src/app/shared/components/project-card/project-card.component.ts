@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { SlicePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, TranslatePipe } from '@angular/router';
 
 import { Project } from '@shared/models/project.model';
 

@@ -192,9 +192,9 @@ export class DashboardComponent implements OnInit {
   confirmDelete(project: Project): void {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: 'Archiver le projet',
-        message: `Archiver « ${project.title} » ?`,
-        confirmLabel: 'Archiver',
+        title: this.lang.translate('admin.confirm.archive.title'),
+        message: `${this.lang.translate('admin.confirm.archive.title')} « ${project.title} » ?`,
+        confirmLabel: this.lang.translate('admin.confirm.archive.confirm'),
         confirmColor: 'warn',
       },
     });

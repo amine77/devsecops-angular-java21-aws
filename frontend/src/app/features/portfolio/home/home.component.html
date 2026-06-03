@@ -51,7 +51,7 @@
 
       <!-- Tech stack badges with stagger -->
       <div class="hero__stack animate-in" style="--delay: 500ms">
-        <span class="hero__stack-label">Stack :</span>
+        <span class="hero__stack-label">{{ 'home.stack.label' | translate }}</span>
         @for (tech of techStack; track tech; let i = $index) {
           <span class="badge badge-blue hero__badge" [style.--badge-delay]="i * 60 + 'ms'">{{ tech }}</span>
         }

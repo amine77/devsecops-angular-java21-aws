@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
+import { LanguageService } from '@core/services/language.service';
 import { AuthService } from '@core/services/auth.service';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
@@ -33,6 +34,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly lang = inject(LanguageService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -81,11 +83,11 @@ export class LoginComponent implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);
         if (err.status === 401) {
-          this.errorMessage.set('Email ou mot de passe incorrect.');
+          this.errorMessage.set(this.lang.translate('auth.login.error.credentials'));
         } else if (err.status === 0) {
-          this.errorMessage.set('Serveur inaccessible. Réessayez dans quelques instants.');
+          this.errorMessage.set(this.lang.translate('auth.login.error.server'));
         } else {
-          this.errorMessage.set('Une erreur est survenue. Réessayez.');
+          this.errorMessage.set(this.lang.translate('auth.login.error.generic'));
         }
       },
     });

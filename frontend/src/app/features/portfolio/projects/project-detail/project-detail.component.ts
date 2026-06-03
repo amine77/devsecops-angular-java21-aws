@@ -93,7 +93,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           }
 
           <div class="pd-content card">
-            <h2 class="pd-content__title">Description du projet</h2>
+            <h2 class="pd-content__title">{{ 'projects.detail.description' | translate }}</h2>
             <p class="pd-content__text">{{ project()!.description }}</p>
           </div>
         </div>

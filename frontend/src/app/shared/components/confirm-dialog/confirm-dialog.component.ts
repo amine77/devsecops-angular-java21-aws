@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
+import { MatButtonModule, TranslatePipe } from '@angular/material/button';
 
 export interface ConfirmDialogData {
   title: string;
@@ -18,7 +18,7 @@ export interface ConfirmDialogData {
     <h2 mat-dialog-title>{{ data.title }}</h2>
     <mat-dialog-content>{{ data.message }}</mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Annuler</button>
+      <button mat-button mat-dialog-close>{{ 'admin.confirm.cancel' | translate }}</button>
       <button mat-raised-button [color]="data.confirmColor ?? 'primary'" [mat-dialog-close]="true">
         {{ data.confirmLabel ?? 'Confirmer' }}
       </button>

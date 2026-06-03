@@ -15,163 +15,103 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           <h1 class="privacy-title">{{ 'privacy.title' | translate }}</h1>
           <p class="privacy-updated">{{ 'privacy.updated' | translate }}</p>
         </div>
-
         <div class="privacy-content">
           <section class="privacy-section">
-            <h2>1. Responsable du traitement</h2>
+            <h2>{{ 'privacy.section1.title' | translate }}</h2>
+            <p>{{ 'privacy.section1.body' | translate }}</p>
             <p>
-              Ce site est un portfolio personnel développé et exploité par
-              <strong>Amine Charrad</strong>, ingénieur DevSecOps.
+              {{ 'privacy.section1.contact' | translate }}
+              <a href="mailto:amine.charrad@gmail.com">amine.charrad@gmail.com</a>
             </p>
-            <p>Contact : <a href="mailto:amine.charrad@gmail.com">amine.charrad@gmail.com</a></p>
           </section>
-
           <section class="privacy-section">
-            <h2>2. Données collectées</h2>
-            <p>Ce site collecte les données suivantes :</p>
+            <h2>{{ 'privacy.section2.title' | translate }}</h2>
+            <p>{{ 'privacy.section2.body' | translate }}</p>
             <ul>
-              <li>
-                <strong>Données de connexion</strong> : adresse e-mail et mot de passe hashé
-                (BCrypt) lors de l'authentification à l'espace d'administration.
-              </li>
-              <li>
-                <strong>Données de navigation</strong> : adresse IP, navigateur, pages consultées,
-                horodatages — collectés automatiquement dans les journaux serveur (logs NGINX et
-                CloudWatch).
-              </li>
-              <li>
-                <strong>Formulaire de contact</strong> : nom, e-mail et message si vous utilisez le
-                formulaire de contact.
-              </li>
+              <li>{{ 'privacy.section2.item1' | translate }}</li>
+              <li>{{ 'privacy.section2.item2' | translate }}</li>
+              <li>{{ 'privacy.section2.item3' | translate }}</li>
             </ul>
-            <p>
-              Aucune donnée sensible (santé, origine ethnique, convictions, etc.) n'est collectée.
-            </p>
+            <p>{{ 'privacy.section2.note' | translate }}</p>
           </section>
-
           <section class="privacy-section">
-            <h2>3. Finalités et base légale</h2>
+            <h2>{{ 'privacy.section3.title' | translate }}</h2>
             <table class="privacy-table">
               <thead>
                 <tr>
-                  <th>Finalité</th>
-                  <th>Base légale</th>
-                  <th>Durée de conservation</th>
+                  <th>{{ 'privacy.table.purpose' | translate }}</th>
+                  <th>{{ 'privacy.table.basis' | translate }}</th>
+                  <th>{{ 'privacy.table.duration' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>Authentification à l'espace admin</td>
-                  <td>Intérêt légitime</td>
-                  <td>Durée du projet</td>
+                  <td>{{ 'privacy.table.row1.purpose' | translate }}</td>
+                  <td>{{ 'privacy.table.row1.basis' | translate }}</td>
+                  <td>{{ 'privacy.table.row1.duration' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Sécurité et journaux d'accès</td>
-                  <td>Intérêt légitime</td>
-                  <td>30 jours (CloudWatch)</td>
+                  <td>{{ 'privacy.table.row2.purpose' | translate }}</td>
+                  <td>{{ 'privacy.table.row2.basis' | translate }}</td>
+                  <td>{{ 'privacy.table.row2.duration' | translate }}</td>
                 </tr>
                 <tr>
-                  <td>Réponse aux messages de contact</td>
-                  <td>Consentement</td>
-                  <td>Jusqu'à traitement de la demande</td>
+                  <td>{{ 'privacy.table.row3.purpose' | translate }}</td>
+                  <td>{{ 'privacy.table.row3.basis' | translate }}</td>
+                  <td>{{ 'privacy.table.row3.duration' | translate }}</td>
                 </tr>
               </tbody>
             </table>
           </section>
-
           <section class="privacy-section">
-            <h2>4. Hébergement et transferts de données</h2>
+            <h2>{{ 'privacy.section4.title' | translate }}</h2>
+            <p>{{ 'privacy.section4.body' | translate }}</p>
+          </section>
+          <section class="privacy-section">
+            <h2>{{ 'privacy.section5.title' | translate }}</h2>
+            <p>{{ 'privacy.section5.body' | translate }}</p>
             <p>
-              Ce site est hébergé sur <strong>Amazon Web Services (AWS)</strong>, région
-              <strong>eu-west-3 (Paris, France)</strong>. Toutes les données sont donc traitées sur
-              le territoire de l'Union européenne, sans transfert vers des pays tiers.
+              <strong>{{ 'privacy.section5.note' | translate }}</strong>
             </p>
           </section>
-
           <section class="privacy-section">
-            <h2>5. Cookies</h2>
-            <p>
-              Ce site utilise uniquement un cookie de session technique, strictement nécessaire au
-              fonctionnement de l'espace d'administration (maintien de la connexion via JWT). Ce
-              cookie ne nécessite pas votre consentement.
-            </p>
-            <p>
-              <strong>Aucun cookie de tracking, de publicité ou d'analyse tiers</strong> n'est
-              utilisé.
-            </p>
+            <h2>{{ 'privacy.section6.title' | translate }}</h2>
+            <p>{{ 'privacy.section6.body' | translate }}</p>
           </section>
-
           <section class="privacy-section">
-            <h2>6. Destinataires des données</h2>
-            <p>
-              Vos données ne sont ni vendues, ni cédées, ni louées à des tiers. Elles sont
-              accessibles uniquement par le responsable du traitement.
-            </p>
-            <p>
-              Les sous-traitants techniques sont : AWS (hébergement), Amazon SES (envoi d'e-mails).
-              Ces prestataires agissent en tant que sous-traitants au sens du RGPD et sont soumis à
-              des obligations contractuelles de confidentialité.
-            </p>
-          </section>
-
-          <section class="privacy-section">
-            <h2>7. Vos droits (RGPD)</h2>
-            <p>
-              Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez
-              des droits suivants :
-            </p>
+            <h2>{{ 'privacy.section7.title' | translate }}</h2>
+            <p>{{ 'privacy.section7.intro' | translate }}</p>
             <ul>
-              <li>
-                <strong>Droit d'accès</strong> : obtenir une copie de vos données personnelles
-              </li>
-              <li><strong>Droit de rectification</strong> : corriger des données inexactes</li>
-              <li><strong>Droit à l'effacement</strong> ("droit à l'oubli")</li>
-              <li><strong>Droit à la limitation du traitement</strong></li>
-              <li>
-                <strong>Droit à la portabilité</strong> : recevoir vos données dans un format
-                structuré
-              </li>
-              <li>
-                <strong>Droit d'opposition</strong> : vous opposer au traitement de vos données
-              </li>
+              <li>{{ 'privacy.section7.right1' | translate }}</li>
+              <li>{{ 'privacy.section7.right2' | translate }}</li>
+              <li>{{ 'privacy.section7.right3' | translate }}</li>
+              <li>{{ 'privacy.section7.right4' | translate }}</li>
+              <li>{{ 'privacy.section7.right5' | translate }}</li>
+              <li>{{ 'privacy.section7.right6' | translate }}</li>
             </ul>
+            <p>{{ 'privacy.section7.contact' | translate }}</p>
             <p>
-              Pour exercer ces droits, contactez-nous à :
-              <a href="mailto:amine.charrad@gmail.com">amine.charrad@gmail.com</a>. Nous répondrons
-              dans un délai d'un mois.
-            </p>
-            <p>
-              Vous pouvez également introduire une réclamation auprès de la
-              <strong>CNIL</strong> :
-              <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer">
-                www.cnil.fr
-              </a>
+              {{ 'privacy.section7.cnil' | translate }}
+              <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer"
+                >www.cnil.fr</a
+              >
             </p>
           </section>
-
           <section class="privacy-section">
-            <h2>8. Sécurité des données</h2>
-            <p>
-              Des mesures techniques et organisationnelles sont mises en œuvre pour protéger vos
-              données :
-            </p>
+            <h2>{{ 'privacy.section8.title' | translate }}</h2>
+            <p>{{ 'privacy.section8.intro' | translate }}</p>
             <ul>
-              <li>Chiffrement en transit (HTTPS/TLS via Let's Encrypt)</li>
-              <li>Chiffrement au repos (AWS RDS chiffré AES-256)</li>
-              <li>Mots de passe hashés avec BCrypt (coût 12)</li>
-              <li>Accès restreint par authentification JWT</li>
-              <li>Secrets gérés via AWS Secrets Manager</li>
-              <li>Audits de sécurité automatisés (OWASP ZAP, CodeQL, Trivy)</li>
+              <li>{{ 'privacy.section8.m1' | translate }}</li>
+              <li>{{ 'privacy.section8.m2' | translate }}</li>
+              <li>{{ 'privacy.section8.m3' | translate }}</li>
+              <li>{{ 'privacy.section8.m4' | translate }}</li>
+              <li>{{ 'privacy.section8.m5' | translate }}</li>
+              <li>{{ 'privacy.section8.m6' | translate }}</li>
             </ul>
           </section>
-
           <section class="privacy-section">
-            <h2>9. Modifications de cette politique</h2>
-            <p>
-              Cette politique peut être mise à jour. La date de dernière modification est indiquée
-              en haut de cette page. Les changements significatifs feront l'objet d'une information
-              sur le site.
-            </p>
+            <h2>{{ 'privacy.section9.title' | translate }}</h2>
+            <p>{{ 'privacy.section9.body' | translate }}</p>
           </section>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 
 import { ProjectCardComponent } from '@shared/components/project-card/project-card.component';
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
+import { LanguageService } from '@core/services/language.service';
 import { ProjectService } from '@core/services/project.service';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 import { PageResponse } from '@shared/models/api-response.model';
@@ -131,6 +132,7 @@ import { Project } from '@shared/models/project.model';
 })
 export class ProjectListComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
+  private readonly lang = inject(LanguageService);
 
   protected readonly pageData = signal<PageResponse<Project> | null>(null);
   protected readonly isLoading = signal(true);
@@ -153,7 +155,7 @@ export class ProjectListComponent implements OnInit {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
       error: () => {
-        this.error.set('Impossible de charger les projets.');
+        this.error.set(this.lang.translate('projects.list.error.load'));
         this.isLoading.set(false);
       },
     });

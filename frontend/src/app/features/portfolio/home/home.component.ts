@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { ProjectCardComponent } from '@shared/components/project-card/project-card.component';
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
+import { LanguageService } from '@core/services/language.service';
 import { ProjectService } from '@core/services/project.service';
 import { Project } from '@shared/models/project.model';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
@@ -33,6 +34,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 })
 export class HomeComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
+  private readonly lang = inject(LanguageService);
 
   protected readonly featuredProjects = signal<Project[]>([]);
   protected readonly isLoading = signal(true);
@@ -75,7 +77,7 @@ export class HomeComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        this.error.set('Impossible de charger les projets.');
+        this.error.set(this.lang.translate('home.featured.error'));
         this.isLoading.set(false);
       },
     });
