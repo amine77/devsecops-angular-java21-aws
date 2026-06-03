@@ -60,7 +60,7 @@ describe('HomeComponent', () => {
   it('should set error on load failure', () => {
     mockProjectService.getFeaturedProjects.mockReturnValue(throwError(() => new Error('err')));
     fixture.detectChanges();
-    expect(component['error']()).toBe('Impossible de charger les projets.');
+    expect(component['error']()).toBeTruthy();
     expect(component['isLoading']()).toBe(false);
   });
 

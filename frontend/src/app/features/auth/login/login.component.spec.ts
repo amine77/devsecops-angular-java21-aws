@@ -89,7 +89,7 @@ describe('LoginComponent', () => {
       component['loginForm'].patchValue({ email: 'test@test.com', password: 'wrongpassword' });
       component.onSubmit();
 
-      expect(component['errorMessage']()).toContain('incorrect');
+      expect(component['errorMessage']()).toContain('auth.login.error.credentials');
     });
 
     it('devrait afficher un message réseau pour erreur 0', () => {
@@ -98,7 +98,7 @@ describe('LoginComponent', () => {
       component['loginForm'].patchValue({ email: 'test@test.com', password: 'password123' });
       component.onSubmit();
 
-      expect(component['errorMessage']()).toContain('inaccessible');
+      expect(component['errorMessage']()).toContain('auth.login.error.server');
     });
 
     it("devrait désactiver le loading en cas d'erreur", () => {
