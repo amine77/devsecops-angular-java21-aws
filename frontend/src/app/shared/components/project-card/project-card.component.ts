@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { SlicePipe } from '@angular/common';
-import { RouterLink, TranslatePipe } from '@angular/router';
+import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 import { Project } from '@shared/models/project.model';
 
@@ -18,7 +19,7 @@ import { Project } from '@shared/models/project.model';
   selector: 'app-project-card',
   // SlicePipe : requis explicitement dans les composants standalone
   // (pas d'import automatique comme avec NgModules + CommonModule)
-  imports: [RouterLink, SlicePipe],
+  imports: [RouterLink, SlicePipe, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article class="project-card card">
