@@ -1,0 +1,4 @@
+# Mini-projets embarqués en statique : ce sont des artefacts de build
+# (générés par Vite dans leurs propres dépôts), pas du code source du
+# portfolio — ne pas les reformater ni les vérifier avec Prettier.
+src/assets/games/**
