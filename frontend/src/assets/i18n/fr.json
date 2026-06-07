@@ -50,7 +50,8 @@
   "skills.retry": "Réessayer",
   "skills.empty": "Aucune compétence pour le moment.",
 
-  "footer.copy": "Construit avec ♥ par Amine Charrad — 2026",
+  "footer.copy.pre": "Construit avec",
+  "footer.copy.post": "par Amine Charrad — 2026",
   "footer.privacy": "Politique de confidentialité",
   "footer.brand": "DevSecOps Portfolio",
   "footer.brand.sub": "21 phases · Angular 20 · Java 21 · AWS",

@@ -62,7 +62,9 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 
         <div class="footer__bottom">
           <p class="footer__copy">
-            {{ 'footer.copy' | translate }} ·
+            {{ 'footer.copy.pre' | translate }}
+            <span class="footer__heart">♥</span>
+            {{ 'footer.copy.post' | translate }} ·
             <a routerLink="/privacy" class="footer__legal-link">{{
               'footer.privacy' | translate
             }}</a>
