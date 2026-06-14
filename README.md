@@ -1,5 +1,7 @@
 # Portfolio DevSecOps — Angular 20 + Spring Boot Java 21 + AWS
 
+🌐 **Site live : https://charrad-devsecops.duckdns.org**
+
 Application full-stack démontrant une pipeline DevSecOps complète : du développement local
 jusqu'au déploiement AWS, avec observabilité, messaging, cache, tests à tous les niveaux,
 et développement assisté par IA (Claude Code + MCP).
