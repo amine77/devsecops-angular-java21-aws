@@ -1,13 +1,22 @@
+<!-- Fil rouge : progression du scroll -->
+<div class="scroll-progress" #scrollProgress aria-hidden="true"></div>
+
 <!-- ========== HERO SECTION ========== -->
-<section class="hero">
+<section class="hero" #heroSection>
   <!-- Animated gradient orbs -->
   <div class="hero__bg" aria-hidden="true">
-    <div class="hero__orb hero__orb--1"></div>
-    <div class="hero__orb hero__orb--2"></div>
-    <div class="hero__orb hero__orb--3"></div>
+    <div class="hero__orb-parallax">
+      <div class="hero__orb hero__orb--1"></div>
+    </div>
+    <div class="hero__orb-parallax">
+      <div class="hero__orb hero__orb--2"></div>
+    </div>
+    <div class="hero__orb-parallax">
+      <div class="hero__orb hero__orb--3"></div>
+    </div>
   </div>
 
-  <div class="container">
+  <div class="container" #heroContent>
     <!-- Left: Content -->
     <div class="hero__content">
       <!-- Availability badge -->
@@ -16,9 +25,10 @@
         <span class="badge badge-green">{{ 'home.available' | translate }}</span>
       </div>
 
-      <h1 class="hero__title animate-in" style="--delay: 100ms">
-        Amine <span class="hero__accent">CHARRAD</span><br />
-        {{ 'home.subtitle' | translate }}
+      <h1 class="hero__title" #heroTitle>
+        <span class="hero__word">Amine</span>
+        <span class="hero__word hero__accent">CHARRAD</span><br />
+        <span class="hero__word">{{ 'home.subtitle' | translate }}</span>
       </h1>
 
       <p class="hero__subtitle animate-in" style="--delay: 200ms">
@@ -59,7 +69,7 @@
     </div>
 
     <!-- Right: Terminal code block -->
-    <div class="hero__terminal animate-in-right" style="--delay: 250ms" aria-hidden="true">
+    <div class="hero__terminal" #heroTerminal aria-hidden="true">
       <div class="terminal__chrome">
         <div class="terminal__dots">
           <span class="terminal__dot terminal__dot--red"></span>
@@ -73,7 +83,7 @@
         </div>
       </div>
 
-      <pre class="terminal__body"><code><span class="t-comment">// Infrastructure as Code — AWS eu-west-3</span>
+      <pre class="terminal__body"><code><span class="t-block t-block--1"><span class="t-comment">// Infrastructure as Code — AWS eu-west-3</span>
 
 <span class="t-keyword">resource</span> <span class="t-string">"aws_instance"</span> <span class="t-string">"app"</span> &#123;
   <span class="t-attr">ami</span>           = <span class="t-string">"ami-0c55b159cbfafe1f0"</span>
@@ -83,9 +93,9 @@
     <span class="t-attr">Environment</span> = <span class="t-string">"production"</span>
     <span class="t-attr">ManagedBy</span>   = <span class="t-string">"terraform"</span>
   &#125;
-&#125;
+&#125;</span>
 
-<span class="t-comment">---</span>
+<span class="t-block t-block--2"><span class="t-comment">---</span>
 <span class="t-attr">apiVersion</span>: <span class="t-value">apps/v1</span>
 <span class="t-keyword">kind</span>: <span class="t-value">Deployment</span>
 <span class="t-attr">metadata</span>:
@@ -97,7 +107,7 @@
       <span class="t-attr">resources</span>:
         <span class="t-attr">limits</span>:
           <span class="t-attr">memory</span>: <span class="t-string">"512Mi"</span>
-          <span class="t-attr">cpu</span>: <span class="t-string">"500m"</span><span class="t-cursor"></span></code></pre>
+          <span class="t-attr">cpu</span>: <span class="t-string">"500m"</span></span><span class="t-cursor"></span></code></pre>
     </div>
   </div>
 </section>
@@ -121,8 +131,13 @@
       </div>
     } @else {
       <div class="grid-projects">
-        @for (project of featuredProjects(); track project.id) {
-          <app-project-card [project]="project" />
+        @for (project of featuredProjects(); track project.id; let i = $index) {
+          <app-project-card
+            [project]="project"
+            appScrollReveal
+            revealEffect="deploy"
+            [revealDelay]="i * 80"
+          />
         }
       </div>
 
@@ -134,7 +149,7 @@
 </section>
 
 <!-- ========== STATS SECTION ========== -->
-<section class="section stats">
+<section class="section stats" #statsSection>
   <div class="container">
     <div class="stats__grid">
       @for (stat of stats; track stat.key) {
