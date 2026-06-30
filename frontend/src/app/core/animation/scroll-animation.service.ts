@@ -68,24 +68,37 @@ export class ScrollAnimationService {
             y: direction === 'up' ? distance : 0,
           };
 
+    const to: gsap.TweenVars = {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      rotateX: 0,
+      scale: 1,
+      duration,
+      delay: delay / 1000,
+      ease: 'power3.out',
+    };
+
+    // Si l'élément est déjà dans le viewport (ex: cartes chargées async), on anime
+    // immédiatement sans attendre un scroll — sinon ScrollTrigger ne déclenche jamais.
+    const rect = element.getBoundingClientRect();
+    const alreadyVisible = rect.top < window.innerHeight * 0.9;
+
     let trigger: ScrollTrigger | null = null;
     this.ngZone.runOutsideAngular(() => {
-      const tween = gsap.fromTo(element, from, {
-        opacity: 1,
-        x: 0,
-        y: 0,
-        rotateX: 0,
-        scale: 1,
-        duration,
-        delay: delay / 1000,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: element,
-          start: 'top 85%',
-          once: true,
-        },
-      });
-      trigger = tween.scrollTrigger ?? null;
+      if (alreadyVisible) {
+        gsap.fromTo(element, from, to);
+      } else {
+        const tween = gsap.fromTo(element, from, {
+          ...to,
+          scrollTrigger: {
+            trigger: element,
+            start: 'top 85%',
+            once: true,
+          },
+        });
+        trigger = tween.scrollTrigger ?? null;
+      }
     });
     return trigger;
   }

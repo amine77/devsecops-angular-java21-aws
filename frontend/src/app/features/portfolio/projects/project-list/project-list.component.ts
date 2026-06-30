@@ -6,8 +6,10 @@ import {
   NgZone,
   OnDestroy,
   OnInit,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import gsap from 'gsap';
@@ -57,14 +59,9 @@ import { Project } from '@shared/models/project.model';
             </button>
           </div>
         } @else {
-          <div class="grid-projects">
-            @for (project of pageData()?.content ?? []; track project.id; let i = $index) {
-              <app-project-card
-                [project]="project"
-                appScrollReveal
-                revealEffect="deploy"
-                [revealDelay]="i * 90"
-              />
+          <div class="grid-projects" #cardsGrid>
+            @for (project of pageData()?.content ?? []; track project.id) {
+              <app-project-card [project]="project" />
             } @empty {
               <div class="empty-state">
                 <p>{{ 'projects.empty' | translate }}</p>
@@ -154,6 +151,7 @@ export class ProjectListComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly lang = inject(LanguageService);
   private readonly ngZone = inject(NgZone);
   private readonly scrollAnim = inject(ScrollAnimationService);
+  private readonly el = inject(ElementRef<HTMLElement>);
 
   protected readonly pageData = signal<PageResponse<Project> | null>(null);
   protected readonly isLoading = signal(true);
@@ -161,9 +159,37 @@ export class ProjectListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private currentPage = 0;
   private headerTl?: gsap.core.Timeline;
+  private cardsTl?: gsap.core.Timeline;
 
   private readonly titleEl = viewChild<ElementRef<HTMLElement>>('title');
   private readonly subtitleEl = viewChild<ElementRef<HTMLElement>>('subtitle');
+
+  constructor() {
+    effect(() => {
+      const data = this.pageData();
+      const loading = this.isLoading();
+      if (loading || !data || this.scrollAnim.reducedMotion) return;
+
+      untracked(() => {
+        this.ngZone.runOutsideAngular(() => {
+          // setTimeout 0 laisse Angular committer le DOM du @for avant d'animer
+          setTimeout(() => {
+            this.cardsTl?.kill();
+            const cards = Array.from(
+              this.el.nativeElement.querySelectorAll('app-project-card')
+            ) as HTMLElement[];
+            if (!cards.length) return;
+            this.cardsTl = gsap.timeline();
+            this.cardsTl.fromTo(
+              cards,
+              { opacity: 0, y: 32, rotateX: -15, scale: 0.92, transformPerspective: 800 },
+              { opacity: 1, y: 0, rotateX: 0, scale: 1, duration: 0.7, ease: 'power3.out', stagger: 0.09 }
+            );
+          }, 0);
+        });
+      });
+    });
+  }
 
   ngOnInit(): void {
     this.loadProjects();
@@ -176,6 +202,7 @@ export class ProjectListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.headerTl?.kill();
+    this.cardsTl?.kill();
   }
 
   private animateHeader(): void {
