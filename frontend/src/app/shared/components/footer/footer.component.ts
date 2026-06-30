@@ -1,18 +1,20 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+
+import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directive';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 @Component({
   selector: 'app-footer',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, ScrollRevealDirective, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <footer class="footer">
       <div class="container">
         <div class="footer__grid">
           <!-- Brand -->
-          <div class="footer__brand">
+          <div class="footer__brand" appScrollReveal revealDirection="left" [revealDelay]="0">
             <div class="footer__logo" aria-hidden="true">
               <svg width="20" height="22" viewBox="0 0 20 22" fill="none">
                 <path
@@ -36,7 +38,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           </div>
 
           <!-- Stack -->
-          <div class="footer__col">
+          <div class="footer__col" appScrollReveal [revealDelay]="120">
             <p class="footer__col-title">{{ 'footer.col.stack' | translate }}</p>
             <ul class="footer__list">
               <li>Angular 20 + Material 3</li>
@@ -48,7 +50,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           </div>
 
           <!-- DevSecOps -->
-          <div class="footer__col">
+          <div class="footer__col" appScrollReveal [revealDelay]="220">
             <p class="footer__col-title">{{ 'footer.col.devsecops' | translate }}</p>
             <ul class="footer__list">
               <li>GitHub Actions CI/CD</li>
@@ -60,7 +62,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           </div>
         </div>
 
-        <div class="footer__bottom">
+        <div class="footer__bottom" appScrollReveal [revealDelay]="300">
           <p class="footer__copy">
             {{ 'footer.copy.pre' | translate }}
             <span class="footer__heart">♥</span>
