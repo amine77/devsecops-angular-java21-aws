@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
 
 import { NavbarComponent } from '@shared/components/navbar/navbar.component';
 import { FooterComponent } from '@shared/components/footer/footer.component';
+import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 
 /**
  * Composant racine de l'application.
@@ -40,4 +41,8 @@ import { FooterComponent } from '@shared/components/footer/footer.component';
     `,
   ],
 })
-export class AppComponent {}
+export class AppComponent {
+  constructor() {
+    inject(ScrollAnimationService).refreshOnNavigation(inject(Router));
+  }
+}

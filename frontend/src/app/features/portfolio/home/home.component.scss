@@ -63,6 +63,18 @@
   animation-delay: var(--delay, 0ms);
 }
 
+/* =========== SCROLL PROGRESS =========== */
+.scroll-progress {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  width: 0%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent), #22d3ee);
+  z-index: 99;
+  pointer-events: none;
+}
+
 /* =========== HERO =========== */
 .hero {
   position: relative;
@@ -144,6 +156,11 @@
     font-size: clamp(2rem, 5vw, 3.5rem);
     line-height: 1.2;
     margin: 0;
+    perspective: 600px;
+  }
+
+  &__word {
+    display: inline-block;
   }
 
   &__accent {
@@ -302,6 +319,10 @@
   overflow-x: auto;
   background: #0d1117;
   color: #c9d1d9;
+
+  .t-block {
+    display: block;
+  }
 
   /* GitHub Dark syntax colours */
   .t-comment {

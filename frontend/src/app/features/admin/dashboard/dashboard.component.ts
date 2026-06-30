@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,10 +20,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import gsap from 'gsap';
 
 import { ProjectService } from '@core/services/project.service';
 import { AuthService } from '@core/services/auth.service';
 import { LanguageService } from '@core/services/language.service';
+import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { Project } from '@shared/models/project.model';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog.component';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
@@ -33,7 +47,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
   template: `
     <div class="section">
       <div class="container">
-        <div class="dashboard-header">
+        <div class="dashboard-header" #header>
           <div>
             <h1>{{ 'admin.dashboard.title' | translate }}</h1>
             <p>{{ 'admin.dashboard.welcome' | translate }} {{ authService.displayName() }}</p>
@@ -49,7 +63,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             <mat-spinner diameter="48" />
           </div>
         } @else {
-          <div class="mat-elevation-z2">
+          <div class="mat-elevation-z2" #tableContainer>
             <table mat-table [dataSource]="projects()" class="dashboard-table">
               <ng-container matColumnDef="title">
                 <th mat-header-cell *matHeaderCellDef>
@@ -168,16 +182,35 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
     `,
   ],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly projectService = inject(ProjectService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly scrollAnim = inject(ScrollAnimationService);
+  private readonly ngZone = inject(NgZone);
+  private readonly el = inject(ElementRef<HTMLElement>);
   protected readonly authService = inject(AuthService);
   private readonly lang = inject(LanguageService);
 
   protected readonly columns = ['title', 'status', 'featured', 'actions'];
   protected readonly projects = signal<Project[]>([]);
   protected readonly isLoading = signal(true);
+
+  private headerTl?: gsap.core.Timeline;
+  private tableAnimated = false;
+
+  constructor() {
+    // Animer la table dès que les données arrivent
+    effect(() => {
+      const list = this.projects();
+      if (list.length > 0 && !this.tableAnimated && !this.scrollAnim.reducedMotion) {
+        this.tableAnimated = true;
+        untracked(() => {
+          setTimeout(() => this.animateTable(), 30);
+        });
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.projectService.getProjects(0, 50).subscribe({
@@ -186,6 +219,44 @@ export class DashboardComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => this.isLoading.set(false),
+    });
+  }
+
+  ngAfterViewInit(): void {
+    if (this.scrollAnim.reducedMotion) return;
+    this.animateHeader();
+  }
+
+  ngOnDestroy(): void {
+    this.headerTl?.kill();
+  }
+
+  private animateHeader(): void {
+    const header = this.el.nativeElement.querySelector('.dashboard-header');
+    if (!header) return;
+    this.ngZone.runOutsideAngular(() => {
+      this.headerTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+      this.headerTl.from(header, { opacity: 0, y: -24, duration: 0.55 });
+    });
+  }
+
+  private animateTable(): void {
+    const table = this.el.nativeElement.querySelector('.mat-elevation-z2');
+    const rows = Array.from(this.el.nativeElement.querySelectorAll('tr.mat-mdc-row')) as HTMLElement[];
+    if (!table) return;
+
+    this.ngZone.runOutsideAngular(() => {
+      gsap.from(table, { opacity: 0, y: 20, duration: 0.5, ease: 'power2.out' });
+      if (rows.length > 0) {
+        gsap.from(rows, {
+          opacity: 0,
+          x: -16,
+          stagger: 0.05,
+          duration: 0.4,
+          ease: 'power2.out',
+          delay: 0.15,
+        });
+      }
     });
   }
 

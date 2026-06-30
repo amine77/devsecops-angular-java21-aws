@@ -1,10 +1,24 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 import { ProjectCardComponent } from '@shared/components/project-card/project-card.component';
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
+import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directive';
 import { LanguageService } from '@core/services/language.service';
 import { ProjectService } from '@core/services/project.service';
+import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { Project } from '@shared/models/project.model';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
@@ -12,9 +26,9 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
  * Page d'accueil du portfolio.
  *
  * Affiche :
- * - Section hero (présentation)
- * - Projets en vedette (featured)
- * - Appel à l'action vers la liste complète
+ * - Section hero (présentation) avec entrée animée GSAP + parallax + scroll-progress
+ * - Projets en vedette (featured) avec reveal "déploiement" en cascade
+ * - Stats avec compteurs animés au scroll
  *
  * Utilise des Signals pour l'état asynchrone :
  * - projects() : liste des projets featured
@@ -27,14 +41,31 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
  */
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, ProjectCardComponent, LoadingSpinnerComponent, TranslatePipe],
+  imports: [
+    RouterLink,
+    ProjectCardComponent,
+    LoadingSpinnerComponent,
+    TranslatePipe,
+    ScrollRevealDirective,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly projectService = inject(ProjectService);
   private readonly lang = inject(LanguageService);
+  private readonly scrollAnim = inject(ScrollAnimationService);
+
+  private readonly scrollProgressRef = viewChild<ElementRef<HTMLElement>>('scrollProgress');
+  private readonly heroSectionRef = viewChild<ElementRef<HTMLElement>>('heroSection');
+  private readonly heroContentRef = viewChild<ElementRef<HTMLElement>>('heroContent');
+  private readonly heroTitleRef = viewChild<ElementRef<HTMLElement>>('heroTitle');
+  private readonly heroTerminalRef = viewChild<ElementRef<HTMLElement>>('heroTerminal');
+  private readonly statsSectionRef = viewChild<ElementRef<HTMLElement>>('statsSection');
+
+  private readonly triggers: ScrollTrigger[] = [];
+  private heroTimeline: gsap.core.Timeline | null = null;
 
   protected readonly featuredProjects = signal<Project[]>([]);
   protected readonly isLoading = signal(true);
@@ -64,6 +95,22 @@ export class HomeComponent implements OnInit {
     this.loadFeaturedProjects();
   }
 
+  ngAfterViewInit(): void {
+    if (this.scrollAnim.reducedMotion) {
+      return;
+    }
+    this.setupScrollProgress();
+    this.setupHeroEntrance();
+    this.setupOrbParallax();
+    this.setupHeroScrubFade();
+    this.setupStatsCounters();
+  }
+
+  ngOnDestroy(): void {
+    this.heroTimeline?.kill();
+    this.triggers.forEach((trigger) => trigger.kill());
+  }
+
   protected retryLoad(): void {
     this.error.set(null);
     this.isLoading.set(true);
@@ -80,6 +127,138 @@ export class HomeComponent implements OnInit {
         this.error.set(this.lang.translate('home.featured.error'));
         this.isLoading.set(false);
       },
+    });
+  }
+
+  /** Barre de progression de scroll fine, fixée sous la navbar. */
+  private setupScrollProgress(): void {
+    const bar = this.scrollProgressRef()?.nativeElement;
+    if (!bar) {
+      return;
+    }
+
+    const trigger = ScrollTrigger.create({
+      start: 0,
+      end: 'max',
+      onUpdate: (self) => {
+        bar.style.width = `${self.progress * 100}%`;
+      },
+    });
+    this.triggers.push(trigger);
+  }
+
+  /** Révélation du titre par groupes de mots (profondeur) + "frappe" du code du terminal. */
+  private setupHeroEntrance(): void {
+    const words = this.heroTitleRef()?.nativeElement.querySelectorAll<HTMLElement>('.hero__word');
+    const blocks = this.heroTerminalRef()?.nativeElement.querySelectorAll<HTMLElement>('.t-block');
+    if (!words?.length && !blocks?.length) {
+      return;
+    }
+
+    const tl = this.scrollAnim.timeline();
+    this.heroTimeline = tl;
+
+    if (words?.length) {
+      tl.fromTo(
+        words,
+        { opacity: 0, y: 36, rotateX: -60 },
+        { opacity: 1, y: 0, rotateX: 0, duration: 0.7, stagger: 0.12, ease: 'power3.out' },
+      );
+    }
+
+    if (blocks?.length) {
+      tl.fromTo(
+        blocks,
+        { clipPath: 'inset(0 100% 0 0)' },
+        { clipPath: 'inset(0 0% 0 0)', duration: 1, stagger: 0.4, ease: 'steps(20)' },
+        0.3,
+      );
+    }
+  }
+
+  /** Parallax des orbes en arrière-plan : vitesses différentes selon la profondeur. */
+  private setupOrbParallax(): void {
+    const heroSection = this.heroSectionRef()?.nativeElement;
+    const orbs = heroSection?.querySelectorAll<HTMLElement>('.hero__orb-parallax');
+    if (!heroSection || !orbs?.length) {
+      return;
+    }
+
+    orbs.forEach((orb, i) => {
+      const tween = gsap.to(orb, {
+        y: (i + 1) * -70,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: heroSection,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: true,
+        },
+      });
+      if (tween.scrollTrigger) {
+        this.triggers.push(tween.scrollTrigger);
+      }
+    });
+  }
+
+  /** Le hero s'estompe et se réduit légèrement à mesure qu'on défile vers les projets. */
+  private setupHeroScrubFade(): void {
+    const heroSection = this.heroSectionRef()?.nativeElement;
+    const heroContent = this.heroContentRef()?.nativeElement;
+    if (!heroSection || !heroContent) {
+      return;
+    }
+
+    const tween = gsap.to(heroContent, {
+      opacity: 0.25,
+      scale: 0.94,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: heroSection,
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true,
+      },
+    });
+    if (tween.scrollTrigger) {
+      this.triggers.push(tween.scrollTrigger);
+    }
+  }
+
+  /** Compteurs animés de 0 à la valeur finale à l'entrée dans le viewport. */
+  private setupStatsCounters(): void {
+    const values = this.statsSectionRef()?.nativeElement.querySelectorAll<HTMLElement>(
+      '.stat-card__value',
+    );
+    if (!values?.length) {
+      return;
+    }
+
+    values.forEach((el) => {
+      const match = el.textContent?.trim().match(/^([\d.]+)(.*)$/);
+      if (!match) {
+        return;
+      }
+      const [, numberPart, suffix] = match;
+      const target = parseFloat(numberPart);
+      const proxy = { value: 0 };
+
+      const tween = gsap.to(proxy, {
+        value: target,
+        duration: 1.4,
+        ease: 'power2.out',
+        onUpdate: () => {
+          el.textContent = `${Math.round(proxy.value)}${suffix}`;
+        },
+        scrollTrigger: {
+          trigger: el,
+          start: 'top 85%',
+          once: true,
+        },
+      });
+      if (tween.scrollTrigger) {
+        this.triggers.push(tween.scrollTrigger);
+      }
     });
   }
 }

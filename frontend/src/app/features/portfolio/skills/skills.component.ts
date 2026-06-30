@@ -1,39 +1,46 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
+import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directive';
+import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { SkillService } from '@core/services/skill.service';
 import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skill.model';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
-/**
- * Page des compétences.
- *
- * Groupe les compétences par catégorie.
- * Utilise computed() pour dériver automatiquement les groupes
- * depuis le signal skills — pas de logique de transformation dans le template.
- */
 @Component({
   selector: 'app-skills',
-  imports: [LoadingSpinnerComponent, TranslatePipe],
+  imports: [LoadingSpinnerComponent, ScrollRevealDirective, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="section skills-page">
       <div class="container">
-        <h1 class="section-title">{{ 'skills.title' | translate }}</h1>
-        <p class="section-subtitle">{{ 'skills.subtitle' | translate }}</p>
+        <h1 class="section-title" appScrollReveal [revealDelay]="0">
+          {{ 'skills.title' | translate }}
+        </h1>
+        <p class="section-subtitle" appScrollReveal [revealDelay]="120">
+          {{ 'skills.subtitle' | translate }}
+        </p>
 
         @if (isLoading()) {
           <app-loading-spinner [message]="'skills.loading' | translate" />
         } @else {
-          @for (group of skillGroups(); track group.category) {
-            <div class="skill-group">
+          @for (group of skillGroups(); track group.category; let gi = $index) {
+            <div class="skill-group" appScrollReveal [revealDelay]="gi * 80" revealDirection="left">
               <h2 class="skill-group__title">
                 <span class="skill-group__icon" aria-hidden="true">{{
                   categoryIcon(group.category)
@@ -41,8 +48,8 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                 {{ categoryLabel(group.category) }}
               </h2>
               <div class="grid-skills">
-                @for (skill of group.skills; track skill.id) {
-                  <div class="skill-card card">
+                @for (skill of group.skills; track skill.id; let si = $index) {
+                  <div class="skill-card card" appScrollReveal [revealDelay]="gi * 80 + si * 60">
                     <div class="skill-card__header">
                       <span class="skill-card__name">{{ skill.name }}</span>
                       <span class="skill-card__pct">{{ skill.level * 20 }}%</span>
@@ -55,7 +62,10 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                       aria-valuemax="100"
                       [attr.aria-label]="skill.name + ' — niveau ' + skill.level + ' sur 5'"
                     >
-                      <div class="skill-card__bar-fill" [style.width.%]="skill.level * 20"></div>
+                      <div
+                        class="skill-card__bar-fill"
+                        [attr.data-w]="skill.level * 20"
+                      ></div>
                     </div>
                   </div>
                 }
@@ -114,20 +124,24 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
       }
       .skill-card__bar-fill {
         height: 100%;
+        width: 0;
         background: linear-gradient(90deg, var(--color-accent), #818cf8);
         border-radius: var(--radius-full);
-        transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
       }
     `,
   ],
 })
-export class SkillsComponent implements OnInit {
+export class SkillsComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly skillService = inject(SkillService);
+  private readonly scrollAnim = inject(ScrollAnimationService);
+  private readonly ngZone = inject(NgZone);
+  private readonly el = inject(ElementRef<HTMLElement>);
 
   private readonly skills = signal<Skill[]>([]);
   protected readonly isLoading = signal(true);
+  private barTriggers: ScrollTrigger[] = [];
+  private barsAnimated = false;
 
-  /** Computed : groupe les skills par catégorie automatiquement. */
   protected readonly skillGroups = computed(() => {
     const grouped = new Map<SkillCategory, Skill[]>();
     for (const skill of this.skills()) {
@@ -138,6 +152,20 @@ export class SkillsComponent implements OnInit {
     return Array.from(grouped.entries()).map(([category, s]) => ({ category, skills: s }));
   });
 
+  constructor() {
+    // Déclencher l'animation des barres dès que les skills sont chargés et rendus
+    effect(() => {
+      const groups = this.skillGroups();
+      if (groups.length > 0 && !this.barsAnimated) {
+        this.barsAnimated = true;
+        untracked(() => {
+          // Laisser Angular rendre le DOM avant de lire les data-w
+          setTimeout(() => this.animateBars(), 50);
+        });
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.skillService.getAllSkills().subscribe({
       next: (data) => {
@@ -145,6 +173,39 @@ export class SkillsComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => this.isLoading.set(false),
+    });
+  }
+
+  ngAfterViewInit(): void {}
+
+  ngOnDestroy(): void {
+    this.barTriggers.forEach((t) => t.kill());
+  }
+
+  private animateBars(): void {
+    if (this.scrollAnim.reducedMotion) return;
+
+    this.ngZone.runOutsideAngular(() => {
+      const bars = Array.from(
+        this.el.nativeElement.querySelectorAll('.skill-card__bar-fill'),
+      ) as HTMLElement[];
+      bars.forEach((bar: HTMLElement, i: number) => {
+        const targetPct = Number(bar.getAttribute('data-w') ?? 0);
+        const trigger = ScrollTrigger.create({
+          trigger: bar,
+          start: 'top 90%',
+          once: true,
+          onEnter: () => {
+            gsap.to(bar, {
+              width: targetPct + '%',
+              duration: 0.75,
+              delay: (i % 6) * 0.06,
+              ease: 'power2.out',
+            });
+          },
+        });
+        this.barTriggers.push(trigger);
+      });
     });
   }
 

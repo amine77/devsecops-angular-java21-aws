@@ -11,8 +11,9 @@
 #   docker-compose -f docker-compose.kafka.yml up -d
 #
 # Accès :
-#   Kafka broker  : localhost:9092 (depuis l'hôte)
-#   Kafka UI      : http://localhost:8090
+#   Kafka broker (Docker interne)  : kafka:9092      (pour kafka-ui et services Docker)
+#   Kafka broker (hôte Windows)    : localhost:9093  (pour Spring Boot mvn spring-boot:run)
+#   Kafka UI                       : http://localhost:8090
 #
 # Architecture KRaft (Kafka 3.8 — sans Zookeeper) :
 #   Le broker joue aussi le rôle de controller.
@@ -39,17 +40,18 @@ services:
       # Ce nœud est à la fois broker (sert les clients) et controller (consensus)
       KAFKA_PROCESS_ROLES: broker,controller
 
-      # --- Listeners réseau
-      # PLAINTEXT : communication avec les clients (producers/consumers)
-      # CONTROLLER : communication interne KRaft entre controllers
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      # Adresse annoncée AUX CLIENTS depuis l'intérieur du réseau Docker
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # --- Listeners réseau (bimodal : Docker interne + hôte Windows)
+      # INTERNAL : pour les services Docker (kafka-ui etc.)
+      # EXTERNAL : pour les processus sur l'hôte (Spring Boot via mvn spring-boot:run)
+      # CONTROLLER : communication interne KRaft
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093,CONTROLLER://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
       # --- Quorum KRaft (un seul controller en dev)
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
 
       # --- Configuration des topics internes (réplication = 1 en dev)
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -72,7 +74,8 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
     ports:
-      - "9092:9092"    # Accessible depuis l'hôte (IDE, outils externes)
+      - "9092:9092"    # INTERNAL — Docker interne (kafka-ui, services Docker)
+      - "9093:9093"    # EXTERNAL — hôte Windows (Spring Boot local, IDE, outils)
     networks:
       - portfolio-network
     healthcheck:
