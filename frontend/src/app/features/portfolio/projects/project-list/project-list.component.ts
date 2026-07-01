@@ -151,7 +151,7 @@ export class ProjectListComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly lang = inject(LanguageService);
   private readonly ngZone = inject(NgZone);
   private readonly scrollAnim = inject(ScrollAnimationService);
-  private readonly el = inject(ElementRef<HTMLElement>);
+  private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
 
   protected readonly pageData = signal<PageResponse<Project> | null>(null);
   protected readonly isLoading = signal(true);
@@ -176,8 +176,8 @@ export class ProjectListComponent implements OnInit, AfterViewInit, OnDestroy {
           setTimeout(() => {
             this.cardsTl?.kill();
             const cards = Array.from(
-              this.el.nativeElement.querySelectorAll('app-project-card')
-            ) as HTMLElement[];
+              this.el.nativeElement.querySelectorAll<HTMLElement>('app-project-card')
+            );
             if (!cards.length) return;
             this.cardsTl = gsap.timeline();
             this.cardsTl.fromTo(

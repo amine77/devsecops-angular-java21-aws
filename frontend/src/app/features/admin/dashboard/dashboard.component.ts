@@ -188,7 +188,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
   private readonly scrollAnim = inject(ScrollAnimationService);
   private readonly ngZone = inject(NgZone);
-  private readonly el = inject(ElementRef<HTMLElement>);
+  private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
   protected readonly authService = inject(AuthService);
   private readonly lang = inject(LanguageService);
 
@@ -232,7 +232,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private animateHeader(): void {
-    const header = this.el.nativeElement.querySelector('.dashboard-header');
+    const header = this.el.nativeElement.querySelector<HTMLElement>('.dashboard-header');
     if (!header) return;
     this.ngZone.runOutsideAngular(() => {
       this.headerTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
@@ -241,8 +241,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private animateTable(): void {
-    const table = this.el.nativeElement.querySelector('.mat-elevation-z2');
-    const rows = Array.from(this.el.nativeElement.querySelectorAll('tr.mat-mdc-row')) as HTMLElement[];
+    const table = this.el.nativeElement.querySelector<HTMLElement>('.mat-elevation-z2');
+    const rows = Array.from(this.el.nativeElement.querySelectorAll<HTMLElement>('tr.mat-mdc-row'));
     if (!table) return;
 
     this.ngZone.runOutsideAngular(() => {

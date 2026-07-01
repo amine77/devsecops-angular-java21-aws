@@ -1,5 +1,4 @@
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -131,15 +130,15 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
     `,
   ],
 })
-export class SkillsComponent implements OnInit, AfterViewInit, OnDestroy {
+export class SkillsComponent implements OnInit, OnDestroy {
   private readonly skillService = inject(SkillService);
   private readonly scrollAnim = inject(ScrollAnimationService);
   private readonly ngZone = inject(NgZone);
-  private readonly el = inject(ElementRef<HTMLElement>);
+  private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
 
   private readonly skills = signal<Skill[]>([]);
   protected readonly isLoading = signal(true);
-  private barTriggers: ScrollTrigger[] = [];
+  private readonly barTriggers: ScrollTrigger[] = [];
   private barsAnimated = false;
 
   protected readonly skillGroups = computed(() => {
@@ -176,8 +175,6 @@ export class SkillsComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  ngAfterViewInit(): void {}
-
   ngOnDestroy(): void {
     this.barTriggers.forEach((t) => t.kill());
   }
@@ -187,8 +184,8 @@ export class SkillsComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.ngZone.runOutsideAngular(() => {
       const bars = Array.from(
-        this.el.nativeElement.querySelectorAll('.skill-card__bar-fill'),
-      ) as HTMLElement[];
+        this.el.nativeElement.querySelectorAll<HTMLElement>('.skill-card__bar-fill'),
+      );
       bars.forEach((bar: HTMLElement, i: number) => {
         const targetPct = Number(bar.getAttribute('data-w') ?? 0);
         const trigger = ScrollTrigger.create({

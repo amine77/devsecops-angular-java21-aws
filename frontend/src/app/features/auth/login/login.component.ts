@@ -51,7 +51,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly scrollAnim = inject(ScrollAnimationService);
   private readonly ngZone = inject(NgZone);
-  private readonly el = inject(ElementRef<HTMLElement>);
+  private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
 
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -84,8 +84,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private animateEntry(): void {
-    const card = this.el.nativeElement.querySelector('.login-card');
-    const shield = this.el.nativeElement.querySelector('.login-shield');
+    const card = this.el.nativeElement.querySelector<HTMLElement>('.login-card');
+    const shield = this.el.nativeElement.querySelector<HTMLElement>('.login-shield');
     if (!card) return;
 
     this.ngZone.runOutsideAngular(() => {
