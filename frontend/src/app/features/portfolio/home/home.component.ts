@@ -162,7 +162,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       tl.fromTo(
         words,
         { opacity: 0, y: 36, rotateX: -60 },
-        { opacity: 1, y: 0, rotateX: 0, duration: 0.7, stagger: 0.12, ease: 'power3.out' },
+        { opacity: 1, y: 0, rotateX: 0, duration: 0.7, stagger: 0.12, ease: 'power3.out' }
       );
     }
 
@@ -171,7 +171,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         blocks,
         { clipPath: 'inset(0 100% 0 0)' },
         { clipPath: 'inset(0 0% 0 0)', duration: 1, stagger: 0.4, ease: 'steps(20)' },
-        0.3,
+        0.3
       );
     }
   }
@@ -227,9 +227,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Compteurs animés de 0 à la valeur finale à l'entrée dans le viewport. */
   private setupStatsCounters(): void {
-    const values = this.statsSectionRef()?.nativeElement.querySelectorAll<HTMLElement>(
-      '.stat-card__value',
-    );
+    const values =
+      this.statsSectionRef()?.nativeElement.querySelectorAll<HTMLElement>('.stat-card__value');
     if (!values?.length) {
       return;
     }

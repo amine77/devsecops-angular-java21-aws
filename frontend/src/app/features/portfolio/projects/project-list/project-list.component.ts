@@ -183,7 +183,15 @@ export class ProjectListComponent implements OnInit, AfterViewInit, OnDestroy {
             this.cardsTl.fromTo(
               cards,
               { opacity: 0, y: 32, rotateX: -15, scale: 0.92, transformPerspective: 800 },
-              { opacity: 1, y: 0, rotateX: 0, scale: 1, duration: 0.7, ease: 'power3.out', stagger: 0.09 }
+              {
+                opacity: 1,
+                y: 0,
+                rotateX: 0,
+                scale: 1,
+                duration: 0.7,
+                ease: 'power3.out',
+                stagger: 0.09,
+              }
             );
           }, 0);
         });

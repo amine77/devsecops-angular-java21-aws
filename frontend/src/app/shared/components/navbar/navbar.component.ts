@@ -158,7 +158,7 @@ export class NavbarComponent implements AfterViewInit, OnDestroy {
         this.entryTl.from(
           Array.from(links.children) as HTMLElement[],
           { opacity: 0, y: -8, stagger: 0.07, duration: 0.4 },
-          '-=0.25',
+          '-=0.25'
         );
       }
       if (actions) {

@@ -61,10 +61,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                       aria-valuemax="100"
                       [attr.aria-label]="skill.name + ' — niveau ' + skill.level + ' sur 5'"
                     >
-                      <div
-                        class="skill-card__bar-fill"
-                        [attr.data-w]="skill.level * 20"
-                      ></div>
+                      <div class="skill-card__bar-fill" [attr.data-w]="skill.level * 20"></div>
                     </div>
                   </div>
                 }
@@ -184,7 +181,7 @@ export class SkillsComponent implements OnInit, OnDestroy {
 
     this.ngZone.runOutsideAngular(() => {
       const bars = Array.from(
-        this.el.nativeElement.querySelectorAll<HTMLElement>('.skill-card__bar-fill'),
+        this.el.nativeElement.querySelectorAll<HTMLElement>('.skill-card__bar-fill')
       );
       bars.forEach((bar: HTMLElement, i: number) => {
         const targetPct = Number(bar.getAttribute('data-w') ?? 0);

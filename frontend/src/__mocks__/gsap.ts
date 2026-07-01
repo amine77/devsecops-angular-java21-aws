@@ -1,7 +1,7 @@
 const mockTl: Record<string, jest.Mock> = {};
 const buildTl = (): Record<string, jest.Mock> => {
   ['from', 'fromTo', 'to', 'add', 'kill', 'pause', 'play'].forEach(
-    (m) => (mockTl[m] = jest.fn().mockReturnThis()),
+    (m) => (mockTl[m] = jest.fn().mockReturnThis())
   );
   return mockTl;
 };

@@ -29,8 +29,7 @@ export class ScrollAnimationService {
   private readonly ngZone = inject(NgZone);
 
   readonly reducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   constructor() {
     // Le ticker GSAP est un RAF loop global et partagé par toutes les animations de l'app.
