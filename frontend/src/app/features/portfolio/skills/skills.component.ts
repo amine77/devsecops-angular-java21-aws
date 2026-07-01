@@ -134,7 +134,7 @@ export class SkillsComponent implements OnInit, OnDestroy {
   private readonly skillService = inject(SkillService);
   private readonly scrollAnim = inject(ScrollAnimationService);
   private readonly ngZone = inject(NgZone);
-  private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
 
   private readonly skills = signal<Skill[]>([]);
   protected readonly isLoading = signal(true);

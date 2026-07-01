@@ -188,7 +188,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
   private readonly scrollAnim = inject(ScrollAnimationService);
   private readonly ngZone = inject(NgZone);
-  private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly authService = inject(AuthService);
   private readonly lang = inject(LanguageService);
 

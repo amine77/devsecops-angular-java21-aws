@@ -51,7 +51,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly scrollAnim = inject(ScrollAnimationService);
   private readonly ngZone = inject(NgZone);
-  private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);

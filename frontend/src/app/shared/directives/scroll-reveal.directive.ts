@@ -15,7 +15,7 @@ import {
   selector: '[appScrollReveal]',
 })
 export class ScrollRevealDirective implements OnInit, OnDestroy {
-  private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly scrollAnim = inject(ScrollAnimationService);
   private trigger: ScrollTrigger | null = null;
 
