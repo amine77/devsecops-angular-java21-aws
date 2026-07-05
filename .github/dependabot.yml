@@ -51,7 +51,7 @@ updates:
           - "org.springframework.security:*"
 
   # ---------------------------------------------------------------------------
-  # FRONTEND — npm (Angular 20, Angular Material, Jest)
+  # FRONTEND — npm (Angular 21, Angular Material, Jest)
   # ---------------------------------------------------------------------------
   - package-ecosystem: "npm"
     directory: "/frontend"

@@ -41,7 +41,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           <div class="footer__col" appScrollReveal [revealDelay]="120">
             <p class="footer__col-title">{{ 'footer.col.stack' | translate }}</p>
             <ul class="footer__list">
-              <li>Angular 20 + Material 3</li>
+              <li>Angular 21 + Material 3</li>
               <li>Spring Boot · Java 21</li>
               <li>PostgreSQL · Redis · Kafka</li>
               <li>Docker · Kubernetes · Helm</li>

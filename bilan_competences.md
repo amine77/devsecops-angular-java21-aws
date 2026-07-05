@@ -61,7 +61,7 @@
 
 | Compétence | Niveau | Détail pratique |
 |---|---|---|
-| **SonarCloud** | Avancé | Quality Gate Java 21 + Angular 20, couverture JaCoCo + lcov, badges |
+| **SonarCloud** | Avancé | Quality Gate Java 21 + Angular 21, couverture JaCoCo + lcov, badges |
 | **OWASP ZAP (DAST)** | Intermédiaire | Scan authentifié, workflow CI automatisé, suppressions commentées |
 | **OWASP Dependency Check** | Intermédiaire | Scan Maven + npm, rapport SARIF, seuil CVSS configurable |
 | **Trivy** | Avancé | Scan image Docker (CRITICAL/HIGH), scan filesystem (secrets + IaC), SARIF |
@@ -124,9 +124,9 @@
 
 | Compétence | Niveau | Détail pratique |
 |---|---|---|
-| **Angular 20** | Avancé | Standalone components, Signals, `ChangeDetectionStrategy.OnPush` |
+| **Angular 21** | Avancé | Standalone components, Signals, `ChangeDetectionStrategy.OnPush` |
 | **Angular Material 3** | Avancé | Dark theme azure/cyan, `provideAnimations()`, MDC components |
-| **TypeScript 5.8** | Avancé | Types stricts, Guards fonctionnels, `withComponentInputBinding()` |
+| **TypeScript 5.9** | Avancé | Types stricts, Guards fonctionnels, `withComponentInputBinding()` |
 | **RxJS** | Intermédiaire | Interceptors JWT, error interceptor, Observables services |
 | **Angular Signals** | Avancé | `signal()`, `computed()`, `effect()` — sans AsyncPipe ni subscribe |
 | **CSS Animations** | Intermédiaire | `@keyframes` fadeInUp/orbFloat/pingPulse, stagger delays CSS custom props |
@@ -207,7 +207,7 @@
 ## 🎯 Résumé Profil pour CV
 
 ```
-Ingénieur Fullstack DevSecOps — Angular 20 · Spring Boot Java 21 · AWS · Kubernetes
+Ingénieur Fullstack DevSecOps — Angular 21 · Spring Boot Java 21 · AWS · Kubernetes
 
 • CI/CD sécurisée : GitHub Actions, SAST (SonarCloud/Semgrep/CodeQL), DAST (OWASP ZAP),
   SBOM (CycloneDX), Cosign SLSA Level 2, Trivy, Gitleaks
@@ -221,7 +221,7 @@ Ingénieur Fullstack DevSecOps — Angular 20 · Spring Boot Java 21 · AWS · K
 
 • Backend : Spring Boot 3.3, Java 21 (Virtual Threads), PostgreSQL, Redis, Kafka KRaft
 
-• Frontend : Angular 20 (Signals, OnPush), Angular Material 3, CSS animations
+• Frontend : Angular 21 (Signals, OnPush), Angular Material 3, CSS animations
 
 • IA & Outillage : Claude Code CLI, Model Context Protocol (MCP), 21st Magic MCP
 

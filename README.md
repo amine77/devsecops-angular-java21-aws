@@ -1,4 +1,4 @@
-# Portfolio DevSecOps — Angular 20 + Spring Boot Java 21 + AWS
+# Portfolio DevSecOps — Angular 21 + Spring Boot Java 21 + AWS
 
 🌐 **Site live : https://charrad-devsecops.duckdns.org**
 
@@ -10,7 +10,7 @@ et développement assisté par IA (Claude Code + MCP).
 
 | Couche | Technologie |
 |--------|-------------|
-| Frontend | Angular 20, TypeScript, Angular Material 3 (dark theme), Signals |
+| Frontend | Angular 21, TypeScript, Angular Material 3 (dark theme), Signals |
 | Backend | Spring Boot 3.3, Java 21, Virtual Threads (Project Loom) |
 | Base de données | PostgreSQL 15, Flyway migrations |
 | Cache | Redis 7.2 — Spring Cache `@Cacheable`, TTL 5/10 min |
@@ -285,7 +285,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   │   └── logback-spring.xml            # JSON en prod, couleurs en dev
 │   └── Dockerfile                        # Multi-stage build (Maven → JRE Alpine)
 │
-├── frontend/                             # Angular 20 + Angular Material 3
+├── frontend/                             # Angular 21 + Angular Material 3
 │   ├── src/app/
 │   │   ├── core/                         # Services, guards, interceptors
 │   │   ├── features/                     # auth/, admin/, portfolio/

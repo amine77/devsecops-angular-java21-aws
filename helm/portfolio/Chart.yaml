@@ -1,7 +1,7 @@
 apiVersion: v2
 name: portfolio
 description: >
-  Portfolio DevSecOps — Angular 20 + Spring Boot Java 21 + AWS.
+  Portfolio DevSecOps — Angular 21 + Spring Boot Java 21 + AWS.
   Helm chart pour le déploiement Kubernetes via ArgoCD GitOps.
 
 type: application

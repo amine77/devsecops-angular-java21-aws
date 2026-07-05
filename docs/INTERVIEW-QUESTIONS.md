@@ -359,13 +359,13 @@ Chaque réponse suit le format `ApiResponse<T>` : `{ success: false, data: null,
 
 ## Angular & Frontend
 
-### Q31 — Pourquoi Angular 20 et pas React ou Vue ?
+### Q31 — Pourquoi Angular 21 et pas React ou Vue ?
 
 Angular est un framework opinionné avec une structure imposée (modules, services, DI, routing). C'est une force dans un contexte enterprise : tous les développeurs Angular écrivent du code structuré de la même façon.
 
 React est une librairie, ce qui nécessite de choisir soi-même routing, state management, etc. Vue est un bon compromis mais moins présent dans les grandes entreprises françaises.
 
-Dans ce portfolio, Angular 20 démontre aussi la maîtrise des Signals (remplaçant progressif de RxJS pour la gestion d'état local), `@if`/`@for` (nouvelle syntaxe template), et le mode `zoneless` (ChangeDetectionStrategy.OnPush).
+Dans ce portfolio, Angular 21 démontre aussi la maîtrise des Signals (remplaçant progressif de RxJS pour la gestion d'état local), `@if`/`@for` (nouvelle syntaxe template), et le mode `zoneless` (ChangeDetectionStrategy.OnPush).
 
 ---
 

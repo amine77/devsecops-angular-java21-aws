@@ -72,7 +72,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly error = signal<string | null>(null);
 
   protected readonly techStack = [
-    'Angular 20',
+    'Angular 21',
     'Spring Boot',
     'Java 21',
     'PostgreSQL',

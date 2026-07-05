@@ -34,7 +34,7 @@ permissions:
 jobs:
 
   sonarcloud:
-    name: SonarCloud — Java 21 + Angular 20
+    name: SonarCloud — Java 21 + Angular 21
     runs-on: ubuntu-latest
 
     steps:
