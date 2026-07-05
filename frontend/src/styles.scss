@@ -1,16 +1,16 @@
 // Polices auto-hébergées — aucune dépendance Google Fonts CDN (SonarCloud S5725)
 @use '@angular/material' as mat;
-@import '@fontsource/roboto/300.css';
-@import '@fontsource/roboto/400.css';
-@import '@fontsource/roboto/500.css';
-@import '@fontsource/inter/300.css';
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
-@import '@fontsource/jetbrains-mono/400.css';
-@import '@fontsource/jetbrains-mono/500.css';
-@import 'material-icons/iconfont/material-icons.css';
+@use '@fontsource/roboto/300.css' as *;
+@use '@fontsource/roboto/400.css' as *;
+@use '@fontsource/roboto/500.css' as *;
+@use '@fontsource/inter/300.css' as *;
+@use '@fontsource/inter/400.css' as *;
+@use '@fontsource/inter/500.css' as *;
+@use '@fontsource/inter/600.css' as *;
+@use '@fontsource/inter/700.css' as *;
+@use '@fontsource/jetbrains-mono/400.css' as *;
+@use '@fontsource/jetbrains-mono/500.css' as *;
+@use 'material-icons/iconfont/material-icons.css' as *;
 
 // Thème Material 3 dark — couleurs cohérentes avec le design slate/blue du portfolio
 html {

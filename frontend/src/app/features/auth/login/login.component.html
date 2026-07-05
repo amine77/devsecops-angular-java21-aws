@@ -35,7 +35,15 @@
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>{{ 'auth.login.email' | translate }}</mat-label>
-          <input matInput type="email" formControlName="email" placeholder="admin@portfolio.dev" autocomplete="email" />
+          <input
+            id="login-email"
+            matInput
+            type="email"
+            formControlName="email"
+            placeholder="admin@portfolio.dev"
+            autocomplete="email"
+            [attr.aria-label]="'auth.login.email' | translate"
+          />
           <mat-icon matPrefix>email</mat-icon>
           @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('required')) {
             <mat-error>{{ 'auth.login.email.required' | translate }}</mat-error>
@@ -48,10 +56,12 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>{{ 'auth.login.password' | translate }}</mat-label>
           <input
+            id="login-password"
             matInput
             [type]="hidePassword() ? 'password' : 'text'"
             formControlName="password"
             autocomplete="current-password"
+            [attr.aria-label]="'auth.login.password' | translate"
           />
           <mat-icon matPrefix>lock</mat-icon>
           <button
