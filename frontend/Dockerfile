@@ -49,7 +49,7 @@ FROM nginx:1.27-alpine AS runtime
 # Métadonnées
 LABEL maintainer="amine.charrad@gmail.com"
 LABEL version="1.0.0"
-LABEL description="Portfolio Frontend — Angular 20 + NGINX"
+LABEL description="Portfolio Frontend — Angular 21 + NGINX"
 
 # Supprimer la configuration NGINX par défaut
 RUN rm /etc/nginx/conf.d/default.conf

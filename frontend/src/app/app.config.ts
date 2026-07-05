@@ -8,7 +8,7 @@ import { jwtInterceptor } from '@core/interceptors/jwt.interceptor';
 import { errorInterceptor } from '@core/interceptors/error.interceptor';
 
 /**
- * Configuration principale de l'application Angular 18 standalone.
+ * Configuration principale de l'application Angular 21 standalone.
  *
  * Remplace le NgModule racine (AppModule) des versions précédentes.
  * Avantages de l'approche standalone :

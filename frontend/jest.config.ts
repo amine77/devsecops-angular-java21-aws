@@ -12,9 +12,10 @@
  * (compilation des templates, décorateurs, etc.)
  */
 import type { Config } from 'jest';
+import { createCjsPreset } from 'jest-preset-angular/presets/index.js';
 
 const config: Config = {
-  preset: 'jest-preset-angular',
+  ...createCjsPreset(),
 
   // Fichier de setup exécuté APRÈS l'installation du framework de test.
   // Initialise jest-preset-angular (setup des zones, TestBed, etc.)
@@ -57,21 +58,6 @@ const config: Config = {
     '^@shared/(.*)$': '<rootDir>/src/app/shared/$1',
     '^@features/(.*)$': '<rootDir>/src/app/features/$1',
     '^@environments/(.*)$': '<rootDir>/src/environments/$1',
-  },
-
-  // Configuration du transformer jest-preset-angular.
-  // Depuis jest-preset-angular 14.x + Jest 28+, on utilise "transform"
-  // au lieu de "globals.ts-jest" (déprécié).
-  transform: {
-    // String.raw évite le double-échappement des backslash dans les regex.
-    // String.raw`^.+\.(ts|js|mjs|html|svg)$` équivaut à '^.+\\.(ts|js|mjs|html|svg)$'
-    [String.raw`^.+\.(ts|js|mjs|html|svg)$`]: [
-      'jest-preset-angular',
-      {
-        tsconfig: '<rootDir>/tsconfig.spec.json',
-        stringifyContentPathRegex: String.raw`\.(html|svg)$`,
-      },
-    ],
   },
 };
 
