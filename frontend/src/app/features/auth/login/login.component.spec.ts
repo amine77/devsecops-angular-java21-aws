@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
@@ -180,6 +180,30 @@ describe('LoginComponent', () => {
       component.ngOnInit();
 
       expect(navigateSpy).not.toHaveBeenCalled();
+    });
+
+    it('devrait utiliser le returnUrl fourni dans les query params', () => {
+      mockAuthService.isAuthenticated.mockReturnValue(false);
+      mockAuthService.login.mockReturnValue(of({ success: true, data: {}, timestamp: '' }));
+      TestBed.inject(ActivatedRoute).snapshot.queryParams = { returnUrl: '/admin/projects' };
+      const router = TestBed.inject(Router);
+      const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      component.ngOnInit();
+      component['loginForm'].patchValue({ email: 'test@test.com', password: 'password123' });
+      component.onSubmit();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/admin/projects']);
+    });
+  });
+
+  describe('togglePassword', () => {
+    it('devrait inverser la visibilité du mot de passe', () => {
+      expect(component['hidePassword']()).toBe(true);
+      component['togglePassword']();
+      expect(component['hidePassword']()).toBe(false);
+      component['togglePassword']();
+      expect(component['hidePassword']()).toBe(true);
     });
   });
 });

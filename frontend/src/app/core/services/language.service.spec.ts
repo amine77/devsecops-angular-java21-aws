@@ -52,4 +52,23 @@ describe('LanguageService', () => {
     const req = httpMock.expectOne('/assets/i18n/de.json');
     req.flush({});
   });
+
+  it('should reset translations to an empty object on http error', () => {
+    service.setLanguage('en');
+    const req = httpMock.expectOne('/assets/i18n/en.json');
+    req.error(new ProgressEvent('error'));
+    expect(service.translate('nav.portfolio')).toBe('nav.portfolio');
+  });
+
+  it('should restore a previously saved language from localStorage on init', () => {
+    localStorage.setItem('lang', 'de');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ imports: [HttpClientTestingModule] });
+
+    const freshService = TestBed.inject(LanguageService);
+    const freshHttpMock = TestBed.inject(HttpTestingController);
+
+    expect(freshService.current()).toBe('de');
+    freshHttpMock.expectOne('/assets/i18n/de.json').flush({});
+  });
 });

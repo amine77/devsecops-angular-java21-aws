@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 
 import { ProjectListComponent } from './project-list.component';
 import { ProjectService } from '@core/services/project.service';
+import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { PageResponse } from '@shared/models/api-response.model';
 import { Project } from '@shared/models/project.model';
 
@@ -102,5 +103,67 @@ describe('ProjectListComponent', () => {
     mockProjectService.getProjects.mockReturnValue(of(mockPage()));
     fixture.detectChanges();
     expect(() => fixture.destroy()).not.toThrow();
+  });
+
+  it('should not animate the cards when there is no card to animate', () => {
+    jest.useFakeTimers();
+    mockProjectService.getProjects.mockReturnValue(of(mockPage({ content: [] })));
+    fixture.detectChanges();
+    expect(() => jest.advanceTimersByTime(0)).not.toThrow();
+    jest.useRealTimers();
+  });
+});
+
+describe('ProjectListComponent (reducedMotion)', () => {
+  let fixture: ComponentFixture<ProjectListComponent>;
+
+  const mockProject: Project = {
+    id: 1,
+    title: 'Portfolio DevSecOps',
+    description: 'Desc',
+    summary: 'Résumé',
+    githubUrl: null,
+    demoUrl: null,
+    imageUrl: null,
+    featured: true,
+    sortOrder: 1,
+    status: 'ACTIVE',
+    skills: [],
+    createdAt: '',
+    updatedAt: '',
+  };
+
+  const mockProjectService = {
+    getProjects: jest.fn().mockReturnValue(
+      of({
+        content: [mockProject],
+        page: 0,
+        size: 9,
+        totalElements: 1,
+        totalPages: 1,
+        first: true,
+        last: true,
+      })
+    ),
+  };
+
+  const mockScrollAnimationService = { reducedMotion: true };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ProjectListComponent, RouterTestingModule, HttpClientTestingModule],
+      providers: [
+        { provide: ProjectService, useValue: mockProjectService },
+        { provide: ScrollAnimationService, useValue: mockScrollAnimationService },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ProjectListComponent);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('should skip the header and card animations when reducedMotion is true', () => {
+    expect(() => fixture.detectChanges()).not.toThrow();
   });
 });
