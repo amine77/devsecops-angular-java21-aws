@@ -5,6 +5,6 @@
   "description": "Lambda : rapport hebdomadaire portfolio → SES",
   "main": "index.mjs",
   "dependencies": {
-    "@aws-sdk/client-ses": "^3.787.0"
+    "@aws-sdk/client-ses": "^3.1079.0"
   }
 }
