@@ -76,9 +76,7 @@ describe('ProjectListComponent', () => {
   });
 
   it('should go to next page', () => {
-    mockProjectService.getProjects.mockReturnValue(
-      of(mockPage({ totalPages: 2, last: false }))
-    );
+    mockProjectService.getProjects.mockReturnValue(of(mockPage({ totalPages: 2, last: false })));
     fixture.detectChanges();
     component['nextPage']();
     expect(mockProjectService.getProjects).toHaveBeenCalledTimes(2);

@@ -22,7 +22,9 @@ describe('ProjectDetailComponent', () => {
     featured: true,
     sortOrder: 1,
     status: 'ACTIVE',
-    skills: [{ id: 1, name: 'Angular', category: 'FRONTEND', iconUrl: null, level: 4, sortOrder: 1 }],
+    skills: [
+      { id: 1, name: 'Angular', category: 'FRONTEND', iconUrl: null, level: 4, sortOrder: 1 },
+    ],
     createdAt: '',
     updatedAt: '',
   };
