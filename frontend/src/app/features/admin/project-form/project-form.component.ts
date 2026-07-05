@@ -240,7 +240,9 @@ export class ProjectFormComponent implements OnInit {
   }
 
   protected onSkillChange(id: number, selected: boolean): void {
-    this.selectedSkillIds.update((ids) => (selected ? [...ids, id] : ids.filter((i) => i !== id)));
+    this.selectedSkillIds.update((ids) =>
+      selected ? (ids.includes(id) ? ids : [...ids, id]) : ids.filter((i) => i !== id)
+    );
   }
 
   protected isInvalid(field: string): boolean {

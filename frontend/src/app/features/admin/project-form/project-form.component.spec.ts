@@ -106,6 +106,17 @@ describe('ProjectFormComponent', () => {
     expect(component['isSkillSelected'](1)).toBe(false);
   });
 
+  it('should not accumulate duplicate skillIds when selectionChange fires repeatedly for an already selected skill', () => {
+    // Reproduit le bug de prod : Angular Material peut redéclencher (selectionChange)
+    // pour un chip déjà sélectionné (ex. resynchronisation du binding [selected]),
+    // ce qui faisait grossir selectedSkillIds avec des doublons -> 404 backend.
+    fixture.detectChanges();
+    component['onSkillChange'](1, true);
+    component['onSkillChange'](1, true);
+    component['onSkillChange'](1, true);
+    expect(component['selectedSkillIds']()).toEqual([1]);
+  });
+
   it('should mark form as touched on invalid submit', () => {
     fixture.detectChanges();
     component.onSubmit();

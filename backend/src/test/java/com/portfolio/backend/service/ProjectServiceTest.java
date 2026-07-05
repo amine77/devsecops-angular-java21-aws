@@ -4,6 +4,7 @@ import com.portfolio.backend.dto.request.ProjectRequest;
 import com.portfolio.backend.dto.response.ProjectResponse;
 import com.portfolio.backend.entity.Project;
 import com.portfolio.backend.entity.ProjectStatus;
+import com.portfolio.backend.entity.Skill;
 import com.portfolio.backend.exception.ResourceNotFoundException;
 import com.portfolio.backend.kafka.EventPublisher;
 import com.portfolio.backend.mapper.ProjectMapper;
@@ -195,6 +196,59 @@ class ProjectServiceTest {
 
             // WHEN / THEN
             assertThatThrownBy(() -> projectService.deleteProject(99L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("updateProject() — résolution des skills")
+    class UpdateProjectSkillsTests {
+
+        @Test
+        @DisplayName("Accepte des skillIds dupliqués sans lever ResourceNotFoundException")
+        void shouldDeduplicateSkillIdsBeforeResolving() {
+            // GIVEN — le front peut envoyer des IDs en double (bug d'accumulation d'évènements
+            // Angular Material sur les mat-chip-option) ; le repository dédoublonne toujours
+            // le résultat, donc la comparaison doit se faire sur des IDs uniques.
+            List<Skill> existingSkills = List.of(
+                Skill.builder().id(1L).name("Java 21").build(),
+                Skill.builder().id(2L).name("Angular").build()
+            );
+            ProjectRequest request = new ProjectRequest(
+                "Portfolio DevSecOps", "Description détaillée du projet",
+                "Résumé", "https://github.com/test", null, null,
+                true, 1, List.of(1L, 2L, 1L, 2L)
+            );
+
+            given(projectRepository.findById(1L)).willReturn(Optional.of(testProject));
+            given(skillRepository.findAllById(any())).willReturn(existingSkills);
+            given(projectRepository.save(any(Project.class))).willReturn(testProject);
+            given(projectMapper.toResponse(testProject)).willReturn(testProjectResponse);
+
+            // WHEN / THEN
+            ProjectResponse result = projectService.updateProject(1L, request);
+
+            assertThat(result).isNotNull();
+            assertThat(testProject.getSkills()).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("Lance ResourceNotFoundException si un skillId n'existe vraiment pas")
+        void shouldThrowNotFoundWhenSkillIdIsUnknown() {
+            // GIVEN
+            ProjectRequest request = new ProjectRequest(
+                "Portfolio DevSecOps", "Description détaillée du projet",
+                "Résumé", "https://github.com/test", null, null,
+                true, 1, List.of(1L, 999L)
+            );
+
+            given(projectRepository.findById(1L)).willReturn(Optional.of(testProject));
+            given(skillRepository.findAllById(any())).willReturn(
+                List.of(Skill.builder().id(1L).name("Java 21").build())
+            );
+
+            // WHEN / THEN
+            assertThatThrownBy(() -> projectService.updateProject(1L, request))
                 .isInstanceOf(ResourceNotFoundException.class);
         }
     }

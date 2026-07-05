@@ -27,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Service métier pour la gestion des projets.
@@ -224,8 +226,9 @@ public class ProjectService {
         if (skillIds == null || skillIds.isEmpty()) {
             return new ArrayList<>();
         }
-        List<Skill> skills = skillRepository.findAllById(skillIds);
-        if (skills.size() != skillIds.size()) {
+        Set<Long> uniqueIds = new HashSet<>(skillIds);
+        List<Skill> skills = skillRepository.findAllById(uniqueIds);
+        if (skills.size() != uniqueIds.size()) {
             throw new ResourceNotFoundException("Une ou plusieurs compétences sont introuvables");
         }
         return skills;
