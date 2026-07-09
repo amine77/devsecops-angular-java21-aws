@@ -103,22 +103,27 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                   {{ 'admin.dashboard.col.actions' | translate }}
                 </th>
                 <td mat-cell *matCellDef="let p" class="actions-cell">
-                  <a
-                    [routerLink]="['/admin/projects', p.id, 'edit']"
-                    mat-icon-button
-                    matTooltip="{{ 'admin.dashboard.edit' | translate }}"
-                    color="primary"
-                  >
-                    <mat-icon>edit</mat-icon>
-                  </a>
-                  <button
-                    mat-icon-button
-                    matTooltip="{{ 'admin.dashboard.archive' | translate }}"
-                    color="warn"
-                    (click)="confirmDelete(p)"
-                  >
-                    <mat-icon>archive</mat-icon>
-                  </button>
+                  <!-- Le flex vit sur ce div interne, PAS sur le <td> :
+                       un td en display:flex sort du layout table et sa
+                       bordure basse se désaligne des autres colonnes -->
+                  <div class="actions-wrap">
+                    <a
+                      [routerLink]="['/admin/projects', p.id, 'edit']"
+                      mat-icon-button
+                      matTooltip="{{ 'admin.dashboard.edit' | translate }}"
+                      color="primary"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </a>
+                    <button
+                      mat-icon-button
+                      matTooltip="{{ 'admin.dashboard.archive' | translate }}"
+                      color="warn"
+                      (click)="confirmDelete(p)"
+                    >
+                      <mat-icon>archive</mat-icon>
+                    </button>
+                  </div>
                 </td>
               </ng-container>
 
@@ -156,8 +161,9 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
       .dashboard-table {
         width: 100%;
       }
-      .actions-cell {
+      .actions-wrap {
         display: flex;
+        align-items: center;
         gap: 0.25rem;
       }
       .no-data {
