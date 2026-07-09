@@ -37,7 +37,10 @@ COPY checkstyle.xml .
 # Télécharger les dépendances Maven (étape cachée séparément)
 # -B : batch mode (pas d'interactivité)
 # dependency:go-offline : télécharge toutes les dépendances
-RUN mvn dependency:go-offline -B
+# --mount=type=cache : cache BuildKit persistant pour ~/.m2 — même quand le
+# pom.xml change, seuls les artefacts nouveaux/modifiés sont retéléchargés
+# (sans ce mount, un changement de pom invalide la couche et retélécharge TOUT)
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
 
 # Copier maintenant le code source
 COPY src ./src
@@ -48,7 +51,7 @@ COPY src ./src
 #   Raison : séparation des responsabilités — Docker produit un artefact,
 #   le CI vérifie la qualité. Évite aussi les conflits Guava Maven 3.9 / Checkstyle.
 # -Dspring.profiles.active=prod : profile prod pour la compilation
-RUN mvn package -B -DskipTests -Dcheckstyle.skip=true -Dspring.profiles.active=prod
+RUN --mount=type=cache,target=/root/.m2 mvn package -B -DskipTests -Dcheckstyle.skip=true -Dspring.profiles.active=prod
 
 # Extraire les layers du JAR Spring Boot (optimisation cache Docker)
 # Spring Boot Layered JAR sépare :

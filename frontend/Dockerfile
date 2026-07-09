@@ -30,7 +30,9 @@ COPY package.json package-lock.json ./
 
 # npm ci (clean install) : plus déterministe que npm install
 # --prefer-offline : utilise le cache si disponible (plus rapide en CI)
-RUN npm ci --prefer-offline
+# --mount=type=cache : cache BuildKit persistant pour ~/.npm — les tarballs
+# déjà téléchargés sont réutilisés même quand package-lock.json change
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
 
 # Copier le reste du code source
 COPY . .
