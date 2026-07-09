@@ -1,8 +1,5 @@
 // Polices auto-hébergées — aucune dépendance Google Fonts CDN (SonarCloud S5725)
 @use '@angular/material' as mat;
-@use '@fontsource/roboto/300.css' as *;
-@use '@fontsource/roboto/400.css' as *;
-@use '@fontsource/roboto/500.css' as *;
 @use '@fontsource/inter/300.css' as *;
 @use '@fontsource/inter/400.css' as *;
 @use '@fontsource/inter/500.css' as *;
@@ -21,7 +18,9 @@ html {
         tertiary: mat.$cyan-palette,
         theme-type: dark,
       ),
-      typography: Roboto,
+      // Inter partout (au lieu de Roboto) : une seule famille sans-serif
+      // à télécharger, cohérente avec --font-sans du reste du site
+      typography: Inter,
       density: 0,
     )
   );

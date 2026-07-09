@@ -2,9 +2,9 @@
  * Setup Jest pour les tests Angular.
  * Ce fichier est exécuté avant chaque suite de tests.
  */
-import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
+import { setupZonelessTestEnv } from 'jest-preset-angular/setup-env/zoneless';
 
-setupZoneTestEnv();
+setupZonelessTestEnv();
 
 // JSDOM n'implémente pas window.matchMedia — requis par ScrollAnimationService
 Object.defineProperty(window, 'matchMedia', {

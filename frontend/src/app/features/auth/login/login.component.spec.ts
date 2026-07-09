@@ -34,7 +34,18 @@ describe('LoginComponent', () => {
 
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
+
+    // Mock par défaut de router.navigate : en zoneless, une navigation vers une
+    // route inexistante (NG04002) devient une promesse rejetée NON capturée
+    // (zone.js l'avalait) et fait crasher le worker Jest.
+    const navigateSpy = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
     fixture.detectChanges();
+
+    // Purge les appels enregistrés pendant le ngOnInit du beforeEach (le mock
+    // isAuthenticated peut fuiter entre tests : clearAllMocks ne réinitialise
+    // pas les mockReturnValue) pour que chaque test parte d'un spy vierge.
+    navigateSpy.mockClear();
   });
 
   afterEach(() => jest.clearAllMocks());

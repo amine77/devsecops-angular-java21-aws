@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -16,9 +16,11 @@ import { errorInterceptor } from '@core/interceptors/error.interceptor';
  * - Configuration explicite et centralisée
  * - Pas de NgModule à maintenir
  *
- * provideZoneChangeDetection({ eventCoalescing: true }) :
- * Regroupe plusieurs changements en un seul cycle de détection.
- * Améliore les performances.
+ * provideZonelessChangeDetection() :
+ * Détection de changement sans zone.js (stable depuis Angular 20).
+ * Possible ici car tous les composants sont OnPush + signals.
+ * Gains : zone.js retiré du bundle (~35 kB), pas de monkey-patching
+ * des APIs async, meilleure interop avec GSAP (qui tourne hors Angular).
  *
  * provideRouter(...routes) :
  * - withComponentInputBinding() : les paramètres de route sont injectés
@@ -32,7 +34,7 @@ import { errorInterceptor } from '@core/interceptors/error.interceptor';
  */
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideZonelessChangeDetection(),
     provideAnimations(),
     provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
     provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
