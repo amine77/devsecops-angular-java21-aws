@@ -10,8 +10,8 @@ et développement assisté par IA (Claude Code + MCP).
 
 | Couche | Technologie |
 |--------|-------------|
-| Frontend | Angular 21, TypeScript, Angular Material 3 (dark theme), Signals |
-| Backend | Spring Boot 3.3, Java 21, Virtual Threads (Project Loom) |
+| Frontend | Angular 21 (zoneless), TypeScript, Angular Material 3 (dark theme), Signals |
+| Backend | Spring Boot 3.5, Java 21, Virtual Threads (Project Loom) |
 | Base de données | PostgreSQL 15, Flyway migrations |
 | Cache | Redis 7.2 — Spring Cache `@Cacheable`, TTL 5/10 min |
 | Messaging | Apache Kafka KRaft (sans Zookeeper) — événements métier asynchrones |

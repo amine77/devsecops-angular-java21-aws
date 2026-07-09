@@ -136,36 +136,30 @@ ssh -i ~/.ssh/portfolio-key.pem ec2-user@$EC2_IP \
   "sudo systemctl start portfolio"
 ```
 
-## Backend Terraform distant (optionnel — recommandé en équipe)
+## Backend Terraform distant (ACTIVÉ — S3 avec locking natif)
 
-Pour partager le state entre développeurs et CI/CD :
+Le state est hébergé dans S3 depuis 2026-07 : bucket
+`portfolio-terraform-state-<account-id>` (versionné, SSE-S3, accès public
+bloqué). Le locking est géré nativement par S3 via `use_lockfile = true`
+(Terraform >= 1.10) — **plus besoin de table DynamoDB** (approche dépréciée).
 
 ```bash
-# 1. Créer le bucket S3 et la table DynamoDB (une seule fois)
-aws s3api create-bucket \
-  --bucket portfolio-terraform-state \
-  --region eu-west-3 \
-  --create-bucket-configuration LocationConstraint=eu-west-3
+# 1. Créer le bucket (idempotent, une seule fois par compte AWS)
+./scripts/bootstrap-state.sh
 
-aws s3api put-bucket-versioning \
-  --bucket portfolio-terraform-state \
-  --versioning-configuration Status=Enabled
+# 2. Le bloc backend "s3" est déjà actif dans versions.tf :
+#    bucket       = "portfolio-terraform-state-<account-id>"
+#    key          = "portfolio/prod/terraform.tfstate"
+#    region       = "eu-west-3"
+#    encrypt      = true
+#    use_lockfile = true
 
-aws s3api put-bucket-encryption \
-  --bucket portfolio-terraform-state \
-  --server-side-encryption-configuration \
-    '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
-
-aws dynamodb create-table \
-  --table-name portfolio-terraform-locks \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region eu-west-3
-
-# 2. Décommenter le bloc backend dans versions.tf
-# 3. Re-initialiser : terraform init -migrate-state
+# 3. Initialiser / migrer un state local existant :
+terraform init -migrate-state
 ```
+
+Avantages : state partagé dev + CI/CD, rollback via le versioning S3,
+chiffrement at-rest, verrou natif sans ressource supplémentaire.
 
 ## Makefile targets
 

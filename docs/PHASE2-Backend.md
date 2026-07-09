@@ -43,7 +43,7 @@ PostgreSQL
 backend/
 ├── Dockerfile                          ← Multi-stage, JRE Alpine, user non-root
 ├── .dockerignore
-├── pom.xml                             ← Java 21, Spring Boot 3.3, Checkstyle, JaCoCo
+├── pom.xml                             ← Java 21, Spring Boot 3.5, Checkstyle, JaCoCo
 ├── checkstyle.xml                      ← Règles style Java (lignes max, nommage, etc.)
 └── src/
     ├── main/
