@@ -50,12 +50,18 @@ frontend/cypress/screenshots/
 
 # =============================================================================
 # INFRASTRUCTURE — Terraform
+# Note : .terraform.lock.hcl n'est PAS ignoré (bonne pratique : le commiter
+# pour figer les versions exactes des providers entre devs et CI).
 # =============================================================================
-infrastructure/terraform/.terraform/
-infrastructure/terraform/*.tfstate
-infrastructure/terraform/*.tfstate.*
-infrastructure/terraform/.terraform.lock.hcl
-infrastructure/terraform/crash.log
+**/.terraform/
+*.tfstate
+*.tfstate.*
+tfplan
+*.tfplan
+crash.log
+# Artefacts de packaging des Lambdas (régénérés par le build)
+terraform/modules/**/*.zip
+lambdas/**/*.zip
 
 # =============================================================================
 # DOCKER
@@ -83,6 +89,13 @@ logs/
 tmp/
 temp/
 .cache/
+
+# Crash dumps JVM (hs_err_pid*.log est couvert par *.log, replay_pid* non)
+hs_err_pid*
+replay_pid*
+
+# Artefacts de session Playwright MCP (screenshots/console de debug)
+.playwright-mcp/
 
 # =============================================================================
 # OS
