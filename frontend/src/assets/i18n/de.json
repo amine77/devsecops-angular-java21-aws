@@ -145,8 +145,10 @@
   "admin.form.field.summary": "Kurze Zusammenfassung",
   "admin.form.field.description": "Vollständige Beschreibung *",
   "admin.form.field.description.error": "Beschreibung erforderlich (10-5000 Zeichen)",
+  "admin.form.field.summary.error": "Zusammenfassung darf 500 Zeichen nicht überschreiten",
   "admin.form.field.github": "GitHub-URL",
   "admin.form.field.demo": "Demo-URL",
+  "admin.form.field.url.error": "Die URL muss mit http:// oder https:// beginnen",
   "admin.form.field.image": "Bild-URL",
   "admin.form.field.featured": "Hervorgehobenes Projekt",
   "admin.form.field.featured.label": "Auf der Startseite hervorheben",
@@ -159,5 +161,6 @@
   "admin.form.submit.edit": "Änderungen speichern",
   "admin.form.submitting": "Wird gespeichert...",
   "admin.form.error": "Fehler beim Speichern.",
+  "admin.form.error.network": "Der Server ist nicht erreichbar. Überprüfen Sie Ihre Verbindung.",
   "admin.form.saved": "Projekt gespeichert."
 }

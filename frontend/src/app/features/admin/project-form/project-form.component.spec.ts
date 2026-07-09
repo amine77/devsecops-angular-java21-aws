@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
@@ -65,6 +66,11 @@ describe('ProjectFormComponent', () => {
 
     fixture = TestBed.createComponent(ProjectFormComponent);
     component = fixture.componentInstance;
+
+    // Mock par défaut de router.navigate : en zoneless, une navigation vers une
+    // route inexistante (NG04002) devient une promesse rejetée NON capturée
+    // (zone.js l'avalait) et fait crasher le worker Jest.
+    jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -143,6 +149,37 @@ describe('ProjectFormComponent', () => {
     });
     component.onSubmit();
     expect(component['errorMessage']()).toBeTruthy(); // translated text depends on runtime lang
+  });
+
+  it('should surface the backend validation message instead of a generic error on 400', () => {
+    // Bug de prod : une URL GitHub sans schéma (ex. "github.com/x") passe la validation
+    // frontend (aucun validator avant ce fix) mais échoue le @URL backend en 400 —
+    // l'ancien handler affichait toujours le même message générique.
+    mockProjectService.createProject.mockReturnValue(
+      throwError(() => ({
+        status: 400,
+        error: {
+          message: 'Erreur de validation des données',
+          validationErrors: { githubUrl: "L'URL GitHub doit être une URL valide" },
+        },
+      }))
+    );
+    fixture.detectChanges();
+    component.form.patchValue({
+      title: 'Nouveau Projet',
+      description: 'Description de 10 chars min',
+    });
+    component.onSubmit();
+    expect(component['errorMessage']()).toBe("L'URL GitHub doit être une URL valide");
+  });
+
+  it('should reject a githubUrl without http(s) scheme', () => {
+    fixture.detectChanges();
+    component.form.patchValue({ githubUrl: 'github.com/amine77/foo' });
+    expect(component.form.get('githubUrl')?.valid).toBe(false);
+
+    component.form.patchValue({ githubUrl: 'https://github.com/amine77/foo' });
+    expect(component.form.get('githubUrl')?.valid).toBe(true);
   });
 
   it('isInvalid returns false for valid untouched field', () => {

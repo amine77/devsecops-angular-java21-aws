@@ -145,8 +145,10 @@
   "admin.form.field.summary": "Short summary",
   "admin.form.field.description": "Full description *",
   "admin.form.field.description.error": "Description required (10-5000 characters)",
+  "admin.form.field.summary.error": "Summary cannot exceed 500 characters",
   "admin.form.field.github": "GitHub URL",
   "admin.form.field.demo": "Demo URL",
+  "admin.form.field.url.error": "URL must start with http:// or https://",
   "admin.form.field.image": "Image URL",
   "admin.form.field.featured": "Featured project",
   "admin.form.field.featured.label": "Feature on homepage",
@@ -159,5 +161,6 @@
   "admin.form.submit.edit": "Save changes",
   "admin.form.submitting": "Saving...",
   "admin.form.error": "Error while saving.",
+  "admin.form.error.network": "The server is unreachable. Check your connection.",
   "admin.form.saved": "Project saved."
 }

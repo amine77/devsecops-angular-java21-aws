@@ -151,10 +151,12 @@
   "admin.form.field.title": "Titre *",
   "admin.form.field.title.error": "Le titre est obligatoire (2-200 caractères)",
   "admin.form.field.summary": "Résumé court",
+  "admin.form.field.summary.error": "Le résumé ne peut pas dépasser 500 caractères",
   "admin.form.field.description": "Description complète *",
   "admin.form.field.description.error": "Description obligatoire (10-5000 caractères)",
   "admin.form.field.github": "URL GitHub",
   "admin.form.field.demo": "URL Démo",
+  "admin.form.field.url.error": "L'URL doit commencer par http:// ou https://",
   "admin.form.field.image": "URL Image",
   "admin.form.field.featured": "Projet en vedette",
   "admin.form.field.featured.label": "Mettre en vedette (homepage)",
@@ -167,5 +169,6 @@
   "admin.form.submit.edit": "Enregistrer les modifications",
   "admin.form.submitting": "Sauvegarde...",
   "admin.form.error": "Erreur lors de la sauvegarde.",
+  "admin.form.error.network": "Le serveur est inaccessible. Vérifiez votre connexion.",
   "admin.form.saved": "Projet sauvegardé."
 }

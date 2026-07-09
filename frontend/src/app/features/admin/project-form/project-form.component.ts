@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +17,10 @@ import { SkillService } from '@core/services/skill.service';
 import { LanguageService } from '@core/services/language.service';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 import { Skill } from '@shared/models/skill.model';
+import { ErrorResponse } from '@shared/models/api-response.model';
+
+// Miroir du @URL (Hibernate Validator) côté backend : exige un schéma http(s).
+const URL_PATTERN = /^https?:\/\/.+/;
 
 @Component({
   selector: 'app-project-form',
@@ -58,6 +63,9 @@ import { Skill } from '@shared/models/skill.model';
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>{{ 'admin.form.field.summary' | translate }}</mat-label>
             <input matInput formControlName="summary" placeholder="Affiché sur les cards..." />
+            @if (isInvalid('summary')) {
+              <mat-error>{{ 'admin.form.field.summary.error' | translate }}</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
@@ -73,12 +81,18 @@ import { Skill } from '@shared/models/skill.model';
               <mat-label>{{ 'admin.form.field.github' | translate }}</mat-label>
               <input matInput formControlName="githubUrl" placeholder="https://github.com/..." />
               <mat-icon matPrefix>code</mat-icon>
+              @if (isInvalid('githubUrl')) {
+                <mat-error>{{ 'admin.form.field.url.error' | translate }}</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>{{ 'admin.form.field.demo' | translate }}</mat-label>
               <input matInput formControlName="demoUrl" placeholder="https://..." />
               <mat-icon matPrefix>open_in_new</mat-icon>
+              @if (isInvalid('demoUrl')) {
+                <mat-error>{{ 'admin.form.field.url.error' | translate }}</mat-error>
+              }
             </mat-form-field>
           </div>
 
@@ -206,11 +220,11 @@ export class ProjectFormComponent implements OnInit {
 
   protected readonly form = this.fb.group({
     title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
-    description: ['', [Validators.required, Validators.minLength(10)]],
-    summary: [''],
-    githubUrl: [''],
-    demoUrl: [''],
-    imageUrl: [''],
+    description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(5000)]],
+    summary: ['', [Validators.maxLength(500)]],
+    githubUrl: ['', [Validators.pattern(URL_PATTERN)]],
+    demoUrl: ['', [Validators.pattern(URL_PATTERN)]],
+    imageUrl: ['', [Validators.pattern(URL_PATTERN)]],
     featured: [false],
     sortOrder: [0],
   });
@@ -270,10 +284,28 @@ export class ProjectFormComponent implements OnInit {
         this.snackBar.open(this.lang.translate('admin.form.saved'), 'OK', { duration: 3000 });
         void this.router.navigate(['/admin']);
       },
-      error: () => {
-        this.errorMessage.set(this.lang.translate('admin.form.error'));
+      error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);
+        this.errorMessage.set(this.extractErrorMessage(err));
       },
     });
+  }
+
+  /**
+   * Extrait un message exploitable de la réponse d'erreur backend
+   * (ErrorResponse { message, validationErrors }) au lieu d'un message générique
+   * identique pour un 400 (champ invalide), un 404 (skill obsolète) ou un 500.
+   */
+  private extractErrorMessage(err: HttpErrorResponse): string {
+    if (err.status === 0) {
+      return this.lang.translate('admin.form.error.network');
+    }
+
+    const body = err.error as ErrorResponse | undefined;
+    const firstValidationError = body?.validationErrors
+      ? Object.values(body.validationErrors)[0]
+      : undefined;
+
+    return firstValidationError ?? body?.message ?? this.lang.translate('admin.form.error');
   }
 }
