@@ -207,10 +207,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: npm audit
-        # --audit-level=high : échoue sur HIGH et CRITICAL uniquement
-        # || true : ne pas bloquer le pipeline (informationnel)
+      - name: npm audit (rapport complet, informationnel)
         run: npm audit --audit-level=high || true
+
+      - name: npm audit — Gate bloquant (CRITICAL)
+        # BLOQUANT sur les vulnérabilités critiques uniquement.
+        # HIGH reste visible dans le step précédent sans bloquer.
+        run: npm audit --audit-level=critical
 
       - name: Trivy — Scan dossier frontend (secrets + misconfig)
         uses: aquasecurity/trivy-action@master
@@ -259,7 +262,8 @@ jobs:
           cache-to: type=gha,mode=max
           load: true
 
-      - name: Trivy — Scan image frontend
+      # Passe 1 — RAPPORT : scan complet exporté en SARIF, sans bloquer.
+      - name: Trivy — Scan image frontend (rapport)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: portfolio-frontend:${{ github.sha }}
@@ -274,3 +278,13 @@ jobs:
         with:
           sarif_file: trivy-frontend.sarif
           category: trivy-frontend-image
+
+      # Passe 2 — GATE bloquant : échoue sur CRITICAL corrigeable.
+      - name: Trivy — Gate bloquant (CRITICAL corrigeables)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: portfolio-frontend:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: 'CRITICAL'
+          ignore-unfixed: true

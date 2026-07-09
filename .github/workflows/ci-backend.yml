@@ -78,7 +78,9 @@ jobs:
   test:
     name: 🧪 Tests + Coverage (JaCoCo ≥ 70%)
     runs-on: ubuntu-latest
-    needs: quality
+    # Pas de "needs: quality" : Checkstyle et les tests sont indépendants,
+    # les exécuter en parallèle fait gagner ~2-3 min par run.
+    # docker-build-scan attend toujours les deux (needs: [quality, test]).
     defaults:
       run:
         working-directory: backend
@@ -188,12 +190,13 @@ jobs:
       - name: OWASP Dependency Check
         run: |
           mvn org.owasp:dependency-check-maven:check \
-            -DfailBuildOnCVSS=7 \
+            -DfailBuildOnCVSS=9 \
             -DsuppressionFile=../owasp-suppressions.xml \
             -Dformats=HTML,SARIF \
-            -B 2>&1 || true
-          # || true : ne pas faire échouer le pipeline sur les false positives
-          # En production, retirer le || true et gérer via owasp-suppressions.xml
+            -B
+          # BLOQUANT sur CVSS >= 9 (CRITICAL) : les false positives se gèrent
+          # via owasp-suppressions.xml, pas en ignorant l'exit code.
+          # CVSS 7-9 (HIGH) : remonté dans le rapport SARIF sans bloquer.
 
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4
@@ -253,14 +256,14 @@ jobs:
           cache-to: type=gha,mode=max
           load: true
 
-      - name: Trivy — Scan vulnérabilités image
+      # Passe 1 — RAPPORT : scan complet (MEDIUM+) exporté en SARIF,
+      # visible dans GitHub → Security, sans bloquer.
+      - name: Trivy — Scan vulnérabilités image (rapport)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: portfolio-backend:${{ github.sha }}
           format: sarif
           output: trivy-backend.sarif
-          # Ne fail pas le build sur les vulnérabilités — remonte dans Security
-          # En production : exit-code: '1' + severity: 'HIGH,CRITICAL'
           exit-code: '0'
           severity: 'MEDIUM,HIGH,CRITICAL'
 
@@ -270,6 +273,18 @@ jobs:
         with:
           sarif_file: trivy-backend.sarif
           category: trivy-backend
+
+      # Passe 2 — GATE bloquant : échoue sur CRITICAL corrigeable.
+      # ignore-unfixed : ne bloque pas sur les CVE Alpine sans patch disponible
+      # (on ne peut rien y faire à part attendre l'upstream).
+      - name: Trivy — Gate bloquant (CRITICAL corrigeables)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: portfolio-backend:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: 'CRITICAL'
+          ignore-unfixed: true
 
       # misconfig retiré des scanners : Trivy résout les POM Maven Central
       # pour valider les dépendances → déclenche des 429 Too Many Requests
