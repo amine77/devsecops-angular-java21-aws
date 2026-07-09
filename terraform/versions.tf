@@ -20,24 +20,24 @@ terraform {
   }
 
   # ==========================================================================
-  # BACKEND DISTANT — S3 + DynamoDB pour le state partagé
+  # BACKEND DISTANT — S3 pour le state partagé
   # ==========================================================================
-  # IMPORTANT : Décommenter APRÈS avoir bootstrappé les ressources S3/DynamoDB.
-  # Bootstrap avec les scripts dans scripts/bootstrap-state.sh
+  # Bucket bootstrappé via scripts/bootstrap-state.sh (versioning + SSE-S3 +
+  # public access block).
   #
   # Avantages du backend distant :
   #   - State partagé entre développeurs et CI/CD
-  #   - Locking via DynamoDB (évite les conflits)
+  #   - Locking natif S3 via use_lockfile (Terraform >= 1.10 — remplace
+  #     l'ancienne approche DynamoDB, dépréciée)
   #   - Chiffrement at-rest (SSE-S3)
   #   - Versioning activé sur le bucket (rollback possible)
-  #
-  # backend "s3" {
-  #   bucket         = "portfolio-terraform-state"   # À remplacer par ton bucket
-  #   key            = "portfolio/prod/terraform.tfstate"
-  #   region         = "eu-west-3"
-  #   encrypt        = true
-  #   dynamodb_table = "portfolio-terraform-locks"   # Pour le locking
-  # }
+  backend "s3" {
+    bucket       = "portfolio-terraform-state-583931058666"
+    key          = "portfolio/prod/terraform.tfstate"
+    region       = "eu-west-3"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 # =============================================================================
