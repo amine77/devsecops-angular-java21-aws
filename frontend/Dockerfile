@@ -45,8 +45,15 @@ RUN npm run build
 # ===========================================================================
 # STAGE 2 : NGINX RUNTIME
 # nginx:alpine = ~25MB (vs ~130MB pour nginx:latest)
+# 1.30 = branche stable — 1.27 embarquait un OpenSSL vulnérable
+# (CVE-2026-31789 critique sur libcrypto3/libssl3, corrigé en 3.3.7-r0)
 # ===========================================================================
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.30-alpine AS runtime
+
+# Patchs de sécurité de l'OS : récupère les correctifs Alpine publiés
+# après le build de l'image de base (ex. OpenSSL) sans attendre un rebuild
+# upstream. Le gate Trivy CI (CRITICAL, ignore-unfixed) vérifie le résultat.
+RUN apk upgrade --no-cache
 
 # Métadonnées
 LABEL maintainer="amine.charrad@gmail.com"

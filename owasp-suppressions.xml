@@ -28,4 +28,43 @@
     </suppress>
     -->
 
+    <suppress until="2026-10-31Z">
+        <notes>
+            Faux positifs de correspondance CPE sur netty-* 4.1.122.Final :
+            OWASP DC mappe les jars sur le CPE générique netty:netty et leur
+            attribue des CVE ne concernant pas ces modules/versions. Trivy
+            (matching précis par purl/GHSA) donne 0 vulnérabilité sur les
+            mêmes jars dans l'image Docker (run CI 29051199415).
+            À réévaluer à la prochaine montée de Spring Boot (netty managé).
+        </notes>
+        <packageUrl regex="true">^pkg:maven/io\.netty/netty\-.*@4\.1\.122\.Final$</packageUrl>
+        <cve>CVE-2026-42581</cve>
+        <cve>CVE-2026-45674</cve>
+        <cve>CVE-2026-42584</cve>
+        <cve>CVE-2026-47691</cve>
+        <cve>CVE-2026-42579</cve>
+    </suppress>
+
+    <suppress until="2026-10-31Z">
+        <notes>
+            Faux positifs CPE sur spring-boot 3.5.3 (CPE vmware:spring_boot) :
+            aucune version corrigée publiée (3.5.3 = dernière release) et Trivy
+            ne remonte rien sur ce jar. Réévaluer à chaque release Spring Boot ;
+            si un patch 3.5.x sort, monter le parent au lieu de prolonger.
+        </notes>
+        <packageUrl regex="true">^pkg:maven/org\.springframework\.boot/spring\-boot@3\.5\.3$</packageUrl>
+        <cve>CVE-2026-40971</cve>
+        <cve>CVE-2026-40974</cve>
+    </suppress>
+
+    <suppress until="2026-10-31Z">
+        <notes>
+            Faux positif CPE sur spring-core 6.2.8 (CPE spring_framework) :
+            6.2.8 est la dernière release 6.2.x publiée et Trivy ne remonte
+            rien sur ce jar. Réévaluer à chaque release Spring Framework.
+        </notes>
+        <packageUrl regex="true">^pkg:maven/org\.springframework/spring\-core@6\.2\.8$</packageUrl>
+        <cve>CVE-2026-41855</cve>
+    </suppress>
+
 </suppressions>

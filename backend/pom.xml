@@ -43,6 +43,17 @@
         <!-- lombok.version : héritée du parent Spring Boot (ne pas pinner,
              le parent garantit une version compatible avec le JDK cible) -->
         <cyclonedx.version>2.9.1</cyclonedx.version>
+
+        <!-- ====================================================================
+             OVERRIDES SÉCURITÉ — patchs CVE en avance sur le BOM Spring Boot
+             Ces propriétés surchargent les versions managées par le parent.
+             À RETIRER dès qu'une version de Spring Boot les intègre (vérifier
+             à chaque montée de version du parent).
+             ==================================================================== -->
+        <!-- CVE-2026-41293, CVE-2026-43512, CVE-2026-43515 (gate Trivy/OWASP) -->
+        <tomcat.version>10.1.55</tomcat.version>
+        <!-- CVE-2026-22732 (fix 6.5.9, Boot 3.5.3 gère 6.5.1) -->
+        <spring-security.version>6.5.9</spring-security.version>
     </properties>
 
     <dependencies>
