@@ -14,7 +14,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.0</version>
+        <version>3.5.3</version>
         <relativePath/>
     </parent>
 
@@ -36,12 +36,13 @@
          ================================================================ -->
     <properties>
         <java.version>21</java.version>
-        <jjwt.version>0.12.5</jjwt.version>
-        <springdoc.version>2.5.0</springdoc.version>
-        <testcontainers.version>1.19.8</testcontainers.version>
-        <mapstruct.version>1.5.5.Final</mapstruct.version>
-        <lombok.version>1.18.32</lombok.version>
-        <cyclonedx.version>2.8.1</cyclonedx.version>
+        <jjwt.version>0.12.6</jjwt.version>
+        <springdoc.version>2.8.6</springdoc.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <!-- lombok.version : héritée du parent Spring Boot (ne pas pinner,
+             le parent garantit une version compatible avec le JDK cible) -->
+        <cyclonedx.version>2.9.1</cyclonedx.version>
     </properties>
 
     <dependencies>
@@ -121,7 +122,7 @@
         <dependency>
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
-            <version>7.4</version>
+            <version>8.1</version>
         </dependency>
 
         <!-- ============================================================
@@ -394,7 +395,7 @@
                  JACOCO — CODE COVERAGE
                  Raison : mesure la couverture de tests.
                  Génère un rapport HTML dans target/site/jacoco/
-                 Minimum 80% de couverture imposé.
+                 Minimum 70% de couverture de lignes imposé (aligné avec la CI).
                  ============================================================ -->
             <plugin>
                 <groupId>org.jacoco</groupId>
@@ -436,7 +437,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.55</minimum>
+                                            <minimum>0.70</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
