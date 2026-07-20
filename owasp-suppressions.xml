@@ -65,26 +65,34 @@
             Faux positif CPE sur spring-framework 6.2.8 (CPE spring_framework) :
             6.2.8 est la dernière release 6.2.x publiée et Trivy ne remonte
             rien sur ces jars. Même CPE générique partagé par spring-core,
-            spring-tx et les autres modules spring-framework 6.2.8.
+            spring-tx, spring-context-support et les autres modules
+            spring-framework 6.2.8 (dont certains noms à plusieurs tirets,
+            d'où (\-[a-z]+)+ au lieu de \-[a-z]+).
             Réévaluer à chaque release Spring Framework.
         </notes>
-        <packageUrl regex="true">^pkg:maven/org\.springframework/spring\-[a-z]+@6\.2\.8$</packageUrl>
+        <packageUrl regex="true">^pkg:maven/org\.springframework/spring(\-[a-z]+)+@6\.2\.8$</packageUrl>
         <cve>CVE-2026-41855</cve>
     </suppress>
 
     <suppress until="2026-10-31Z">
         <notes>
-            Faux positifs sur tomcat-embed-core 10.1.55 : c'est la dernière
-            release de la branche 10.1.x publiée sur Maven Central (vérifié
-            via l'API search.maven.org le 2026-07-20, aucune 10.1.56+) et
-            Trivy (image Docker backend, run CI 29779954153) ne remonte
-            aucune de ces CVE sur ce jar. Réévaluer à chaque release Tomcat.
+            Faux positifs sur tomcat-embed-* 10.1.55 (core, websocket, ...) :
+            c'est la dernière release de la branche 10.1.x publiée sur Maven
+            Central (vérifié via l'API search.maven.org le 2026-07-20, aucune
+            10.1.56+) et Trivy (image Docker backend, run CI 29779954153) ne
+            remonte aucune de ces CVE sur ces jars. Même CPE générique
+            apache:tomcat partagé par tous les artefacts tomcat-embed-*.
+            Réévaluer à chaque release Tomcat.
         </notes>
-        <packageUrl regex="true">^pkg:maven/org\.apache\.tomcat\.embed/tomcat\-embed\-core@10\.1\.55$</packageUrl>
+        <packageUrl regex="true">^pkg:maven/org\.apache\.tomcat\.embed/tomcat\-embed\-[a-z]+@10\.1\.55$</packageUrl>
         <cve>CVE-2026-55276</cve>
         <cve>CVE-2026-53434</cve>
         <cve>CVE-2026-59083</cve>
         <cve>CVE-2026-59084</cve>
+        <cve>CVE-2026-53404</cve>
+        <cve>CVE-2026-55955</cve>
+        <cve>CVE-2026-55956</cve>
+        <cve>CVE-2026-50229</cve>
     </suppress>
 
 </suppressions>
