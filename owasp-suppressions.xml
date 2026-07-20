@@ -49,22 +49,42 @@
         <notes>
             Faux positifs CPE sur spring-boot 3.5.3 (CPE vmware:spring_boot) :
             aucune version corrigée publiée (3.5.3 = dernière release) et Trivy
-            ne remonte rien sur ce jar. Réévaluer à chaque release Spring Boot ;
-            si un patch 3.5.x sort, monter le parent au lieu de prolonger.
+            ne remonte rien sur ces jars. Le CPE générique est partagé par tous
+            les artefacts spring-boot-*, d'où la regex non ancrée sur le nom
+            exact (spring-boot, spring-boot-starter, futurs starters...).
+            Réévaluer à chaque release Spring Boot ; si un patch 3.5.x sort,
+            monter le parent au lieu de prolonger.
         </notes>
-        <packageUrl regex="true">^pkg:maven/org\.springframework\.boot/spring\-boot@3\.5\.3$</packageUrl>
+        <packageUrl regex="true">^pkg:maven/org\.springframework\.boot/spring\-boot(\-[a-z\-]+)?@3\.5\.3$</packageUrl>
         <cve>CVE-2026-40971</cve>
         <cve>CVE-2026-40974</cve>
     </suppress>
 
     <suppress until="2026-10-31Z">
         <notes>
-            Faux positif CPE sur spring-core 6.2.8 (CPE spring_framework) :
+            Faux positif CPE sur spring-framework 6.2.8 (CPE spring_framework) :
             6.2.8 est la dernière release 6.2.x publiée et Trivy ne remonte
-            rien sur ce jar. Réévaluer à chaque release Spring Framework.
+            rien sur ces jars. Même CPE générique partagé par spring-core,
+            spring-tx et les autres modules spring-framework 6.2.8.
+            Réévaluer à chaque release Spring Framework.
         </notes>
-        <packageUrl regex="true">^pkg:maven/org\.springframework/spring\-core@6\.2\.8$</packageUrl>
+        <packageUrl regex="true">^pkg:maven/org\.springframework/spring\-[a-z]+@6\.2\.8$</packageUrl>
         <cve>CVE-2026-41855</cve>
+    </suppress>
+
+    <suppress until="2026-10-31Z">
+        <notes>
+            Faux positifs sur tomcat-embed-core 10.1.55 : c'est la dernière
+            release de la branche 10.1.x publiée sur Maven Central (vérifié
+            via l'API search.maven.org le 2026-07-20, aucune 10.1.56+) et
+            Trivy (image Docker backend, run CI 29779954153) ne remonte
+            aucune de ces CVE sur ce jar. Réévaluer à chaque release Tomcat.
+        </notes>
+        <packageUrl regex="true">^pkg:maven/org\.apache\.tomcat\.embed/tomcat\-embed\-core@10\.1\.55$</packageUrl>
+        <cve>CVE-2026-55276</cve>
+        <cve>CVE-2026-53434</cve>
+        <cve>CVE-2026-59083</cve>
+        <cve>CVE-2026-59084</cve>
     </suppress>
 
 </suppressions>
