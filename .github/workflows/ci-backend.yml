@@ -290,6 +290,11 @@ jobs:
       # pour valider les dépendances → déclenche des 429 Too Many Requests
       # sur les runners mutualisés (IP partagée, quota épuisé rapidement).
       # La détection de misconfig Java est couverte par OWASP Dependency Check.
+      # offline-scan : même avec scanners=secret, Trivy tente encore de
+      # résoudre les POM Maven Central pour classifier les jars sans
+      # pom.properties embarqué — sans rapport avec la détection de secrets.
+      # --offline-scan supprime ces appels réseau (cause du 429/blocage IP
+      # 30 min observé sur le run 29782454495).
       - name: Trivy — Scan filesystem (secrets)
         uses: aquasecurity/trivy-action@master
         with:
@@ -298,3 +303,5 @@ jobs:
           format: 'table'
           severity: 'HIGH,CRITICAL'
           scanners: 'secret'
+        env:
+          TRIVY_OFFLINE_SCAN: true
