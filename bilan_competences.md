@@ -97,7 +97,7 @@
 | **JUnit 5 + Mockito** | Avancé | 47 tests unitaires + intégration, couverture ≥70%, mocks services |
 | **Jest (Angular)** | Avancé | 53 tests composants + services + guards, couverture lcov |
 | **Cypress E2E** | Intermédiaire | 3 scénarios : auth, admin CRUD, portfolio public |
-| **k6 Load Tests** | Intermédiaire | 3 scénarios : 100 VUs public, 50 VUs stress auth, 5 VUs CRUD admin |
+| **Gatling Load Tests** | Intermédiaire | 3 simulations : 100 users public, 50 users stress auth, 5 users CRUD admin |
 | **TestContainers** | Intermédiaire | Tests d'intégration PostgreSQL réel (isolés des tests unitaires CI) |
 | **Coverage thresholds** | Intermédiaire | JaCoCo 70% backend, Jest branches 40% frontend |
 | **DAST automatisé** | Intermédiaire | ZAP CI workflow avec authentification JWT |
@@ -193,7 +193,7 @@
 |---|---|
 | **Phases complètes** | 20 phases du dev local au K8s GitOps |
 | **Lignes de code** | ~15 000 (backend Java + frontend Angular + infra) |
-| **Tests automatisés** | 47 JUnit + 53 Jest + 3 Cypress + 3 k6 = **106 tests** |
+| **Tests automatisés** | 47 JUnit + 53 Jest + 3 Cypress + 3 Gatling = **106 tests** |
 | **Workflows CI/CD** | 9 GitHub Actions workflows actifs et verts |
 | **Composants redessinés** | 8 composants Angular (design AI-assisted) |
 | **Fichiers Terraform** | 28 fichiers .tf, 8 modules |

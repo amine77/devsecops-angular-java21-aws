@@ -50,7 +50,7 @@ useDefault = true
     # Email admin de test — utilisé dans les tests d'authentification
     '''admin@portfolio\.dev''',
 
-    # Email de test générique Cypress/k6
+    # Email de test générique Cypress/Gatling
     '''test@example\.com''',
     '''user@example\.com''',
 

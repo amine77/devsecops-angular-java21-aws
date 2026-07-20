@@ -43,6 +43,9 @@
         <!-- lombok.version : héritée du parent Spring Boot (ne pas pinner,
              le parent garantit une version compatible avec le JDK cible) -->
         <cyclonedx.version>2.9.1</cyclonedx.version>
+        <!-- GATLING — tests de charge (Phase 14, ex-k6) -->
+        <gatling.version>3.13.5</gatling.version>
+        <gatling-plugin.version>4.16.3</gatling-plugin.version>
 
         <!-- ====================================================================
              OVERRIDES SÉCURITÉ — patchs CVE en avance sur le BOM Spring Boot
@@ -307,6 +310,20 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- ============================================================
+             GATLING — TESTS DE CHARGE (Java DSL)
+             Raison : simulateur de charge JVM-natif (remplace k6, Phase 14).
+             Scope test : jamais embarqué dans le JAR applicatif exécutable.
+             Simulations : src/test/java/com/portfolio/backend/loadtest/
+             Lancement : mvn gatling:test -Dgatling.simulationClass=<FQCN>
+             ============================================================ -->
+        <dependency>
+            <groupId>io.gatling.highcharts</groupId>
+            <artifactId>gatling-charts-highcharts</artifactId>
+            <version>${gatling.version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -493,6 +510,21 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- ============================================================
+                 GATLING MAVEN PLUGIN
+                 Raison : exécute les simulations Java DSL (tests de charge).
+                 Pas d'<executions> : jamais déclenché par "mvn test"/"mvn verify",
+                 uniquement via "mvn gatling:test" (comme k6 était manuel en CI).
+                 ============================================================ -->
+            <plugin>
+                <groupId>io.gatling</groupId>
+                <artifactId>gatling-maven-plugin</artifactId>
+                <version>${gatling-plugin.version}</version>
+                <configuration>
+                    <runMultipleSimulations>true</runMultipleSimulations>
+                </configuration>
             </plugin>
 
         </plugins>

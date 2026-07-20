@@ -121,14 +121,14 @@ redis-cli -p 6379
 
 ## 4. Impact sur les performances
 
-### Scénario k6 (Phase 14) : 100 VUs sur GET /projects
+### Simulation Gatling (Phase 14) : 100 users sur GET /projects
 
 | Métrique | Sans cache | Avec cache Redis |
 |----------|-----------|-----------------|
 | p(95) latence | ~150ms (PostgreSQL + requête JPA) | ~15ms (Redis hit) |
 | Charge PostgreSQL | 100 req/s | ~0.03 req/s (1 req toutes les 5 min) |
 
-Les réponses Redis < 20ms sont comptées comme "cache hits estimés" par le scénario k6.
+Les réponses Redis < 20ms sont comptées comme "cache hits estimés" par `PublicProjectsSimulation`.
 
 ---
 

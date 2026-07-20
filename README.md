@@ -18,7 +18,7 @@ et développement assisté par IA (Claude Code + MCP).
 | Serverless | AWS Lambda (Node.js 20) — 3 fonctions : rapport hebdomadaire, resize images, formulaire contact |
 | Sécurité | JWT (HS384), BCrypt cost=12, Spring Security, OWASP Dependency Check, OWASP ZAP DAST |
 | Observabilité | Prometheus, Grafana (3 dashboards), Logback JSON + MDC, Micrometer |
-| Tests | JUnit 5 + Mockito (47 tests), Jest (53 tests), Cypress E2E (20 specs), k6 load tests (3 scénarios) |
+| Tests | JUnit 5 + Mockito (47 tests), Jest (53 tests), Cypress E2E (20 specs), Gatling load tests (3 simulations) |
 | Infrastructure | AWS — EC2, RDS, ECR, VPC, CloudWatch, Lambda, S3, API Gateway, SES via Terraform |
 | CI/CD | GitHub Actions — build, test, SAST (CodeQL), Trivy, OWASP DC, deploy |
 | **GitOps** | **ArgoCD — App of Apps · Helm Chart · Kustomize overlays · modèle pull** |
@@ -117,29 +117,26 @@ Scénarios couverts :
 - `02-admin.cy.ts` — dashboard admin, création/modification/archivage de projets
 - `03-portfolio.cy.ts` — accès public, navbar conditionnelle
 
-### Tests de charge k6 (Phase 14)
+### Tests de charge Gatling (Phase 14)
 
-Prérequis : [k6 installé](https://k6.io/docs/get-started/installation/) + backend démarré.
+Prérequis : Maven (Gatling est téléchargé automatiquement) + backend démarré.
 
 ```powershell
-# Windows : winget install k6
-# Linux/Mac : brew install k6
-
-make test-load        # 100 VUs — GET /projects, SLA p(95) < 200ms
-make test-load-auth   # 50 VUs  — POST /auth/login (stress bcrypt)
-make test-load-admin  # 5 VUs   — flux CRUD admin complet
-make test-load-all    # Les 3 scénarios séquentiellement
+make test-load        # 100 users — GET /projects, SLA p(95) < 200ms
+make test-load-auth   # 50 users  — POST /auth/login (stress bcrypt)
+make test-load-admin  # 5 users   — flux CRUD admin complet
+make test-load-all    # Les 3 simulations séquentiellement
 ```
 
-Rapports HTML générés dans `k6/reports/` après chaque run.
+Rapports HTML générés dans `backend/target/gatling/` après chaque run.
 
-| Scénario | Seuils |
-|----------|--------|
-| GET /projects — 100 VUs | `p(95) < 200ms`, `p(99) < 500ms`, `error rate < 1%` |
-| POST /auth/login — 50 VUs | `p(95) < 1500ms` (bcrypt intentionnel) |
-| Admin CRUD — 5 VUs | `p(95) < 500ms` |
+| Simulation | Seuils |
+|------------|--------|
+| GET /projects — 100 users | `p(95) < 200ms`, `p(99) < 500ms`, `error rate < 1%` |
+| POST /auth/login — 50 users | `p(95) < 1500ms` (bcrypt intentionnel) |
+| Admin CRUD — 5 users | `p(95) < 500ms` |
 
-En CI : `Actions → "Load Tests — k6" → Run workflow` (déclenchement manuel).
+En CI : `Actions → "Load Tests — Gatling" → Run workflow` (déclenchement manuel).
 
 ---
 
@@ -301,12 +298,11 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── cypress.config.ts
 │   └── Dockerfile                        # Build Nginx
 │
-├── k6/                                   # Tests de charge (Phase 14)
-│   ├── lib/helpers.js                    # BASE_URL, getAdminToken(), authHeaders()
-│   └── scenarios/
-│       ├── 01-public-projects.js         # 100 VUs, SLA p(95)<200ms
-│       ├── 02-auth-stress.js             # 50 VUs, stress login
-│       └── 03-admin-flow.js              # 5 VUs, CRUD complet
+├── backend/src/test/java/.../loadtest/   # Tests de charge Gatling (Phase 14)
+│   ├── LoadTestConfig.java                # BASE_URL, identifiants admin
+│   ├── PublicProjectsSimulation.java      # 100 users, SLA p(95)<200ms
+│   ├── AuthStressSimulation.java          # 50 users, stress login
+│   └── AdminFlowSimulation.java           # 5 users, CRUD complet
 │
 ├── docker/
 │   ├── docker-compose.yml                # Stack complète (backend + frontend en Docker)
@@ -346,7 +342,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── ci-backend.yml                    # Checkstyle → Tests → CodeQL → OWASP DC → Trivy
 │   ├── ci-frontend.yml                   # ESLint → Jest → Prettier → Trivy image
 │   ├── security.yml                      # Scans de sécurité hebdomadaires
-│   ├── k6-load-test.yml                  # Tests de charge (déclenchement manuel)
+│   ├── gatling-load-test.yml              # Tests de charge (déclenchement manuel)
 │   ├── deploy-infra.yml                  # Terraform validate/plan
 │   └── deploy-app.yml                    # Build Docker + push ECR + deploy SSH
 │
@@ -364,7 +360,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── PHASE11-Redis-Cache.md
 │   ├── PHASE12-DAST.md
 │   ├── PHASE13-Cypress-E2E.md
-│   ├── PHASE14-k6-Load-Tests.md
+│   ├── PHASE14-Gatling-Load-Tests.md
 │   ├── PHASE15-Lambda-Serverless.md
 │   ├── PHASE16-Security-Avancee.md
 │   ├── PHASE17-Design-UX-AI.md

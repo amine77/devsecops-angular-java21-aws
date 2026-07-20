@@ -1,31 +1,32 @@
 # =============================================================================
-# K6 LOAD TESTS — Tests de charge
+# GATLING LOAD TESTS — Tests de charge (ex-k6, Phase 14)
 # =============================================================================
 # Déclenchement manuel uniquement (les tests de charge ne tournent PAS
 # à chaque push — trop longs et gourmands en ressources).
 #
-# Démarre une stack complète (Postgres + Backend) dans le runner CI,
-# puis exécute le scénario k6 choisi et publie le rapport HTML.
+# Démarre une stack complète (Postgres + Redis + Backend) dans le runner CI,
+# puis exécute la simulation Gatling choisie via le plugin Maven et publie
+# le rapport HTML généré dans backend/target/gatling/.
 #
 # UTILISATION :
-#   GitHub → Actions → "Load Tests — k6" → Run workflow
-#   Sélectionner le scénario et la cible URL.
+#   GitHub → Actions → "Load Tests — Gatling" → Run workflow
+#   Sélectionner le scénario et l'URL cible.
 # =============================================================================
 
-name: Load Tests — k6
+name: Load Tests — Gatling
 
 on:
   workflow_dispatch:
     inputs:
       scenario:
-        description: 'Scénario k6 à exécuter'
+        description: 'Simulation Gatling à exécuter'
         required: true
-        default: '01-public-projects'
+        default: 'public-projects'
         type: choice
         options:
-          - 01-public-projects
-          - 02-auth-stress
-          - 03-admin-flow
+          - public-projects
+          - auth-stress
+          - admin-flow
           - all
       base_url:
         description: 'URL du backend (vide = démarrage auto dans CI)'
@@ -37,7 +38,7 @@ env:
 
 jobs:
   load-test:
-    name: k6 — ${{ inputs.scenario }}
+    name: Gatling — ${{ inputs.scenario }}
     runs-on: ubuntu-latest
 
     services:
@@ -89,10 +90,10 @@ jobs:
             -Dspring.data.redis.host=localhost \
             -Dspring.kafka.listener.auto-startup=false \
             -Dspring.kafka.admin.auto-create=false \
-            -DJWT_SECRET=k6-test-secret-key-minimum-256-bits-for-hs256-algorithm &
+            -DJWT_SECRET=gatling-test-secret-key-minimum-256-bits-for-hs256-algorithm &
           echo "Backend PID: $!"
         env:
-          JWT_SECRET: k6-test-secret-key-minimum-256-bits-for-hs256-algorithm
+          JWT_SECRET: gatling-test-secret-key-minimum-256-bits-for-hs256-algorithm
 
       - name: Attendre que le backend soit prêt
         if: inputs.base_url == ''
@@ -108,19 +109,6 @@ jobs:
           done
           curl -sf http://localhost:8080/actuator/health | python3 -m json.tool
 
-      - name: Installer k6
-        run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
-            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
-            | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install -y k6
-
-      - name: Créer le dossier de rapports
-        run: mkdir -p k6/reports
-
       - name: Déterminer l'URL cible
         id: target
         run: |
@@ -130,32 +118,39 @@ jobs:
             echo "url=http://localhost:8080" >> $GITHUB_OUTPUT
           fi
 
-      # ── Scénario unique ──────────────────────────────────────────────────────
-      - name: Run k6 — ${{ inputs.scenario }}
+      # ── Simulation unique ────────────────────────────────────────────────────
+      - name: Run Gatling — ${{ inputs.scenario }}
         if: inputs.scenario != 'all'
+        working-directory: backend
         run: |
-          k6 run \
-            -e BASE_URL=${{ steps.target.outputs.url }} \
-            k6/scenarios/${{ inputs.scenario }}.js
+          declare -A SIMULATIONS=(
+            [public-projects]=com.portfolio.backend.loadtest.PublicProjectsSimulation
+            [auth-stress]=com.portfolio.backend.loadtest.AuthStressSimulation
+            [admin-flow]=com.portfolio.backend.loadtest.AdminFlowSimulation
+          )
+          mvn --batch-mode gatling:test \
+            -DbaseUrl=${{ steps.target.outputs.url }} \
+            -Dgatling.simulationClass="${SIMULATIONS[${{ inputs.scenario }}]}"
         continue-on-error: true
 
-      # ── Tous les scénarios ───────────────────────────────────────────────────
-      - name: Run k6 — tous les scénarios
+      # ── Toutes les simulations ───────────────────────────────────────────────
+      - name: Run Gatling — toutes les simulations
         if: inputs.scenario == 'all'
+        working-directory: backend
         run: |
-          for scenario in 01-public-projects 02-auth-stress 03-admin-flow; do
-            echo "════════ $scenario ════════"
-            k6 run \
-              -e BASE_URL=${{ steps.target.outputs.url }} \
-              k6/scenarios/${scenario}.js || true
+          for sim in PublicProjectsSimulation AuthStressSimulation AdminFlowSimulation; do
+            echo "════════ $sim ════════"
+            mvn --batch-mode gatling:test \
+              -DbaseUrl=${{ steps.target.outputs.url }} \
+              -Dgatling.simulationClass="com.portfolio.backend.loadtest.$sim" || true
             sleep 5
           done
         continue-on-error: true
 
-      - name: Upload rapports HTML
+      - name: Upload rapports Gatling
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: k6-reports-${{ github.run_id }}
-          path: k6/reports/*.html
+          name: gatling-reports-${{ github.run_id }}
+          path: backend/target/gatling/**
           retention-days: 30

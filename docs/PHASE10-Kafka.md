@@ -155,7 +155,7 @@ spring.kafka.consumer.properties.spring.json.trusted.packages=\
   com.portfolio.backend.kafka.event
 ```
 
-### Désactivation pour les tests CI (k6, Cypress, ZAP)
+### Désactivation pour les tests CI (Gatling, Cypress, ZAP)
 
 Quand Kafka n'est pas démarré, les workflows CI le désactivent :
 

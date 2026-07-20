@@ -58,7 +58,7 @@ jobs:
     name: ZAP ${{ inputs.scan_type || 'api' }} scan
     runs-on: ubuntu-latest
 
-    # ── Services annexes (même pattern que k6-load-test.yml) ────────────────
+    # ── Services annexes (même pattern que gatling-load-test.yml) ────────────
     services:
       postgres:
         image: postgres:15-alpine

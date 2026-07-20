@@ -57,7 +57,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
               <li>SonarCloud · OWASP ZAP</li>
               <li>SBOM CycloneDX · Cosign</li>
               <li>Prometheus · Grafana</li>
-              <li>k6 · Cypress · JUnit 5</li>
+              <li>Gatling · Cypress · JUnit 5</li>
             </ul>
           </div>
         </div>

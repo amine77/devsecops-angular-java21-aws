@@ -202,30 +202,29 @@ test-e2e: ## Lance les tests Cypress E2E (nécessite l'appli lancée)
 	@echo "$(CYAN)▶ Tests E2E Cypress...$(RESET)"
 	cd frontend && npx cypress run
 
-test-load: ## Lance le scénario k6 principal — GET /projects 100 VUs (prérequis: backend démarré)
-	@echo "$(CYAN)▶ Test de charge k6 — scénario SLA principal...$(RESET)"
-	@command -v k6 >/dev/null 2>&1 || (echo "$(RED)✘ k6 non installé. Voir https://k6.io/docs/get-started/installation/$(RESET)" && exit 1)
-	k6 run k6/scenarios/01-public-projects.js
-	@echo "$(GREEN)✔ Rapport : k6/reports/01-public-projects.html$(RESET)"
+test-load: ## Lance la simulation Gatling principale — GET /projects 100 users (prérequis: backend démarré)
+	@echo "$(CYAN)▶ Test de charge Gatling — simulation SLA principale...$(RESET)"
+	cd backend && mvn gatling:test -Dgatling.simulationClass=com.portfolio.backend.loadtest.PublicProjectsSimulation
+	@echo "$(GREEN)✔ Rapport : backend/target/gatling/$(RESET)"
 
-test-load-auth: ## Lance le scénario k6 stress login (50 VUs)
-	@echo "$(CYAN)▶ Test de charge k6 — stress login...$(RESET)"
-	k6 run k6/scenarios/02-auth-stress.js
-	@echo "$(GREEN)✔ Rapport : k6/reports/02-auth-stress.html$(RESET)"
+test-load-auth: ## Lance la simulation Gatling stress login (50 users)
+	@echo "$(CYAN)▶ Test de charge Gatling — stress login...$(RESET)"
+	cd backend && mvn gatling:test -Dgatling.simulationClass=com.portfolio.backend.loadtest.AuthStressSimulation
+	@echo "$(GREEN)✔ Rapport : backend/target/gatling/$(RESET)"
 
-test-load-admin: ## Lance le scénario k6 flux admin CRUD (5 VUs)
-	@echo "$(CYAN)▶ Test de charge k6 — flux admin CRUD...$(RESET)"
-	k6 run k6/scenarios/03-admin-flow.js
-	@echo "$(GREEN)✔ Rapport : k6/reports/03-admin-flow.html$(RESET)"
+test-load-admin: ## Lance la simulation Gatling flux admin CRUD (5 users)
+	@echo "$(CYAN)▶ Test de charge Gatling — flux admin CRUD...$(RESET)"
+	cd backend && mvn gatling:test -Dgatling.simulationClass=com.portfolio.backend.loadtest.AdminFlowSimulation
+	@echo "$(GREEN)✔ Rapport : backend/target/gatling/$(RESET)"
 
-test-load-all: ## Lance tous les scénarios k6 séquentiellement
-	@echo "$(CYAN)▶ Tous les scénarios k6...$(RESET)"
+test-load-all: ## Lance toutes les simulations Gatling séquentiellement
+	@echo "$(CYAN)▶ Toutes les simulations Gatling...$(RESET)"
 	$(MAKE) test-load
 	@sleep 5
 	$(MAKE) test-load-auth
 	@sleep 5
 	$(MAKE) test-load-admin
-	@echo "$(GREEN)✔ Tous les tests de charge terminés — rapports dans k6/reports/$(RESET)"
+	@echo "$(GREEN)✔ Tous les tests de charge terminés — rapports dans backend/target/gatling/$(RESET)"
 
 # =============================================================================
 # LINTING — Qualité du code
