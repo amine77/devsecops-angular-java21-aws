@@ -156,21 +156,65 @@ Le rapport contient latence p50/p95/p99, débit (req/s), taux d'erreur, et le d�
 
 ## 6. Lancement local
 
+### Étape 1 — Dépendances (Postgres + Redis)
+
 ```powershell
-# Prérequis : backend démarré (mvn spring-boot:run ou make up) + Maven installé
+docker compose -f docker/docker-compose.dev-stack.yml up -d
+```
+
+### Étape 2 — Backend Spring Boot
+
+```powershell
+cd backend
+mvn spring-boot:run
+```
+
+Vérifier que le backend est prêt avant de lancer une simulation :
+
+```powershell
+curl http://localhost:8080/actuator/health/readiness
+```
+
+### Étape 3 — Lancer une simulation
+
+Via les cibles Makefile (depuis la racine du repo — le plus simple) :
+
+```powershell
+make test-load        # PublicProjectsSimulation — 100 users, GET /projects (SLA principal)
+make test-load-auth   # AuthStressSimulation — jusqu'à 50 users, stress login bcrypt
+make test-load-admin  # AdminFlowSimulation — 5 users, flux CRUD admin
+make test-load-all    # Les 3 séquentiellement (pause 5s entre chaque)
+```
+
+Ou directement en Maven, sans Makefile :
+
+```powershell
 cd backend
 mvn gatling:test -Dgatling.simulationClass=com.portfolio.backend.loadtest.PublicProjectsSimulation
+```
 
-# Ou via les cibles Makefile (depuis la racine du repo)
-make test-load        # 100 users — GET /projects
-make test-load-auth   # 50 users  — POST /auth/login
-make test-load-admin  # 5 users   — CRUD admin
-make test-load-all    # Les 3 séquentiellement
+### Options utiles (`-D`, voir `LoadTestConfig.java`)
 
-# Contre une autre URL (staging, prod)
+| Propriété | Défaut | Usage |
+|-----------|--------|-------|
+| `-DbaseUrl=...` | `http://localhost:8080` | Cibler un autre environnement (staging, dev déployé) |
+| `-DadminEmail=...` | `admin@portfolio.dev` | Nécessaire si l'admin local diffère du défaut |
+| `-DadminPassword=...` | `Admin@2024!` | Requis par `AuthStressSimulation` et `AdminFlowSimulation` |
+
+```powershell
 mvn gatling:test -DbaseUrl=http://staging.example.com:8080 \
     -Dgatling.simulationClass=com.portfolio.backend.loadtest.PublicProjectsSimulation
 ```
+
+> `AuthStressSimulation` et `AdminFlowSimulation` échouent au login si aucun admin n'existe encore en base — s'assurer que l'admin par défaut a été seedé avant de les lancer.
+
+### Étape 4 — Consulter le rapport
+
+```
+backend/target/gatling/<nom-simulation-en-minuscules>-<timestamp>/index.html
+```
+
+À ouvrir directement dans un navigateur (percentiles p50/p95/p99, débit req/s, détail par requête).
 
 ---
 
