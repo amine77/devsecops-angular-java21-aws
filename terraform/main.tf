@@ -79,24 +79,12 @@ module "security_groups" {
 }
 
 # =============================================================================
-# MODULE 4 — RDS PostgreSQL
+# MODULE 4 — RDS PostgreSQL : SUPPRIMÉ le 24/07/2026
 # =============================================================================
-module "rds" {
-  source = "./modules/rds"
-
-  name_prefix           = local.name_prefix
-  vpc_id                = module.vpc.vpc_id
-  private_subnet_ids    = module.vpc.private_subnet_ids
-  security_group_id     = module.security_groups.rds_sg_id
-  db_instance_class     = var.db_instance_class
-  db_name               = var.db_name
-  db_username           = var.db_username
-  db_password           = var.db_password
-  allocated_storage     = var.db_allocated_storage
-  backup_retention_days = var.db_backup_retention_days
-  skip_final_snapshot   = var.db_skip_final_snapshot
-  environment           = var.environment
-}
+# PostgreSQL tourne désormais en container sur l'EC2 (docker-compose, service
+# "postgres") pour réduire le coût AWS (~13-16$/mois économisés). Migration
+# documentée dans deployment_plan.md (mémoire projet). RDS host = "postgres"
+# (résolution DNS interne au network docker-compose), port 5432 inchangé.
 
 # =============================================================================
 # MODULE 5 — EC2
@@ -119,10 +107,10 @@ module "ec2" {
   ecr_repository_arns = values(module.ecr.repository_arns)
   image_tag           = var.image_tag
 
-  # RDS
-  rds_host    = module.rds.host
-  rds_port    = module.rds.port
-  db_name     = module.rds.db_name
+  # PostgreSQL — containerisé sur l'EC2 depuis le 24/07/2026 (ex-RDS)
+  rds_host    = "postgres"
+  rds_port    = 5432
+  db_name     = var.db_name
   db_username = var.db_username
   db_password = var.db_password
   jwt_secret  = var.jwt_secret
@@ -133,8 +121,6 @@ module "ec2" {
   deployment_mode       = var.deployment_mode
   github_repo           = var.github_repo
   argocd_admin_password = var.argocd_admin_password
-
-  depends_on = [module.rds]
 }
 
 # =============================================================================
@@ -148,14 +134,12 @@ module "secrets_manager" {
 
   name_prefix  = local.name_prefix
   environment  = var.environment
-  rds_host     = module.rds.host
-  rds_port     = module.rds.port
-  db_name      = module.rds.db_name
+  rds_host     = "postgres"
+  rds_port     = 5432
+  db_name      = var.db_name
   db_username  = var.db_username
   db_password  = var.db_password
   jwt_secret   = var.jwt_secret
-
-  depends_on = [module.rds]
 }
 
 # =============================================================================

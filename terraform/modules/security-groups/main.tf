@@ -100,42 +100,5 @@ resource "aws_security_group" "ec2" {
   }
 }
 
-# =============================================================================
-# SECURITY GROUP RDS — Base de données PostgreSQL
-# =============================================================================
-resource "aws_security_group" "rds" {
-  name        = "${var.name_prefix}-rds-sg"
-  description = "Security group for RDS PostgreSQL - EC2 access only"
-  vpc_id      = var.vpc_id
-
-  # --- Ingress ---
-  # PostgreSQL uniquement depuis le SG EC2 (pas depuis internet !)
-  # Raison : RDS ne doit JAMAIS être accessible depuis l'internet public.
-  # Utiliser aws_security_group.ec2.id comme source = moindre privilège.
-  ingress {
-    description     = "PostgreSQL from EC2 only"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ec2.id]
-  }
-
-  # --- Egress ---
-  # RDS n'initie pas de connexions sortantes, mais AWS nécessite une règle egress.
-  egress {
-    description = "Allow all outbound (required by AWS)"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.name_prefix}-rds-sg"
-    Role = "database"
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+# Security group RDS supprimé le 24/07/2026 — PostgreSQL containerisé sur l'EC2,
+# le trafic 5432 reste local au réseau docker-compose, plus besoin de SG dédié.

@@ -61,18 +61,7 @@ output "swagger_url" {
   value       = "http://${module.ec2.public_ip}/api/swagger-ui.html"
 }
 
-# =============================================================================
-# RDS
-# =============================================================================
-output "rds_endpoint" {
-  description = "RDS connection endpoint (hostname:port)"
-  value       = module.rds.endpoint
-}
-
-output "rds_jdbc_url" {
-  description = "JDBC URL for Spring Boot datasource"
-  value       = module.rds.jdbc_url
-}
+# RDS supprimé le 24/07/2026 — PostgreSQL containerisé sur l'EC2 (voir module ec2)
 
 # =============================================================================
 # ECR

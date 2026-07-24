@@ -141,6 +141,25 @@ resource "aws_iam_role_policy" "cloudwatch_logs" {
   })
 }
 
+# --- Policy : backups DB (pg_dump quotidien vers S3, hors EC2) ---
+# RDS supprimé le 24/07/2026 — PostgreSQL tourne en container sur l'EC2, donc
+# plus aucun backup automatique géré par AWS. Écriture seule, scopée au préfixe
+# db-backups/ du bucket state existant (pas de bucket dédié pour un simple blog).
+resource "aws_iam_role_policy" "db_backup_s3" {
+  name = "${var.name_prefix}-db-backup-s3"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "DbBackupWriteOnly"
+      Effect   = "Allow"
+      Action   = ["s3:PutObject"]
+      Resource = "arn:aws:s3:::portfolio-terraform-state-583931058666/db-backups/*"
+    }]
+  })
+}
+
 # --- Instance Profile --- (pont entre le rôle IAM et l'instance EC2)
 resource "aws_iam_instance_profile" "ec2" {
   name = "${var.name_prefix}-ec2-profile"
