@@ -107,6 +107,9 @@ terraform/
 ├── modules/secrets-manager/
 │   ├── main.tf           → aws_secretsmanager_secret + versions (dev + prod)
 │   ├── variables.tf      → rds_host, db_username, db_password, jwt_secret
+│   │                       (rds_host reste le nom de la variable, mais sa valeur est
+│   │                        câblée en dur sur "postgres" depuis la suppression de RDS
+│   │                        le 24/07/2026 — voir PHASE1-Architecture.md)
 │   └── outputs.tf        → ARNs et noms des secrets
 ├── modules/ec2/main.tf   → IAM policy secretsmanager:GetSecretValue portfolio/*
 └── main.tf               → module secrets_manager ajouté

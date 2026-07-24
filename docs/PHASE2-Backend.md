@@ -94,7 +94,7 @@ backend/
     │   └── resources/
     │       ├── application.properties         ← Virtual Threads, HikariCP, Actuator
     │       ├── application-dev.properties     ← PostgreSQL local, logs DEBUG
-    │       ├── application-prod.properties    ← RDS via env vars, logs INFO
+    │       ├── application-prod.properties    ← PostgreSQL (conteneur Docker) via env vars, logs INFO
     │       └── db/migration/
     │           ├── V1__create_users.sql
     │           ├── V2__create_projects.sql

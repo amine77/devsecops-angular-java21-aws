@@ -1,5 +1,22 @@
 # Phase 20 — Kubernetes Free Tier : EC2 t3.micro + SWAP + K3s + ArgoCD
 
+> ⚠️ **Mode alternatif, non déployé en production.** La production réelle du portfolio
+> tourne en Docker Compose sur une EC2 t3.small (voir [PHASE1-Architecture.md](PHASE1-Architecture.md)).
+> Ce mode K3s (`deployment_mode = "k3s"`) reste un code Terraform complet et une démonstration
+> de compétence Kubernetes/GitOps, mais n'est pas ce qui sert https://charrad-devsecops.duckdns.org.
+>
+> **⚠️ Impact de la suppression de RDS (24/07/2026)** : ce document décrivait à l'origine
+> RDS PostgreSQL comme base de données. RDS a depuis été définitivement supprimé (module
+> retiré de `terraform/main.tf`). Ce mode K3s pointe toujours vers les variables
+> `rds_host`/`rds_port` (désormais câblées en dur sur `"postgres"`/`5432`, le nom du
+> conteneur Docker Compose du mode réel) — **cette valeur ne résout à rien dans un cluster
+> K3s**, qui n'a pas de conteneur Postgres équivalent. Concrètement : si ce mode était
+> réactivé aujourd'hui tel quel, l'application n'aurait pas de base de données accessible.
+> Il faudrait ajouter un déploiement Postgres dans le cluster (ou pointer vers une base
+> externe) avant de pouvoir le redéployer. Ceci n'a pas été corrigé volontairement — ce
+> mode n'étant pas utilisé en production, ce n'est pas une priorité tant qu'il n'est pas
+> réactivé.
+
 ## Objectif
 
 Déployer un cluster Kubernetes opérationnel sur AWS Free Tier (~$0/mois les 12 premiers mois)
@@ -44,8 +61,9 @@ AWS Free Tier
 │  Port 30080 → ArgoCD UI                                 │
 └──────────────────────────────────────────────────────────┘
 
-RDS db.t3.micro (Free Tier) — subnet privé
-  PostgreSQL 15 — accessible depuis EC2 uniquement
+⚠️ Pas de base de données câblée par défaut depuis la suppression de RDS le
+   24/07/2026 (historiquement : RDS db.t3.micro en subnet privé). À ajouter
+   avant réactivation de ce mode — voir l'avertissement en tête de document.
 ```
 
 ---
@@ -135,7 +153,7 @@ terraform init
 # Prévisualiser (vérifier les ressources créées)
 terraform plan -out=tfplan
 
-# Appliquer (~5 minutes pour créer VPC + RDS + EC2)
+# Appliquer (~5 minutes pour créer VPC + EC2 — pas de RDS, voir avertissement en tête de document)
 terraform apply tfplan
 ```
 
@@ -194,14 +212,18 @@ echo "http://$EC2_IP:30080"
 
 ## Coût réel estimé
 
+> Ce mode n'étant pas déployé, ces coûts sont théoriques (basés sur les prix Free Tier
+> AWS) et n'incluent pas la base de données, qui n'est plus câblée par défaut (voir
+> l'avertissement en tête de document).
+
 | Service | Free Tier | Coût après 12 mois |
 |---|---|---|
 | EC2 t3.micro | 750h/mois gratuit | ~$8/mois |
-| RDS db.t3.micro | 750h/mois gratuit | ~$15/mois |
+| Base de données (à ajouter) | — | non chiffré, dépend de la solution choisie |
 | EBS 28GB (gp3) | 30GB gratuit | $0 (dans la limite) |
 | ECR | 500MB gratuit | $0 (images <500MB) |
 | EIP (attachée) | Gratuite | Gratuite |
-| **Total** | **~$0/mois** (12 mois) | **~$23/mois** |
+| **Total (hors DB)** | **~$0/mois** (12 mois) | **~$8/mois** |
 
 ---
 

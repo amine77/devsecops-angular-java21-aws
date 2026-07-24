@@ -1,5 +1,11 @@
 # Phase 5 — Infrastructure AWS avec Terraform
 
+> ⚠️ **Mise à jour 2026-07-24** : le module `rds` a été retiré du câblage de `main.tf`.
+> PostgreSQL est désormais un conteneur Docker sur l'EC2 (voir
+> [PHASE1-Architecture.md](PHASE1-Architecture.md)) — RDS a été définitivement supprimé
+> le 24/07/2026 après une période de migration. Le dossier `terraform/modules/rds/`
+> existe encore sur disque mais n'est plus référencé nulle part (code orphelin).
+
 ## Architecture déployée
 
 ```
@@ -9,20 +15,20 @@ Internet
 │                                                                             │
 │   Subnet Public eu-west-3a (10.0.1.0/24)                                   │
 │   ┌──────────────────────────────────────┐                                  │
-│   │  EC2 t2.micro (Free Tier)            │ ← Elastic IP (IP fixe)          │
+│   │  EC2 t3.small (2GB RAM)              │ ← Elastic IP (IP fixe)          │
 │   │  Amazon Linux 2023                   │                                  │
 │   │  ┌────────────────────────────────┐  │                                  │
-│   │  │ Docker                         │  │                                  │
-│   │  │  • portfolio-frontend (NGINX)  │←─┤── Port 80 (HTTP)                │
+│   │  │ Docker Compose (/opt/portfolio)│  │                                  │
+│   │  │  • portfolio-frontend (NGINX)  │←─┤── NGINX hôte : 80/443 (HTTPS)   │
 │   │  │  • portfolio-backend (Spring)  │  │                                  │
+│   │  │  • portfolio-postgres          │  │  ← plus de subnet privé RDS,    │
+│   │  │  • portfolio-redis             │  │    Postgres tourne ici          │
+│   │  │  • portfolio-prometheus/grafana│  │                                  │
 │   │  └────────────────────────────────┘  │                                  │
-│   └─────────────────┬────────────────────┘                                  │
-│                     │ PostgreSQL :5432 (Security Group → Security Group)    │
-│   Subnet Privé eu-west-3a (10.0.10.0/24)                                   │
-│   ┌──────────────────────────────────────┐                                  │
-│   │  RDS PostgreSQL 15 (db.t3.micro)     │ ← Pas d'accès internet          │
-│   │  20 GB gp2, encrypted, backup 7j     │                                  │
-│   └──────────────────────────────────────┘                                  │
+│   └───────────────────────────────────────┘                                  │
+│                                                                              │
+│   (Le subnet privé existe toujours dans le module vpc/, mais plus aucune    │
+│    ressource — RDS était la seule à l'occuper — n'y est déployée)           │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ECR (Elastic Container Registry) :
@@ -35,11 +41,10 @@ ECR (Elastic Container Registry) :
 | Décision | Raison |
 |----------|--------|
 | EC2 en subnet **public** | Pas de NAT Gateway (~$32/mois). SG restrictif compense. |
-| **t2.micro** EC2 | Free Tier 750h/mois. Suffisant pour un portfolio. |
-| **db.t3.micro** RDS | Free Tier 750h/mois. 20 GB gratuit. |
-| **Single-AZ** RDS | Multi-AZ = 2× le coût. Subnet group 2-AZ prêt si upgrade. |
+| **t3.small** EC2 | Hors Free Tier (~$16.5/mois) mais nécessaire pour faire tourner Postgres + Redis + Prometheus/Grafana + l'app sur une seule instance depuis la suppression de RDS. |
+| **PostgreSQL conteneurisé** (pas RDS) | Migré le 23-24/07/2026 pour couper ~$18/mois de coûts RDS (instance + storage) hors Free Tier. Compromis assumé : SPOF app+DB sur le même EC2/EBS, mitigé par backup `pg_dump` quotidien vers S3. |
 | **EIP** fixe | L'IP EC2 change au redémarrage sans EIP. |
-| **IAM Instance Profile** | Jamais de clés AWS sur le serveur. `aws ecr get-login-password` utilise le rôle. |
+| **IAM Instance Profile** | Jamais de clés AWS sur le serveur. `aws ecr get-login-password` et l'upload S3 des backups utilisent le rôle. |
 | **IMDSv2 obligatoire** | Protège contre les attaques SSRF qui volent le token IMDSv1. |
 | **VPC Flow Logs** | Audit réseau. Rétention 7 jours (coût minimal). |
 | Pas d'ALB | ALB coûte ~$16/mois fixe. Nginx sur EC2 suffit pour un portfolio. |
@@ -178,34 +183,43 @@ make tf-validate  # valide la syntaxe
 terraform/
 ├── .gitignore                  # Ignore state, .tfvars, .terraform/
 ├── versions.tf                 # Versions Terraform + provider AWS
-├── main.tf                     # Orchestre les 5 modules
-├── variables.tf                # 20 variables documentées avec validations
-├── outputs.tf                  # Outputs (IP, URLs, commandes)
+├── main.tf                     # Orchestre les 9 modules réellement câblés
+├── variables.tf                # Variables documentées avec validations, dont deployment_mode
+├── outputs.tf                  # Outputs (IP, URLs, commandes) — plus de rds_endpoint/rds_jdbc_url
 ├── terraform.tfvars.example    # Template (sans secrets, commitable)
 └── modules/
-    ├── vpc/          # VPC + 4 subnets + IGW + routes + VPC Flow Logs
-    ├── ecr/          # 2 repos ECR + lifecycle policies + scan on push
-    ├── security-groups/ # SG EC2 (80/443/22) + SG RDS (5432 from EC2 only)
-    ├── rds/          # PostgreSQL 15 + parameter group + subnet group
-    └── ec2/          # AMI AL2023 + IAM role + EIP + user-data + CloudWatch alarm
+    ├── vpc/                    # VPC + subnets public/privé + IGW + routes + VPC Flow Logs
+    ├── ecr/                    # 2 repos ECR + lifecycle policies + scan on push
+    ├── security-groups/        # SG EC2 (80/443/22) — plus de SG RDS dédié
+    ├── ec2/                    # AMI AL2023 + IAM role (dont backup S3) + EIP + user-data + CloudWatch alarm
+    ├── secrets-manager/        # Phase 21 — secrets applicatifs (JWT, etc.)
+    ├── cloudwatch/             # Alarmes + log groups applicatifs
+    ├── lambda-contact-form/    # Phase 15 — Lambda serverless
+    ├── lambda-image-resize/    # Phase 15 — Lambda serverless
+    ├── lambda-weekly-report/   # Phase 15 — Lambda serverless
+    └── rds/                    # ⚠️ Code orphelin — retiré de main.tf le 24/07/2026, non instancié
 ```
 
 ## Sécurité
 
 - **Secrets** : jamais dans le state ou le code → variables sensibles + terraform.tfvars non committé
-- **RDS** : uniquement accessible depuis le SG EC2, pas d'IP publique
-- **EC2** : IMDSv2 obligatoire, chiffrement root volume, IAM moindre privilège
+- **PostgreSQL** : conteneurisé sur l'EC2, pas d'exposition réseau externe (`ports: []` en prod), plus de RDS/subnet privé dédié depuis le 24/07/2026
+- **EC2** : IMDSv2 obligatoire, chiffrement root volume, IAM moindre privilège (dont policy `s3:PutObject` scopée au préfixe `db-backups/*` pour les backups Postgres)
 - **SG** : principe du moindre privilège, pas de règles overly permissive
 - **VPC Flow Logs** : audit de tout le trafic réseau
 - **ECR** : scan CVE automatique à chaque push
 
 ## Coût estimé
 
-| Ressource | Coût Free Tier | Coût après 12 mois |
-|-----------|----------------|---------------------|
-| EC2 t2.micro | $0 (750h/mois) | ~$8.50/mois |
-| RDS db.t3.micro | $0 (750h/mois) | ~$15/mois |
-| ECR (< 500 MB) | $0 | $0 |
-| EIP (attachée) | $0 | $0 |
-| VPC Flow Logs | ~$0.50 | ~$0.50 |
-| **Total** | **~$0.50/mois** | **~$24/mois** |
+> Coûts réels post-migration (24/07/2026) — voir [FINOPS-Cost-Analysis.md](FINOPS-Cost-Analysis.md)
+> pour le détail et l'historique complet (avant/après suppression de RDS).
+
+| Ressource | Coût mensuel réel |
+|-----------|---------------------|
+| EC2 t3.small (compute) | ~$16.5/mois (hors Free Tier) |
+| PostgreSQL (conteneur sur l'EC2) | $0 (inclus dans le coût EC2) |
+| ECR (< 500 MB) | $0 |
+| EIP (attachée) | $0 |
+| VPC (NAT/data transfer) | ~$3/mois |
+| Secrets Manager | ~$0.6/mois |
+| **Total** | **~$21-22/mois** |

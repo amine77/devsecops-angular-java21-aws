@@ -1,8 +1,20 @@
 # PHASE 1 — Architecture Globale & Préparation
 
 > **Date de création :** 2026-05-25
+> **Dernière mise à jour :** 2026-07-24 — réécrit pour refléter l'architecture réellement déployée
 > **Projet :** DevSecOps Portfolio — Angular + Spring Boot Java 21 + AWS
 > **Objectif :** Architecture cloud native orientée production, compatible AWS Free Tier
+
+---
+
+> ⚠️ **Ce document décrit l'architecture réellement en production** : Docker Compose sur
+> une seule EC2 (`deployment_mode = "docker"`, Terraform `terraform/main.tf`).
+>
+> Un **mode alternatif Kubernetes** (K3s + ArgoCD, toujours Free Tier) existe en parallèle
+> dans le même code Terraform (`deployment_mode = "k3s"`) et est entièrement fonctionnel,
+> mais **n'est pas ce qui sert le trafic réel** sur https://charrad-devsecops.duckdns.org.
+> Il est documenté séparément : [PHASE18-ArgoCD-GitOps.md](PHASE18-ArgoCD-GitOps.md) et
+> [PHASE20-FreeTier-K3s.md](PHASE20-FreeTier-K3s.md).
 
 ---
 
@@ -26,13 +38,20 @@
 Avant de coder une seule ligne, un architecte senior **dessine l'architecture**.
 Chaque choix technique a un **coût**, une **raison**, et un **impact sur la maintenabilité**.
 
+La production tourne sur **une seule EC2** avec **Docker Compose** (pas de Kubernetes managé,
+pas de RDS managé) : c'est le compromis coût/simplicité retenu pour un portfolio personnel
+(pas un site e-commerce), après une migration effectuée le 23-24/07/2026 qui a sorti
+PostgreSQL de RDS pour le conteneuriser sur la même instance et réduire la facture AWS.
+Le mode Kubernetes (K3s + ArgoCD) reste démontré dans le code Terraform pour la vitrine
+technique, activable via une simple variable, mais n'est pas le mode live.
+
 ---
 
 ## 2. Diagramme d'architecture global
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════════╗
-║                        DEVSECOPS PORTFOLIO — ARCHITECTURE                       ║
+║                        DEVSECOPS PORTFOLIO — ARCHITECTURE (mode réel : Docker)   ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -53,12 +72,14 @@ Chaque choix technique a un **coût**, une **raison**, et un **impact sur la mai
 │   ┌──────────────────────────────────────────────────────────────────────┐  │
 │   │                     CI/CD PIPELINE                                   │  │
 │   │                                                                      │  │
-│   │  ① Lint & Format Check   ② Unit Tests   ③ Integration Tests         │  │
-│   │  ④ E2E Cypress Tests     ⑤ Build Docker ⑥ Push ECR                  │  │
-│   │  ⑦ SSH → EC2             ⑧ helm upgrade                             │  │
+│   │  ci-backend.yml / ci-frontend.yml : Lint → Tests unitaires →         │  │
+│   │  Tests intégration (Testcontainers) → SonarCloud → Build Docker      │  │
+│   │  gatling-load-test.yml, dast-zap.yml, security.yml : gates qualité   │  │
+│   │  deploy-app.yml : push ECR puis SSH → EC2 → docker compose up        │  │
+│   │  deploy-infra.yml : terraform plan/apply (VPC, EC2, IAM, Lambdas)    │  │
 │   └──────────────────────────────────────────────────────────────────────┘  │
 │                          │              │                                    │
-│                     Push images    Deploy via SSH                            │
+│                     Push images    Deploy via SSH (docker compose)           │
 └────────────────────────── ─ ─ ─ ─ ─ ─ │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
                                           │
           ┌───────────────────────────────┼───────────────────────────────┐
@@ -68,58 +89,59 @@ Chaque choix technique a un **coût**, une **raison**, et un **impact sur la mai
 │   AMAZON ECR    │           │                   AWS VPC                     │
 │                 │           │                                               │
 │ ┌─────────────┐ │           │  ┌─────────────────────────────────────────┐ │
-│ │ backend:tag │ │           │  │          PUBLIC SUBNET                   │ │
+│ │ backend:tag │ │           │  │          SUBNET PUBLIC                   │ │
 │ └─────────────┘ │◄──────────┤  │                                          │ │
 │ ┌─────────────┐ │  Pull     │  │  ┌──────────────────────────────────┐   │ │
-│ │frontend:tag │ │  images   │  │  │     EC2 t2.micro (Free Tier)     │   │ │
-│ └─────────────┘ │           │  │  │         1 vCPU / 1GB RAM         │   │ │
-└─────────────────┘           │  │  │         + 2GB SWAP               │   │ │
-                              │  │  │         Elastic IP: X.X.X.X      │   │ │
+│ │frontend:tag │ │  images   │  │  │  EC2 t3.small (2GB RAM)          │   │ │
+│ └─────────────┘ │           │  │  │  Amazon Linux 2023               │   │ │
+└─────────────────┘           │  │  │  Elastic IP : 13.39.132.25       │   │ │
                               │  │  │                                  │   │ │
                               │  │  │  ┌────────────────────────────┐  │   │ │
-                              │  │  │  │     MINIKUBE (K8s)         │  │   │ │
-                              │  │  │  │                            │  │   │ │
-                              │  │  │  │  ┌──────────────────────┐  │  │   │ │
-                              │  │  │  │  │  NGINX Ingress Ctrl   │  │  │   │ │
-                              │  │  │  │  │  :80 / :443           │  │  │   │ │
-                              │  │  │  │  └──────┬───────┬────────┘  │  │   │ │
-                              │  │  │  │         │       │            │  │   │ │
-                              │  │  │  │    /    │    /api│            │  │   │ │
-                              │  │  │  │         ▼       ▼            │  │   │ │
-                              │  │  │  │  ┌──────────┐ ┌──────────┐  │  │   │ │
-                              │  │  │  │  │ Frontend │ │ Backend  │  │  │   │ │
-                              │  │  │  │  │  Pod     │ │  Pod     │  │  │   │ │
-                              │  │  │  │  │  NGINX   │ │  JVM     │  │  │   │ │
-                              │  │  │  │  │  :80     │ │  :8080   │  │  │   │ │
-                              │  │  │  │  │  128MB   │ │  400MB   │  │  │   │ │
-                              │  │  │  │  └──────────┘ └────┬─────┘  │  │   │ │
-                              │  │  │  │                     │        │  │   │ │
-                              │  │  │  └─────────────────────┼────────┘  │   │ │
-                              │  │  └───────────────────────── ─│─ ─ ─ ─ ┘   │ │
-                              │  │                              │             │ │
-                              │  │  ┌───────────────────────────┼───────────┐ │ │
-                              │  │  │      PRIVATE SUBNET       │           │ │ │
-                              │  │  │                           ▼           │ │ │
-                              │  │  │  ┌────────────────────────────────┐   │ │ │
-                              │  │  │  │  RDS PostgreSQL t3.micro       │   │ │ │
-                              │  │  │  │  (Free Tier) :5432             │   │ │ │
-                              │  │  │  │  Accessible depuis EC2 ONLY    │   │ │ │
-                              │  │  │  └────────────────────────────────┘   │ │ │
-                              │  │  └────────────────────────────────────────┘ │ │
+                              │  │  │  │  NGINX (host, natif)       │  │   │ │
+                              │  │  │  │  Certbot / Let's Encrypt   │  │   │ │
+                              │  │  │  │  :80 / :443 — TLS          │  │   │ │
+                              │  │  │  └──┬──────┬──────┬──────────┘  │   │ │
+                              │  │  │     │      │      │              │   │ │
+                              │  │  │    /  /api/  /grafana/            │   │ │
+                              │  │  │     ▼      ▼      ▼              │   │ │
+                              │  │  │  ┌──────┐┌───────┐┌─────────┐   │   │ │
+                              │  │  │  │front ││backend││ grafana │   │   │ │
+                              │  │  │  │:8081 ││ :8080 ││  :3000  │   │   │ │
+                              │  │  │  └──────┘└───┬───┘└────┬────┘   │   │ │
+                              │  │  │              │         │         │   │ │
+                              │  │  │              ▼         ▼         │   │ │
+                              │  │  │        ┌──────────┐ ┌──────────┐ │   │ │
+                              │  │  │        │ postgres │ │prometheus│ │   │ │
+                              │  │  │        │  (local) │ │  + redis │ │   │ │
+                              │  │  │        └────┬─────┘ └──────────┘ │   │ │
+                              │  │  │             │  (Docker Compose,  │   │ │
+                              │  │  │             │   /opt/portfolio)  │   │ │
+                              │  │  │             ▼                    │   │ │
+                              │  │  │   pg_dump quotidien (systemd      │   │ │
+                              │  │  │   timer 03h UTC) ─────────────────┼───┼─┼──► S3
+                              │  │  └────────────────────────────────────┘   │ │
                               │  └────────────────────────────────────────────  ┘ │
                               └───────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           FLUX UTILISATEUR FINAL                            │
 │                                                                              │
-│  Browser → https://monapp.duckdns.org                                       │
+│  Browser → https://charrad-devsecops.duckdns.org                            │
 │      → DuckDNS DNS → Elastic IP EC2                                         │
-│      → iptables/nodePort → Minikube NGINX Ingress                           │
-│      → TLS terminaison (cert-manager + Let's Encrypt)                       │
-│      → Route "/" → Angular Pod → UI statique                                │
-│      → Route "/api" → Spring Boot Pod → RDS PostgreSQL                      │
+│      → NGINX (host, natif — pas de conteneur) reçoit :443                   │
+│      → TLS terminaison (Certbot + Let's Encrypt, renouvelé par systemd)    │
+│      → Route "/"        → container frontend (Angular statique)            │
+│      → Route "/api/"    → container backend (Spring Boot) → PostgreSQL     │
+│      → Route "/grafana/"→ container Grafana (dashboards Prometheus)        │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Note historique :** entre le lancement du projet et le 23/07/2026, PostgreSQL était
+hébergé sur **AWS RDS** (subnet privé, managé). Une migration a conteneurisé PostgreSQL
+sur l'EC2 (23-24/07/2026) pour réduire les coûts (~40 $/mois bruts → ~22 $/mois), suivie
+de la suppression définitive de RDS le 24/07/2026 (snapshot manuel conservé en filet de
+sécurité). Conséquence assumée : l'app et la base partagent désormais le même EC2/EBS
+(SPOF), mitigé par un backup quotidien hors-EC2 vers S3.
 
 ---
 
@@ -127,7 +149,7 @@ Chaque choix technique a un **coût**, une **raison**, et un **impact sur la mai
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                         FLUX RÉSEAU COMPLET                                  │
+│                         FLUX RÉSEAU COMPLET (mode Docker Compose réel)       │
 └──────────────────────────────────────────────────────────────────────────────┘
 
 REQUÊTE UTILISATEUR → PAGE WEB
@@ -136,66 +158,61 @@ REQUÊTE UTILISATEUR → PAGE WEB
   [Browser]                    [DNS]              [AWS EC2]
       │                          │                     │
       │ GET https://             │                     │
-      │ monapp.duckdns.org/      │                     │
+      │ charrad-devsecops.       │                     │
+      │ duckdns.org/             │                     │
       │─────────────────────────►│                     │
       │                          │ DNS lookup:         │
       │                          │ → Elastic IP        │
       │◄─────────────────────────│                     │
-      │                    IP: X.X.X.X                 │
+      │                    IP: 13.39.132.25            │
       │                                                │
       │ TCP:443 ───────────────────────────────────────►
       │                                                │
       │               [Security Group AWS]             │
       │               Port 443 autorisé ✓              │
       │                                                │
-      │          [Minikube NodePort 30443]              │
+      │          [NGINX — process natif sur l'EC2]      │
       │               ↓                               │
-      │          [NGINX Ingress Controller]             │
-      │               ↓                               │
-      │          TLS Handshake (Let's Encrypt cert)    │
+      │          TLS Handshake (certificat Certbot)    │
       │◄───────────────────────────────────────────────│
       │                                                │
       │ HTTPS établi ✓                                 │
 
-ROUTAGE INGRESS
-════════════════
+ROUTAGE NGINX (reverse proxy vers les conteneurs Docker)
+═════════════════════════════════════════════════════════
 
   Request: GET /api/projects
   ┌─────────────────────────────────────────────────┐
-  │  NGINX Ingress Controller                        │
+  │  NGINX (host, /etc/nginx/conf.d/)                │
   │                                                 │
-  │  host: monapp.duckdns.org                       │
-  │  path: /api/* ──────────────────────────────┐   │
-  │  path: /*   ────────────────────────────┐   │   │
-  │                                         │   │   │
-  └─────────────────────────────────────────┼───┼───┘
-                                            │   │
-              ┌─────────────────────────────┘   │
-              │                                 │
-              ▼                                 ▼
-  ┌─────────────────────────┐     ┌─────────────────────────┐
-  │  frontend-service       │     │  backend-service        │
-  │  ClusterIP :80          │     │  ClusterIP :8080        │
-  └────────────┬────────────┘     └────────────┬────────────┘
-               │                               │
-               ▼                               ▼
-  ┌─────────────────────────┐     ┌─────────────────────────┐
-  │  frontend Pod           │     │  backend Pod            │
-  │  NGINX serving          │     │  Spring Boot JVM        │
-  │  dist/angular/          │     │  → JDBC → RDS           │
-  └─────────────────────────┘     └─────────────────────────┘
+  │  server_name charrad-devsecops.duckdns.org       │
+  │  location /api/     → proxy_pass 127.0.0.1:8080 │
+  │  location /grafana/ → proxy_pass 127.0.0.1:3000 │
+  │  location /         → proxy_pass 127.0.0.1:8081 │
+  │                                                 │
+  └─────────────────────────────────────────────────┘
+                                            │
+                    ┌───────────────────────┴────────────────────┐
+                    ▼                                            ▼
+      ┌─────────────────────────┐                 ┌─────────────────────────┐
+      │  portfolio-backend      │                 │  portfolio-frontend      │
+      │  Spring Boot JVM :8080  │                 │  NGINX (container) :8081 │
+      │  → JDBC → postgres:5432 │                 │  dist/angular/           │
+      └─────────────────────────┘                 └─────────────────────────┘
 
-COMMUNICATION INTERNE K8S (ClusterIP DNS)
-══════════════════════════════════════════
+COMMUNICATION ENTRE CONTENEURS (réseau Docker "portfolio-network")
+════════════════════════════════════════════════════════════════
 
-  backend Pod → PostgreSQL :
+  backend → PostgreSQL :
   └─ Connection string :
-     jdbc:postgresql://rds-endpoint.aws.com:5432/portfolio
-     (RDS hors cluster, accès via Security Group)
+     jdbc:postgresql://postgres:5432/portfolio_prod
+     (conteneur "postgres" sur le même hôte, résolu par DNS Docker)
 
-  frontend Pod → backend Pod :
-  └─ Via NGINX proxy_pass /api → backend-service:8080
-     OU Angular appelle /api → réécrit par Ingress
+  backend → Redis (cache) :
+  └─ spring.data.redis.host=redis (voir PHASE11-Redis-Cache.md)
+
+  Prometheus → backend/postgres/redis :
+  └─ scrape des endpoints /actuator/prometheus et exporters (voir PHASE7)
 ```
 
 ---
@@ -211,7 +228,7 @@ COMMUNICATION INTERNE K8S (ClusterIP DNS)
 | HTTP | HttpClient + Interceptors | Gestion centralisée JWT, retry, error handling |
 | State | Services RxJS | Pas de NgRx pour un portfolio (overkill), services simples suffisent |
 | Build prod | `ng build --configuration production` | Tree-shaking, minification, AOT compilation → bundle petit |
-| Serveur | NGINX dans Docker | Sert les fichiers statiques, gzip, proxy_pass vers API |
+| Serveur | NGINX dans le conteneur (sert le build Angular) derrière un NGINX hôte (TLS + reverse proxy) | Séparation claire : le NGINX conteneur sert des fichiers statiques, le NGINX hôte gère TLS/Certbot et le routage entre conteneurs |
 
 ### ☕ Spring Boot Java 21 — Backend
 
@@ -220,20 +237,21 @@ COMMUNICATION INTERNE K8S (ClusterIP DNS)
 | Java 21 | Virtual Threads (Loom) | Scalabilité sur petite RAM, threads légers |
 | Architecture | Layered (Controller/Service/Repo) | Séparation des responsabilités, testabilité |
 | JPA/Hibernate | Spring Data JPA | ORM standard Java, pas de SQL boilerplate |
-| Sécurité | Spring Security + JWT | Standard industrie, stateless (idéal Kubernetes) |
+| Sécurité | Spring Security + JWT | Standard industrie, stateless (portable K8s ou Compose) |
 | DTOs | MapStruct ou manuel | Évite d'exposer les entités DB = sécurité + flexibilité |
 | Docs API | SpringDoc OpenAPI 3 | Interface interactive, documentation automatique |
-| Health | Spring Actuator | Kubernetes liveness/readiness probes |
-| JVM opts | `-Xmx300m -Xss256k` | Limite RAM pour EC2 t2.micro (1GB total) |
+| Health | Spring Actuator | Healthcheck Docker Compose + probes si mode K3s |
+| JVM opts | `-Xmx300m -Xss256k` | Limite RAM pour EC2 t3.small (2GB total, partagé avec Postgres/Redis/Prometheus/Grafana) |
 
 ### 🐘 PostgreSQL — Base de données
 
 | Aspect | Choix | Pourquoi |
 |--------|-------|----------|
-| Hébergement | AWS RDS Free Tier | Managé, backups automatiques, pas de DBA work |
-| Instance | db.t3.micro (1 vCPU, 1GB) | Free Tier 12 mois |
-| Connexion | depuis EC2 via Security Group | RDS dans subnet privé → pas exposé publiquement |
+| Hébergement | **Conteneur Docker** (`postgres:15-alpine`) sur l'EC2, service `postgres` de `/opt/portfolio/docker-compose.yml` | Ex-RDS managé jusqu'au 23/07/2026 — migré pour réduire le coût (~18 $/mois de RDS en moins). Compromis assumé : plus de SPOF app+DB sur le même EC2/EBS |
+| Volume | Volume Docker nommé `postgres_data` | Persistance des données indépendante du cycle de vie du conteneur |
+| Connexion | Réseau Docker interne `portfolio-network` | Le backend résout `postgres` par DNS Docker, pas d'exposition réseau externe (`ports: []` en prod) |
 | Pool | HikariCP (défaut Spring) | Pool de connexions performant |
+| Backup | `pg_dump` quotidien (systemd timer, 03h00 UTC) → upload S3 (`db-backups/`), rétention locale 14 jours | Remplace les backups automatiques RDS, seul filet de sécurité hors-EC2 depuis la suppression de RDS le 24/07/2026 |
 
 ### 🐳 Docker — Conteneurisation
 
@@ -243,26 +261,21 @@ COMMUNICATION INTERNE K8S (ClusterIP DNS)
 | Registry | Amazon ECR | Intégré AWS IAM, free 500MB/mois, latence faible vers EC2 |
 | Base backend | `eclipse-temurin:21-jre-alpine` | JRE seul (pas JDK), Alpine = image petite (~150MB) |
 | Base frontend | `node:20-alpine` (build) + `nginx:alpine` (run) | Build Angular → copie dist/ dans NGINX |
+| Orchestration prod | **Docker Compose** sur une seule EC2 (`/opt/portfolio/docker-compose.yml`) | Simplicité et coût — pas de control plane à payer/maintenir pour un portfolio |
 
-### ☸️ Kubernetes / Minikube — Orchestration
+### ☸️ Kubernetes (K3s + ArgoCD) — Mode alternatif, non utilisé en production
 
-| Aspect | Choix | Pourquoi |
-|--------|-------|----------|
-| Minikube | Cluster K8s local sur EC2 | Gratuit, démontre Kubernetes sans coût EKS ($72/mois) |
-| Driver | `--driver=none` ou `docker` | Sur EC2, driver `none` = K8s directement sur host = moins RAM |
-| Namespace | `portfolio` | Isolation, bonne pratique |
-| Resources | Limits/Requests | Évite OOMKill sur 1GB RAM |
-| Probes | Liveness + Readiness | K8s redémarre si mort, attend si pas prêt |
-| Secrets | K8s Secrets | Pas de credentials en clair dans les YAMLs |
-| ConfigMaps | Variables d'env non-sensibles | Configuration externalisée |
+| Aspect | État réel |
+|--------|-----------|
+| Statut | Code Terraform et manifests **complets et fonctionnels**, activables via `deployment_mode = "k3s"` |
+| Production actuelle | **Non** — la variable réelle en prod est `deployment_mode = "docker"` (voir `terraform/terraform.tfvars`) |
+| Documentation | [PHASE18-ArgoCD-GitOps.md](PHASE18-ArgoCD-GitOps.md) (GitOps/ArgoCD) et [PHASE20-FreeTier-K3s.md](PHASE20-FreeTier-K3s.md) (K3s Free Tier) |
+| Pourquoi le garder | Démontre la compétence Kubernetes/GitOps pour un recruteur sans payer le coût de l'exploiter en continu |
 
 ### ⛵ Helm — Package Manager Kubernetes
 
-| Aspect | Choix | Pourquoi |
-|--------|-------|----------|
-| Charts | Un chart par app | Versioning indépendant, valeurs différentes par env |
-| Values | `values.yaml` | Paramétrage sans modifier les templates |
-| Upgrade | `helm upgrade --install` | Idempotent = safe en CI/CD |
+Utilisé uniquement dans le mode alternatif K3s (`helm/` à la racine du repo) — voir
+[PHASE19-Helm.md](PHASE19-Helm.md). Le mode Docker Compose réel n'utilise pas Helm.
 
 ### 🏗️ Terraform — Infrastructure as Code
 
@@ -270,40 +283,48 @@ COMMUNICATION INTERNE K8S (ClusterIP DNS)
 |--------|-------|----------|
 | Provider | AWS | Infrastructure AWS gérée par code |
 | State | S3 remote backend | State partagé en équipe, pas de conflits |
-| Modules | modules/ séparés | Réutilisabilité, séparation vpc/ec2/rds/ecr |
-| Variables | tfvars par env | Même code, configurations différentes |
+| Modules réels | `vpc`, `ecr`, `ec2`, `security-groups`, `secrets-manager`, `cloudwatch`, `lambda-*` | Voir [PHASE5-Terraform.md](PHASE5-Terraform.md) — le module `rds` a été retiré du câblage (`main.tf`) le 24/07/2026 |
+| Variables | `terraform.tfvars` (non commité) | Même code, `deployment_mode` bascule Docker Compose ⇄ K3s |
 
 ### 🔄 GitHub Actions — CI/CD
 
 | Aspect | Choix | Pourquoi |
 |--------|-------|----------|
+| Workflows | `ci-backend.yml`, `ci-frontend.yml`, `sonarcloud.yml`, `security.yml`, `sbom-supply-chain.yml`, `dast-zap.yml`, `gatling-load-test.yml`, `deploy-app.yml`, `deploy-infra.yml`, `ci-gitops.yml` | Un workflow par responsabilité, fail fast si un gate échoue |
 | Triggers | push main + PR | Build sur chaque commit |
-| Stages | test → build → push → deploy | Fail fast si tests KO |
 | Secrets | GitHub Secrets | Credentials AWS jamais en clair |
-| Deploy | SSH + helm upgrade | Simple, fonctionne sur n'importe quel serveur |
+| Deploy (réel) | `deploy-app.yml` : SSH → `docker compose pull` + `up -d --no-deps` | Pas de `helm upgrade` en production réelle (réservé au mode K3s) |
 
-### 🌐 NGINX Ingress — Reverse Proxy
-
-| Aspect | Choix | Pourquoi |
-|--------|-------|----------|
-| Ingress | NGINX Ingress Controller | Standard K8s, annotations riches, cert-manager intégration |
-| Routing | Path-based | `/` → frontend, `/api` → backend sur même domaine (pas de CORS) |
-| CORS | Évité grâce au path-based routing | Frontend et backend sur même domaine/port |
-
-### 🔒 cert-manager + Let's Encrypt — HTTPS
+### 🌐 NGINX (hôte) — Reverse Proxy + TLS
 
 | Aspect | Choix | Pourquoi |
 |--------|-------|----------|
-| cert-manager | Opérateur K8s | Renouvellement automatique des certificats |
-| Let's Encrypt | CA gratuite | HTTPS gratuit, reconnu par tous les navigateurs |
-| Challenge | HTTP-01 | Simple, fonctionne avec Ingress standard |
+| NGINX | Installé nativement sur l'EC2 (pas conteneurisé) | Termine TLS et route vers les conteneurs par port (`8081` frontend, `8080` backend, `3000` Grafana) |
+| Routing | Path-based (`/`, `/api/`, `/grafana/`) | Un seul domaine, pas de CORS |
+| Mode K3s (alternatif) | NGINX Ingress Controller dans le cluster | Voir PHASE20 — non utilisé en prod réelle |
+
+### 🔒 Certbot + Let's Encrypt — HTTPS
+
+| Aspect | Choix | Pourquoi |
+|--------|-------|----------|
+| Certbot | Installé sur l'hôte EC2, renouvellement via timer systemd | HTTPS gratuit, reconnu par tous les navigateurs |
+| Let's Encrypt | CA gratuite | Certificat lié au domaine DuckDNS |
+| Mode K3s (alternatif) | cert-manager (opérateur K8s) | Voir PHASE20 — non utilisé en prod réelle |
 
 ### 🦆 DuckDNS — Domaine gratuit
 
 | Aspect | Choix | Pourquoi |
 |--------|-------|----------|
-| DuckDNS | DNS dynamique gratuit | Pointe vers Elastic IP, Let's Encrypt compatible |
-| Elastic IP | IP statique AWS | IP fixe même après redémarrage EC2 |
+| DuckDNS | DNS dynamique gratuit | Domaine réel : `charrad-devsecops.duckdns.org`, pointe vers l'Elastic IP |
+| Elastic IP | IP statique AWS (`13.39.132.25`) | IP fixe même après redémarrage EC2 |
+
+### 📊 Redis, Prometheus, Grafana — Cache & Observabilité
+
+Conteneurs supplémentaires de la stack Docker Compose réelle (`portfolio-redis`,
+`portfolio-prometheus`, `portfolio-grafana`), non représentés dans les versions
+précédentes de ce document. Détaillés dans
+[PHASE11-Redis-Cache.md](PHASE11-Redis-Cache.md) et
+[PHASE7-Observability.md](PHASE7-Observability.md).
 
 ---
 
@@ -311,28 +332,26 @@ COMMUNICATION INTERNE K8S (ClusterIP DNS)
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║              BUDGET RAM EC2 t2.micro (1GB total)                   ║
+║              BUDGET RAM EC2 t3.small (2048 MB total)                ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║                                                                      ║
-║  OS Linux (Ubuntu 22.04)          ~150 MB                           ║
-║  Docker daemon                    ~80 MB                            ║
-║  Minikube + etcd + API server     ~350 MB                           ║
-║  Spring Boot Pod (JVM -Xmx256m)   ~300 MB ← Critique               ║
-║  Angular/NGINX Pod                ~50 MB                            ║
-║  NGINX Ingress Controller         ~50 MB                            ║
-║  cert-manager                     ~40 MB                            ║
+║  OS Linux (Amazon Linux 2023)      ~150 MB                          ║
+║  Docker daemon                     ~80 MB                           ║
+║  NGINX hôte (natif, pas conteneur) ~20 MB                           ║
+║  Spring Boot (JVM -Xmx300m, limite ~400M) ~400 MB ← le plus lourd   ║
+║  PostgreSQL (limite conteneur)     ~256 MB                          ║
+║  Angular/NGINX conteneur           ~64 MB                           ║
+║  Redis                             ~64 MB                           ║
+║  Prometheus                        ~200 MB                          ║
+║  Grafana                           ~150 MB                          ║
 ║  ─────────────────────────────────────                              ║
-║  TOTAL ESTIMÉ                    ~1020 MB ← DÉPASSE 1GB !          ║
+║  TOTAL ESTIMÉ                      ~1384 MB / 2048 MB               ║
 ║                                                                      ║
-║  SOLUTION : Activer SWAP 2GB sur EC2                                ║
-║  sudo fallocate -l 2G /swapfile                                     ║
-║  sudo chmod 600 /swapfile                                           ║
-║  sudo mkswap /swapfile                                              ║
-║  sudo swapon /swapfile                                              ║
-║                                                                      ║
-║  ⚠️  Le swap ralentit mais évite l'OOM Killer                        ║
-║  ⚠️  Pour un usage pro, migrer vers t3.small (2GB, ~17$/mois)       ║
-║  ✅  Pour le portfolio/learning : t2.micro + swap suffisent          ║
+║  ✅  t3.small (2GB) suffit sans SWAP pour ce mode Docker Compose     ║
+║  ⚠️  Le mode K3s (alternatif) a besoin de plus de marge : le         ║
+║      volume racine passe à 28GB et un SWAP de 4GB est prévu          ║
+║      (voir terraform/modules/ec2/main.tf, condition sur              ║
+║      deployment_mode == "k3s")                                       ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -345,230 +364,76 @@ devsecops-angular-java21-aws/              ← Racine du monorepo
 │
 ├── README.md                              ← Documentation principale portfolio
 ├── .gitignore                             ← Ignorer node_modules, .terraform, etc.
-├── .editorconfig                          ← Cohérence IDE (indentation, charset)
 │
-├── .github/                               ← GitHub Actions CI/CD
-│   └── workflows/
-│       ├── backend-ci.yml                 ← Tests + build backend
-│       ├── frontend-ci.yml                ← Tests + build frontend
-│       └── deploy.yml                     ← Push ECR + déploiement Helm
+├── .github/
+│   └── workflows/                         ← CI/CD réel (voir liste complète section 4)
+│       ├── ci-backend.yml
+│       ├── ci-frontend.yml
+│       ├── sonarcloud.yml
+│       ├── security.yml
+│       ├── sbom-supply-chain.yml
+│       ├── dast-zap.yml
+│       ├── gatling-load-test.yml
+│       ├── deploy-app.yml                 ← Déploiement réel (SSH + docker compose)
+│       ├── deploy-infra.yml               ← terraform plan/apply
+│       └── ci-gitops.yml                  ← Lint manifests K8s/Helm (mode alternatif)
 │
 ├── backend/                               ← Application Spring Boot Java 21
-│   ├── Dockerfile                         ← Multi-stage build optimisé RAM
-│   ├── .dockerignore
-│   ├── pom.xml                            ← Dépendances Maven
-│   ├── checkstyle.xml                     ← Règles style Java
-│   └── src/
-│       ├── main/
-│       │   ├── java/com/portfolio/backend/
-│       │   │   ├── BackendApplication.java
-│       │   │   ├── config/
-│       │   │   │   ├── SecurityConfig.java
-│       │   │   │   ├── OpenApiConfig.java
-│       │   │   │   └── CorsConfig.java
-│       │   │   ├── controller/
-│       │   │   │   ├── AuthController.java
-│       │   │   │   ├── ProjectController.java
-│       │   │   │   └── SkillController.java
-│       │   │   ├── dto/
-│       │   │   │   ├── request/
-│       │   │   │   │   ├── LoginRequest.java
-│       │   │   │   │   ├── RegisterRequest.java
-│       │   │   │   │   └── ProjectRequest.java
-│       │   │   │   └── response/
-│       │   │   │       ├── ApiResponse.java     ← Wrapper standard
-│       │   │   │       ├── PageResponse.java    ← Pagination standard
-│       │   │   │       ├── AuthResponse.java
-│       │   │   │       ├── ProjectResponse.java
-│       │   │   │       └── ErrorResponse.java
-│       │   │   ├── entity/
-│       │   │   │   ├── User.java
-│       │   │   │   ├── Project.java
-│       │   │   │   └── Skill.java
-│       │   │   ├── exception/
-│       │   │   │   ├── GlobalExceptionHandler.java
-│       │   │   │   ├── ResourceNotFoundException.java
-│       │   │   │   ├── UnauthorizedException.java
-│       │   │   │   └── ValidationException.java
-│       │   │   ├── mapper/
-│       │   │   │   ├── ProjectMapper.java
-│       │   │   │   └── SkillMapper.java
-│       │   │   ├── repository/
-│       │   │   │   ├── UserRepository.java
-│       │   │   │   ├── ProjectRepository.java
-│       │   │   │   └── SkillRepository.java
-│       │   │   ├── security/
-│       │   │   │   ├── JwtTokenProvider.java
-│       │   │   │   ├── JwtAuthenticationFilter.java
-│       │   │   │   └── UserDetailsServiceImpl.java
-│       │   │   └── service/
-│       │   │       ├── AuthService.java
-│       │   │       ├── ProjectService.java
-│       │   │       └── SkillService.java
-│       │   └── resources/
-│       │       ├── application.properties         ← Config commune
-│       │       ├── application-dev.properties     ← Dev local
-│       │       ├── application-prod.properties    ← Prod (RDS, logs JSON)
-│       │       └── db/migration/                  ← Flyway migrations SQL
-│       │           ├── V1__create_users.sql
-│       │           ├── V2__create_projects.sql
-│       │           └── V3__create_skills.sql
-│       └── test/
-│           └── java/com/portfolio/backend/
-│               ├── controller/
-│               │   ├── AuthControllerTest.java
-│               │   └── ProjectControllerTest.java
-│               ├── service/
-│               │   ├── AuthServiceTest.java
-│               │   └── ProjectServiceTest.java
-│               ├── repository/
-│               │   └── ProjectRepositoryTest.java
-│               └── integration/
-│                   └── ProjectIntegrationTest.java   ← Testcontainers
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── src/main/java/... (controller/service/repository/security/...)
 │
 ├── frontend/                              ← Application Angular
-│   ├── Dockerfile                         ← Multi-stage : Node build + NGINX
-│   ├── .dockerignore
-│   ├── nginx.conf                         ← Config NGINX prod
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── angular.json
-│   ├── tsconfig.json
-│   ├── tsconfig.app.json
-│   ├── tsconfig.spec.json
-│   ├── .eslintrc.json                     ← Règles ESLint strict
-│   ├── .prettierrc                        ← Formatage auto
-│   ├── jest.config.ts                     ← Jest (remplace Karma)
-│   └── src/
-│       ├── main.ts
-│       ├── index.html
-│       ├── styles.scss
-│       ├── app/
-│       │   ├── app.config.ts              ← Config standalone
-│       │   ├── app.routes.ts              ← Routes lazy-loaded
-│       │   ├── core/                      ← Singleton services
-│       │   │   ├── interceptors/
-│       │   │   │   ├── jwt.interceptor.ts
-│       │   │   │   └── error.interceptor.ts
-│       │   │   ├── guards/
-│       │   │   │   └── auth.guard.ts
-│       │   │   └── services/
-│       │   │       ├── auth.service.ts
-│       │   │       └── storage.service.ts
-│       │   ├── shared/                    ← Composants réutilisables
-│       │   │   ├── components/
-│       │   │   │   ├── navbar/
-│       │   │   │   ├── footer/
-│       │   │   │   ├── loading-spinner/
-│       │   │   │   └── error-message/
-│       │   │   └── models/
-│       │   │       ├── project.model.ts
-│       │   │       ├── skill.model.ts
-│       │   │       └── auth.model.ts
-│       │   └── features/                  ← Modules métier (lazy-loaded)
-│       │       ├── auth/
-│       │       │   ├── auth.routes.ts
-│       │       │   └── login/
-│       │       │       ├── login.component.ts
-│       │       │       ├── login.component.html
-│       │       │       ├── login.component.scss
-│       │       │       └── login.component.spec.ts
-│       │       ├── portfolio/
-│       │       │   ├── portfolio.routes.ts
-│       │       │   ├── home/
-│       │       │   ├── projects/
-│       │       │   │   ├── project-list/
-│       │       │   │   └── project-detail/
-│       │       │   └── skills/
-│       │       └── admin/                 ← CRUD admin (route protégée)
-│       │           ├── admin.routes.ts
-│       │           └── project-form/
-│       └── environments/
-│           ├── environment.ts             ← apiUrl: 'http://localhost:8080'
-│           └── environment.prod.ts        ← apiUrl: '/api'
+│   ├── Dockerfile
+│   ├── nginx.conf                         ← NGINX du conteneur (statique + proxy /api en dev)
+│   └── src/app/...
 │
-├── infrastructure/                        ← Infrastructure as Code
-│   └── terraform/
-│       ├── main.tf                        ← Point d'entrée modules
-│       ├── variables.tf                   ← Variables globales
-│       ├── outputs.tf                     ← IP EC2, endpoint RDS, ECR URLs
-│       ├── provider.tf                    ← AWS provider + backend S3
-│       ├── terraform.tfvars.example       ← Template (jamais committer le vrai)
-│       └── modules/
-│           ├── vpc/
-│           │   ├── main.tf                ← VPC, subnets public/privé, IGW
-│           │   ├── variables.tf
-│           │   └── outputs.tf
-│           ├── ecr/
-│           │   ├── main.tf                ← Repos ECR backend + frontend
-│           │   ├── variables.tf
-│           │   └── outputs.tf
-│           ├── ec2/
-│           │   ├── main.tf                ← Instance t2.micro + Elastic IP
-│           │   ├── variables.tf
-│           │   ├── outputs.tf
-│           │   └── user_data.sh           ← Script bootstrap EC2
-│           └── rds/
-│               ├── main.tf                ← RDS PostgreSQL t3.micro
-│               ├── variables.tf
-│               └── outputs.tf
+├── docker/                                ← Docker Compose (dev + prod-like)
+│   ├── docker-compose.yml                 ← Stack dev locale de base
+│   ├── docker-compose.override.yml        ← Overrides dev (volumes, ports)
+│   ├── docker-compose.prod.yml            ← Simulation locale des conditions prod
+│   ├── docker-compose.dev-stack.yml
+│   ├── docker-compose.kafka.yml           ← Phase 10 — Kafka
+│   ├── docker-compose.observability.yml   ← Phase 7 — Prometheus/Grafana
+│   ├── prometheus/
+│   └── grafana/
 │
-├── kubernetes/                            ← Manifests K8s bruts (sans Helm)
-│   ├── namespace.yaml
-│   ├── backend/
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   ├── configmap.yaml
-│   │   └── secret.yaml
-│   ├── frontend/
-│   │   ├── deployment.yaml
-│   │   └── service.yaml
-│   └── ingress/
-│       ├── ingress.yaml
-│       ├── cluster-issuer.yaml            ← Let's Encrypt ClusterIssuer
-│       └── certificate.yaml
+├── terraform/                             ← Infrastructure as Code (racine, pas de sous-dossier "infrastructure/")
+│   ├── main.tf                            ← Point d'entrée modules — plus de module "rds"
+│   ├── variables.tf                       ← dont `deployment_mode` ("docker" | "k3s")
+│   ├── outputs.tf
+│   ├── terraform.tfvars                   ← Réel, non commité (gitignore)
+│   └── modules/
+│       ├── vpc/
+│       ├── ecr/
+│       ├── ec2/                           ← Instance t3.small + Elastic IP + IAM (dont backup S3)
+│       ├── security-groups/
+│       ├── secrets-manager/               ← Phase 21 — External Secrets
+│       ├── cloudwatch/
+│       ├── lambda-contact-form/
+│       ├── lambda-image-resize/
+│       ├── lambda-weekly-report/
+│       └── rds/                           ← Code encore présent mais non référencé dans main.tf
+│                                             (orphelin depuis la suppression du 24/07/2026)
 │
-├── helm/                                  ← Helm charts (remplace les manifests bruts)
-│   ├── backend/
-│   │   ├── Chart.yaml
-│   │   ├── values.yaml
-│   │   ├── values-prod.yaml
-│   │   └── templates/
-│   │       ├── _helpers.tpl
-│   │       ├── deployment.yaml
-│   │       ├── service.yaml
-│   │       ├── configmap.yaml
-│   │       ├── secret.yaml
-│   │       └── hpa.yaml
-│   └── frontend/
-│       ├── Chart.yaml
-│       ├── values.yaml
-│       ├── values-prod.yaml
-│       └── templates/
-│           ├── _helpers.tpl
-│           ├── deployment.yaml
-│           └── service.yaml
+├── k8s/ , helm/ , argocd/                  ← Manifests bruts, charts Helm, config ArgoCD
+│                                             (mode alternatif K3s — PHASE18/19/20)
 │
-├── docker/
-│   ├── docker-compose.yml                 ← Dev local complet
-│   └── docker-compose.override.yml        ← Overrides dev (volumes, ports)
+├── lambdas/                                ← Sources Node.js des 3 fonctions Lambda (Phase 15)
+├── scripts/                                ← Scripts d'automatisation (déploiement, tests, etc.)
+├── zap/                                    ← Config OWASP ZAP (Phase 12 — DAST)
 │
 └── docs/
     ├── PHASE1-Architecture.md             ← Ce document
-    ├── PHASE2-Backend.md                  ← (à venir)
-    ├── PHASE3-Frontend.md                 ← (à venir)
-    ├── PHASE4-Docker.md                   ← (à venir)
-    ├── PHASE5-Terraform.md                ← (à venir)
-    ├── PHASE6-EC2-Setup.md                ← (à venir)
-    ├── PHASE7-Kubernetes.md               ← (à venir)
-    ├── PHASE8-Helm.md                     ← (à venir)
-    ├── PHASE9-Ingress.md                  ← (à venir)
-    ├── PHASE10-HTTPS.md                   ← (à venir)
-    ├── PHASE11-ECR.md                     ← (à venir)
-    ├── PHASE12-CICD.md                    ← (à venir)
-    ├── PHASE13-Monitoring.md              ← (à venir)
-    ├── PHASE14-Securite.md                ← (à venir)
-    └── PHASE15-Portfolio.md               ← (à venir)
+    ├── PHASE2-Backend.md
+    ├── PHASE3-Frontend.md
+    ├── PHASE5-Terraform.md
+    ├── PHASE18-ArgoCD-GitOps.md
+    ├── PHASE19-Helm.md
+    ├── PHASE20-FreeTier-K3s.md
+    ├── PHASE21-ExternalSecrets.md
+    ├── FINOPS-Cost-Analysis.md
+    └── ... (voir liste complète des phases dans le repo)
 ```
 
 ---
@@ -580,12 +445,11 @@ devsecops-angular-java21-aws/              ← Racine du monorepo
 │             EXEMPLE : Utilisateur se connecte au portfolio                   │
 └──────────────────────────────────────────────────────────────────────────────┘
 
-① Browser → POST https://monapp.duckdns.org/api/auth/login
-   Body: { "email": "admin@portfolio.com", "password": "secret" }
+① Browser → POST https://charrad-devsecops.duckdns.org/api/auth/login
+   Body: { "email": "admin@portfolio.dev", "password": "..." }
 
-② NGINX Ingress Controller reçoit la requête
-   Règle : path /api/* → backend-service:8080
-   Rewrite : /api/auth/login → /auth/login
+② NGINX (hôte EC2, natif) reçoit la requête
+   Règle : location /api/ → proxy_pass http://127.0.0.1:8080/
 
 ③ Spring Boot Controller (AuthController.java)
    @PostMapping("/auth/login")
@@ -598,9 +462,9 @@ devsecops-angular-java21-aws/              ← Racine du monorepo
    → JwtTokenProvider génère un JWT signé (HS256)
    → Retourne AuthResponse { token, expiresIn, userInfo }
 
-⑤ PostgreSQL (RDS)
-   SELECT * FROM users WHERE email = 'admin@portfolio.com'
-   → Connexion sécurisée depuis EC2 (Security Group privé)
+⑤ PostgreSQL (conteneur Docker "postgres" sur la même EC2)
+   SELECT * FROM users WHERE email = 'admin@portfolio.dev'
+   → Connexion via le réseau Docker interne, pas d'exposition externe
 
 ⑥ Réponse HTTP 200 avec JWT dans le body
    { "token": "eyJhbGci...", "expiresIn": 86400 }
@@ -619,31 +483,30 @@ devsecops-angular-java21-aws/              ← Racine du monorepo
 
 ## 8. Stratégie de déploiement — Dev vs Prod
 
-| Aspect | Environnement DEV | Environnement PROD (AWS) |
+| Aspect | Environnement DEV | Environnement PROD (réel) |
 |--------|-------------------|--------------------------|
-| Lancement | `docker-compose up` | `helm upgrade --install` |
-| Angular | `:4200` (`ng serve`) | Pod NGINX `:80` |
-| Spring Boot | `:8080` (`mvn spring-boot:run`) | Pod JVM `:8080` |
-| PostgreSQL | Container local `:5432` | RDS PostgreSQL managé |
-| TLS | ❌ Pas de HTTPS | ✅ Let's Encrypt automatique |
-| Logs | Console colorés lisibles | JSON structurés (parsables) |
+| Lancement | `docker compose up` | `docker compose pull && up -d --no-deps` via SSH (`deploy-app.yml`) |
+| Angular | `:4200` (`ng serve`) | Conteneur NGINX `:8081` derrière le NGINX hôte |
+| Spring Boot | `:8080` (`mvn spring-boot:run`) | Conteneur JVM `:8080` |
+| PostgreSQL | Conteneur local `:5432` | Conteneur `postgres:15-alpine` sur la **même EC2** |
+| TLS | ❌ Pas de HTTPS | ✅ Certbot + Let's Encrypt (renouvellement systemd) |
+| Logs | Console colorés lisibles | Logs Docker (`awslogs` driver → CloudWatch) |
 | Config | `application-dev.properties` | `application-prod.properties` |
-| Base de données | H2 en mémoire (optionnel) | RDS PostgreSQL persistant |
-| Rechargement | Hot reload Angular + Spring DevTools | Images Docker immutables |
-| Debug | Remote debugging JVM possible | Logs + kubectl describe |
+| Rechargement | Hot reload Angular + Spring DevTools | Images Docker immutables, rolling restart via `deploy.sh` |
+| Debug | Remote debugging JVM possible | Logs CloudWatch + `docker exec` / `docker logs` |
 
 ---
 
 ## 9. Checklist PHASE 1 — Avant de passer à la suite
 
-- ✅ L'architecture est comprise dans son ensemble
-- ✅ Les flux réseau sont clairs (Browser → DNS → EC2 → Ingress → Pod → RDS)
-- ✅ Les contraintes RAM EC2 Free Tier sont identifiées (1GB + 2GB swap)
-- ✅ La structure du projet est définie (monorepo avec backend/frontend/infra/helm/k8s)
-- ✅ Les environnements dev/prod sont distincts (docker-compose vs Kubernetes)
-- ✅ La stratégie CI/CD est tracée (GitHub Actions → ECR → helm upgrade)
+- ✅ L'architecture réellement déployée est comprise (Docker Compose, une seule EC2)
+- ✅ Les flux réseau sont clairs (Browser → DuckDNS → EC2 → NGINX hôte → conteneur)
+- ✅ Les contraintes RAM EC2 t3.small sont identifiées (2GB, pas de swap nécessaire en mode Docker)
+- ✅ La structure du projet est définie (monorepo backend/frontend/terraform/docker/k8s-helm-argocd)
+- ✅ Les environnements dev/prod sont distincts (docker compose partout, config différente)
+- ✅ La stratégie CI/CD est tracée (GitHub Actions → ECR → SSH → docker compose)
 - ✅ Chaque composant a une justification technique claire
-- ✅ Les choix Free Tier sont validés (t2.micro + RDS t3.micro + ECR 500MB)
+- ✅ Le mode Kubernetes/K3s alternatif est identifié comme non-production (voir PHASE18/20)
 
 ---
 
@@ -654,17 +517,17 @@ devsecops-angular-java21-aws/              ← Racine du monorepo
 | Compétence | Signal visible |
 |------------|---------------|
 | 🧠 **Vision système** | Capacité à penser bout-en-bout, du browser à la DB |
-| 🌐 **Networking** | DNS, TLS, Security Groups, VPC, Ingress, path-based routing |
-| ☸️ **Kubernetes** | Orchestration, services, ingress, namespaces, probes, resource limits |
-| 🏗️ **IaC** | Terraform pour infrastructure reproductible et versionnée |
-| 🔒 **Security mindset** | RDS en subnet privé, JWT stateless, HTTPS forcé, non-root containers |
-| 💰 **Cost awareness** | Free Tier choisi sciemment, RAM budget explicite, swap strategy |
+| 🌐 **Networking** | DNS, TLS, Security Groups, VPC, reverse proxy path-based routing |
+| ☸️ **Kubernetes** | Démontré via un mode alternatif complet K3s + ArgoCD (PHASE18/20), activable sans réécrire l'infra |
+| 🏗️ **IaC** | Terraform pour infrastructure reproductible et versionnée, deux modes de déploiement pilotés par une variable |
+| 🔒 **Security mindset** | Secrets via AWS Secrets Manager, JWT stateless, HTTPS forcé, non-root containers, IAM least privilege |
+| 💰 **Cost awareness** | Migration RDS → conteneur pour diviser la facture par ~2, arbitrage documenté et assumé |
 | 📐 **Clean architecture** | Séparation claire frontend / backend / infrastructure / CI-CD |
-| 🔄 **CI/CD** | Pipeline complet avec quality gates (lint → test → build → deploy) |
-| 🐳 **Docker** | Multi-stage builds, optimisation taille images, sécurité containers |
-| 📊 **Observabilité** | Probes K8s, Actuator, logs structurés — mindset production |
+| 🔄 **CI/CD** | Pipeline complet avec quality gates (lint → test → SCA/DAST → build → deploy) |
+| 🐳 **Docker** | Multi-stage builds, optimisation taille images, sécurité containers, orchestration Compose en prod |
+| 📊 **Observabilité** | Prometheus + Grafana + Actuator, logs CloudWatch — mindset production |
 
 ---
 
-*Document généré le 2026-05-25 — Projet DevSecOps Portfolio*
+*Document généré le 2026-05-25, réécrit le 2026-07-24 — Projet DevSecOps Portfolio*
 *Prochaine étape : [PHASE 2 — Backend Spring Boot Java 21](PHASE2-Backend.md)*
