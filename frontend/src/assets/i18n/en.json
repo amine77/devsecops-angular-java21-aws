@@ -119,6 +119,8 @@
   "auth.login.error.credentials": "Invalid email or password.",
   "auth.login.error.server": "Server unavailable. Please try again in a moment.",
   "auth.login.error.generic": "An error occurred. Please try again.",
+  "auth.login.error.throttled": "Too many sign-in attempts. Please wait before trying again.",
+  "auth.login.error.throttled.wait": "Too many sign-in attempts. Try again in {minutes} min.",
   "auth.login.password.min.short": "Minimum 6 characters.",
   "admin.dashboard.title": "Admin Dashboard",
   "admin.dashboard.welcome": "Welcome,",

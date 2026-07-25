@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 
 import { LoginComponent } from './login.component';
 import { AuthService } from '@core/services/auth.service';
@@ -110,6 +110,37 @@ describe('LoginComponent', () => {
       component.onSubmit();
 
       expect(component['errorMessage']()).toContain('auth.login.error.server');
+    });
+
+    // Un 429 tombait auparavant dans la branche générique « Une erreur est
+    // survenue. Réessayez. », qui invite à faire exactement ce qui prolonge le
+    // blocage. Les deux cas correspondent aux deux limiteurs en place.
+    it('devrait annoncer la durée d’attente pour un 429 du backend', () => {
+      mockAuthService.login.mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 429,
+              headers: new HttpHeaders({ 'Retry-After': '895' }),
+            })
+        )
+      );
+
+      component['loginForm'].patchValue({ email: 'test@test.com', password: 'wrongpassword' });
+      component.onSubmit();
+
+      expect(component['errorMessage']()).toContain('auth.login.error.throttled.wait');
+    });
+
+    it('devrait rester générique pour un 429 sans Retry-After (limiteur NGINX)', () => {
+      mockAuthService.login.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 429 }))
+      );
+
+      component['loginForm'].patchValue({ email: 'test@test.com', password: 'wrongpassword' });
+      component.onSubmit();
+
+      expect(component['errorMessage']()).toBe('auth.login.error.throttled');
     });
 
     it("devrait désactiver le loading en cas d'erreur", () => {

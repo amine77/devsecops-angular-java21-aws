@@ -122,6 +122,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isLoading.set(false);
         if (err.status === 401) {
           this.errorMessage.set(this.lang.translate('auth.login.error.credentials'));
+        } else if (err.status === 429) {
+          this.errorMessage.set(this.throttledMessage(err));
         } else if (err.status === 0) {
           this.errorMessage.set(this.lang.translate('auth.login.error.server'));
         } else {
@@ -129,5 +131,29 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       },
     });
+  }
+
+  /**
+   * Message affiché quand le débit de connexion est dépassé (429).
+   *
+   * Sans ce cas, un 429 tombait dans la branche générique « Une erreur est
+   * survenue. Réessayez. » — un texte qui invite précisément à faire ce qui
+   * prolonge le blocage, et qui laisse croire à une panne.
+   *
+   * Deux limiteurs peuvent renvoyer ce code : celui du backend, qui renseigne
+   * `Retry-After`, et celui de NGINX placé devant, qui ne le renseigne pas.
+   * D'où le repli sans durée.
+   */
+  private throttledMessage(err: HttpErrorResponse): string {
+    const retryAfter = Number(err.headers.get('Retry-After'));
+
+    if (!Number.isFinite(retryAfter) || retryAfter <= 0) {
+      return this.lang.translate('auth.login.error.throttled');
+    }
+
+    const minutes = Math.ceil(retryAfter / 60);
+    return this.lang
+      .translate('auth.login.error.throttled.wait')
+      .replace('{minutes}', String(minutes));
   }
 }

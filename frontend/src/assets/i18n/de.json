@@ -119,6 +119,8 @@
   "auth.login.error.credentials": "Ungültige E-Mail oder Passwort.",
   "auth.login.error.server": "Server nicht erreichbar. Bitte versuchen Sie es gleich erneut.",
   "auth.login.error.generic": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+  "auth.login.error.throttled": "Zu viele Anmeldeversuche. Bitte warten Sie, bevor Sie es erneut versuchen.",
+  "auth.login.error.throttled.wait": "Zu viele Anmeldeversuche. Versuchen Sie es in {minutes} Min. erneut.",
   "auth.login.password.min.short": "Mindestens 6 Zeichen.",
   "admin.dashboard.title": "Admin-Dashboard",
   "admin.dashboard.welcome": "Willkommen,",

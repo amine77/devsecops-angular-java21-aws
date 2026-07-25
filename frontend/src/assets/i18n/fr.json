@@ -125,6 +125,8 @@
   "auth.login.error.credentials": "Email ou mot de passe incorrect.",
   "auth.login.error.server": "Serveur inaccessible. Réessayez dans quelques instants.",
   "auth.login.error.generic": "Une erreur est survenue. Réessayez.",
+  "auth.login.error.throttled": "Trop de tentatives de connexion. Patientez avant de réessayer.",
+  "auth.login.error.throttled.wait": "Trop de tentatives de connexion. Réessayez dans {minutes} min.",
   "auth.login.password.min.short": "Minimum 6 caractères.",
 
   "admin.dashboard.title": "Dashboard Admin",
