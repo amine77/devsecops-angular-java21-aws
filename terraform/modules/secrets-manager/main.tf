@@ -54,7 +54,7 @@ resource "aws_secretsmanager_secret_version" "dev" {
     "db-username" = var.db_username
     "db-password" = var.db_password
     "jwt-secret"  = var.jwt_secret
-    "redis-host"  = "localhost"  # Redis intégré dans le pod K3s (dev)
+    "redis-host"  = "localhost" # Redis intégré dans le pod K3s (dev)
   })
 
   # Lifecycle : ne pas mettre à jour si la valeur change en dehors de Terraform

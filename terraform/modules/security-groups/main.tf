@@ -61,7 +61,7 @@ resource "aws_security_group" "ec2" {
     from_port   = 30080
     to_port     = 30080
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_ssh_cidr]   # Même restriction que SSH
+    cidr_blocks = [var.allowed_ssh_cidr] # Même restriction que SSH
   }
 
   # Port 8080 Spring Boot — accessible depuis le réseau VPC uniquement

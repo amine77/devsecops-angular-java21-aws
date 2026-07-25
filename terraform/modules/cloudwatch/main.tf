@@ -18,7 +18,7 @@
 # ─── Log Group ───────────────────────────────────────────────────────────────
 resource "aws_cloudwatch_log_group" "backend" {
   name              = "/portfolio/backend"
-  retention_in_days = 30  # 30 jours = compromis coût/utilité (Free Tier = 5 GB/mois)
+  retention_in_days = 30 # 30 jours = compromis coût/utilité (Free Tier = 5 GB/mois)
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-backend-logs"
@@ -79,10 +79,10 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
   alarm_name          = "${var.project_name}-cpu-high"
   alarm_description   = "CPU EC2 > 80% pendant 5 minutes — risque de saturation"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2       # 2 périodes consécutives pour éviter les faux positifs
+  evaluation_periods  = 2 # 2 périodes consécutives pour éviter les faux positifs
   metric_name         = "CPUUtilization"
   namespace           = "AWS/EC2"
-  period              = 300     # 5 minutes
+  period              = 300 # 5 minutes
   statistic           = "Average"
   threshold           = 80
   treat_missing_data  = "notBreaching"
@@ -148,11 +148,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 8
         height = 6
         properties = {
-          title   = "EC2 - CPU Utilization (%)"
-          view    = "timeSeries"
-          region  = var.aws_region
-          period  = 60
-          stat    = "Average"
+          title  = "EC2 - CPU Utilization (%)"
+          view   = "timeSeries"
+          region = var.aws_region
+          period = 60
+          stat   = "Average"
           metrics = [
             ["AWS/EC2", "CPUUtilization", "InstanceId", var.ec2_instance_id]
           ]
@@ -169,11 +169,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 8
         height = 6
         properties = {
-          title   = "EC2 - Memoire utilisee (%)"
-          view    = "timeSeries"
-          region  = var.aws_region
-          period  = 60
-          stat    = "Average"
+          title  = "EC2 - Memoire utilisee (%)"
+          view   = "timeSeries"
+          region = var.aws_region
+          period = 60
+          stat   = "Average"
           metrics = [
             ["CWAgent", "mem_used_percent", "host", "portfolio-ec2"]
           ]
@@ -190,11 +190,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 8
         height = 6
         properties = {
-          title   = "Auth - Echecs / minute"
-          view    = "timeSeries"
-          region  = var.aws_region
-          period  = 60
-          stat    = "Sum"
+          title  = "Auth - Echecs / minute"
+          view   = "timeSeries"
+          region = var.aws_region
+          period = 60
+          stat   = "Sum"
           metrics = [
             ["Portfolio/Security", "AuthLoginFailures"]
           ]
@@ -211,11 +211,11 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 12
         height = 6
         properties = {
-          title   = "HTTP - Erreurs 5xx / minute"
-          view    = "timeSeries"
-          region  = var.aws_region
-          period  = 60
-          stat    = "Sum"
+          title  = "HTTP - Erreurs 5xx / minute"
+          view   = "timeSeries"
+          region = var.aws_region
+          period = 60
+          stat   = "Sum"
           metrics = [
             ["Portfolio/Application", "Http5xxErrors"]
           ]
@@ -232,10 +232,10 @@ resource "aws_cloudwatch_dashboard" "portfolio" {
         width  = 12
         height = 6
         properties = {
-          title   = "Logs ERROR récents"
-          query   = "SOURCE '/portfolio/backend' | fields @timestamp, message, requestId | filter level = 'ERROR' | sort @timestamp desc | limit 20"
-          region  = var.aws_region
-          view    = "table"
+          title  = "Logs ERROR récents"
+          query  = "SOURCE '/portfolio/backend' | fields @timestamp, message, requestId | filter level = 'ERROR' | sort @timestamp desc | limit 20"
+          region = var.aws_region
+          view   = "table"
         }
       }
     ]
