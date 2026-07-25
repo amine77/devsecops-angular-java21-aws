@@ -36,8 +36,11 @@ services:
   # ===========================================================================
   postgres:
     restart: always    # Redémarre automatiquement si le conteneur crashe
-    ports: []          # Override : supprime l'exposition du port 5432
-                       # Accessible uniquement via le réseau interne Docker
+    # !override, pas une liste vide : Compose FUSIONNE les listes, donc "ports: []"
+    # laissait intact le "5433:5432" hérité de docker-compose.yml. La base n'était
+    # inatteignable que par effet de bord ("data" est internal, ce qui empêche
+    # Docker d'établir la publication) — pas par le mécanisme décrit ici.
+    ports: !override []
     # !override remplace la liste héritée de docker-compose.yml au lieu de s'y
     # ajouter : sans cela, "portfolio-network" resterait et le frontend
     # retrouverait une route vers la base.
@@ -67,8 +70,12 @@ services:
   # ===========================================================================
   backend:
     restart: always
-    ports: []           # Override : supprime l'exposition du port 8080
-                        # Accessible uniquement depuis frontend via le réseau interne
+    # Même piège que pour postgres, mais ici sans filet : "edge" n'est pas
+    # internal, donc le 8080 hérité était réellement publié sur l'hôte. Une
+    # simulation de production dans laquelle on joint le backend sans passer par
+    # NGINX ne valide rien — ni le limiteur de débit NGINX, ni les en-têtes de
+    # sécurité, ni le fait que /actuator ne soit pas exposé.
+    ports: !override []
     # ATTENTION — ce fichier est une SURCHARGE de docker-compose.yml, qui définit
     # un "entrypoint" taillé pour le développement local. Sans ce !reset, la
     # fusion le conservait, avec deux conséquences qui vidaient ce fichier de
@@ -133,7 +140,9 @@ services:
   # ===========================================================================
   frontend:
     restart: always
-    ports:
+    # !override sinon le "4200:80" de docker-compose.yml reste publié en plus :
+    # "seul le port 80 est exposé" était faux, les deux l'étaient.
+    ports: !override
       - "80:80"         # En prod, seul le port 80 est exposé (HTTPS géré par l'Ingress)
     # Absent de "data" : une faille dans NGINX ne donne aucune route vers la base.
     networks: !override [edge]
