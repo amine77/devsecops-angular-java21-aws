@@ -1,5 +1,6 @@
 package com.portfolio.backend.controller;
 
+import com.portfolio.backend.config.RateLimitConfig;
 import com.portfolio.backend.config.SecurityConfig;
 import com.portfolio.backend.dto.response.SkillResponse;
 import com.portfolio.backend.exception.GlobalExceptionHandler;
@@ -25,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(SkillController.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class,
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, RateLimitConfig.class,
     JwtAuthenticationEntryPoint.class, JwtAccessDeniedHandler.class})
 @DisplayName("SkillController — Tests Web Layer")
 class SkillControllerTest {

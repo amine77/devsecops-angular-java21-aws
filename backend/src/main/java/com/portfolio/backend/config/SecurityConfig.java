@@ -3,6 +3,7 @@ package com.portfolio.backend.config;
 import com.portfolio.backend.security.JwtAccessDeniedHandler;
 import com.portfolio.backend.security.JwtAuthenticationEntryPoint;
 import com.portfolio.backend.security.JwtAuthenticationFilter;
+import com.portfolio.backend.security.LoginRateLimitFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,6 +39,13 @@ import java.util.List;
  * - CSRF désactivé : inutile avec JWT (les tokens CSRF protègent les sessions cookies)
  * - CORS configuré via Spring (pas via NGINX pour plus de flexibilité)
  *
+ * <p><b>Ordre des filtres</b> : LoginRateLimitFilter s'exécute avant
+ * JwtAuthenticationFilter, lui-même avant UsernamePasswordAuthenticationFilter.
+ * Cet ordre n'est pas cosmétique — une tentative de connexion refusée par le
+ * rate limiter n'atteint jamais BCrypt (coût 12, ~300 ms de CPU par hash).
+ * Un limiteur placé après l'authentification protégerait les comptes mais
+ * laisserait une rafale de requêtes saturer les 2 vCPU de l'instance.
+ *
  * <p>@EnableMethodSecurity : active @PreAuthorize sur les méthodes de service
  */
 @Configuration
@@ -46,6 +54,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final LoginRateLimitFilter loginRateLimitFilter;
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
@@ -55,11 +64,13 @@ public class SecurityConfig {
 
     public SecurityConfig(
         JwtAuthenticationFilter jwtAuthenticationFilter,
+        LoginRateLimitFilter loginRateLimitFilter,
         UserDetailsService userDetailsService,
         JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
         JwtAccessDeniedHandler jwtAccessDeniedHandler
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.loginRateLimitFilter = loginRateLimitFilter;
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
@@ -130,6 +141,9 @@ public class SecurityConfig {
 
             // Notre filtre JWT s'exécute AVANT le filtre d'auth standard de Spring
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+            // Rate limiting encore avant (voir Javadoc de classe pour le pourquoi)
+            .addFilterBefore(loginRateLimitFilter, JwtAuthenticationFilter.class)
 
             .build();
     }

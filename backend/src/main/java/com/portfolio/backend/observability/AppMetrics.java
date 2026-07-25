@@ -99,6 +99,29 @@ public class AppMetrics {
     }
 
     /**
+     * Incrémenter le compteur de connexions refusées par le rate limiter (429).
+     *
+     * <p>Métrique complémentaire de {@code auth_login_failure_total} : celle-ci
+     * compte les mots de passe erronés, celle-là les requêtes qui n'ont même
+     * pas été évaluées. Sans cette distinction, une attaque bloquée avec succès
+     * ressemble en PromQL à une attaque qui s'est arrêtée d'elle-même.
+     *
+     * <p>PromQL — attaque en cours et effectivement bloquée :
+     * <pre>
+     * rate(auth_login_rate_limited_total{reason="locked_out"}[5m]) &gt; 0
+     * </pre>
+     *
+     * @param reason "locked_out" (anti-brute-force) ou "throttled" (protection CPU)
+     */
+    public void incrementLoginRateLimited(String reason) {
+        Counter.builder("auth.login.rate.limited")
+            .description("Login requests rejected by the rate limiter before authentication")
+            .tag("reason", reason)
+            .register(registry)
+            .increment();
+    }
+
+    /**
      * Incrémenter le compteur d'erreurs HTTP par code de statut.
      *
      * @param statusCode code HTTP (ex: 400, 401, 403, 404, 500)

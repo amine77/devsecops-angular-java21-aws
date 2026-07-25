@@ -261,6 +261,25 @@
         </dependency>
 
         <!-- ============================================================
+             CAFFEINE — cache local borné (rate limiting anti-brute-force)
+             Raison : les compteurs de tentatives de login sont volontairement
+             LOCAUX, pas dans Redis. Un contrôle de sécurité ne doit pas
+             dépendre d'un service réseau qui peut tomber : si Redis est
+             indisponible, le CacheErrorHandler dégrade la lecture des projets
+             en lecture DB (acceptable), mais un rate limiter qui dégrade
+             s'ouvre — et c'est précisément l'inverse de ce qu'on veut.
+             Caffeine apporte les deux choses difficiles à écrire à la main :
+             expiration par entrée (fenêtre glissante) et taille bornée
+             (un attaquant qui fait tourner les IP ne peut pas faire grossir
+             la map jusqu'à l'OOM).
+             Version gérée par le BOM Spring Boot — rien à pinner ni à suivre.
+             ============================================================ -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- ============================================================
              H2 — BASE DE DONNÉES EN MÉMOIRE (dev/test uniquement)
              Raison : tests rapides sans PostgreSQL installé localement.
              Scope test : présent uniquement dans les tests.

@@ -28,6 +28,18 @@ import static io.gatling.javaapi.http.HttpDsl.*;
  * <p>~20% des itérations tentent en plus un login invalide (trafic réaliste),
  * réparti via {@code randomSwitch} — équivalent probabiliste du modulo k6
  * ({@code __ITER % 5 === 0}).
+ *
+ * <p><b>PRÉREQUIS — lancer le backend avec {@code RATE_LIMIT_ENABLED=false}.</b>
+ * Depuis l'ajout du rate limiting anti-brute-force, une injection soutenue
+ * depuis une IP unique est refusée en 429 : les assertions {@code status().is(200)}
+ * et {@code status().is(401)} échoueraient et le rapport mesurerait la vitesse
+ * de rejet, pas la capacité du backend. Le workflow
+ * {@code .github/workflows/gatling-load-test.yml} positionne déjà la variable.
+ * En local :
+ * <pre>
+ *   RATE_LIMIT_ENABLED=false mvn spring-boot:run
+ *   mvn gatling:test -Dgatling.simulationClass=com.portfolio.backend.loadtest.AuthStressSimulation
+ * </pre>
  */
 public class AuthStressSimulation extends Simulation {
 

@@ -1,6 +1,7 @@
 package com.portfolio.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.portfolio.backend.config.RateLimitConfig;
 import com.portfolio.backend.config.SecurityConfig;
 import com.portfolio.backend.dto.request.LoginRequest;
 import com.portfolio.backend.dto.response.AuthResponse;
@@ -41,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * - POST /auth/login 400 avec body vide
  */
 @WebMvcTest(AuthController.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class,
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, RateLimitConfig.class,
     JwtAuthenticationEntryPoint.class, JwtAccessDeniedHandler.class})
 @DisplayName("AuthController — Tests Web Layer")
 class AuthControllerTest {

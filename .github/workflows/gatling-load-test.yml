@@ -94,6 +94,14 @@ jobs:
           echo "Backend PID: $!"
         env:
           JWT_SECRET: gatling-test-secret-key-minimum-256-bits-for-hs256-algorithm
+          # Rate limiting désactivé pour ce run — et uniquement pour ce run.
+          # AuthStressSimulation mesure la capacité de POST /auth/login à
+          # absorber des hashs BCrypt. Or toutes les requêtes Gatling sortent
+          # d'une même IP : avec le limiteur actif, la simulation mesurerait
+          # la vitesse à laquelle on renvoie des 429, pas celle du backend.
+          # La protection reste active en production ; c'est bien pour éviter
+          # exactement ce profil de charge qu'elle existe.
+          RATE_LIMIT_ENABLED: 'false'
 
       - name: Attendre que le backend soit prêt
         if: inputs.base_url == ''
