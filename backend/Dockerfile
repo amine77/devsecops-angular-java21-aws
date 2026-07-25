@@ -110,24 +110,47 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD wget -q -O- http://localhost:8080/actuator/health/readiness || exit 1
 
 # =============================================================================
-# OPTIMISATION RAM POUR EC2 t2.micro (1GB total)
+# DIMENSIONNEMENT MÉMOIRE DE LA JVM
 #
-# Options JVM expliquées :
-# -Xmx600m     : heap maximum 600MB (augmenté pour Java 21 + Spring Boot 3.3)
-# -Xms256m     : heap initial 256MB (allow faster startup with more memory)
-# -Xss256k     : taille stack par thread (défaut = 1MB, 256k suffit pour la plupart)
-# -XX:+UseG1GC : Garbage Collector G1 (meilleur sur petite RAM)
-# -XX:MaxMetaspaceSize=256m : limite la metaspace (classes compilées)
-# -XX:+OptimizeStringConcat : optimisation mineures string
-# -Djava.security.egd=... : entropie pour la génération de tokens (faster startup)
-# -Dspring.profiles.active=prod : active le profil prod
+# Le heap n'est plus figé en dur. Raison : un "-Xmx600m" codé ici ignorait
+# totalement la limite mémoire du conteneur. Sur l'EC2, le backend tourne avec
+# "deploy.resources.limits.memory: 768M" — or 600 Mo de heap + 256 Mo de
+# metaspace + les stacks dépassent cette limite, et c'est l'OOM killer du
+# noyau qui tranchait, pas la JVM.
+#
+# Autre effet du codage en dur : le "JAVA_OPTS" défini dans
+# docker-compose.prod.yml n'était JAMAIS lu — un ENTRYPOINT en forme exec ne
+# passe pas par un shell, donc aucune variable d'environnement n'y est
+# interpolée. La configuration mémoire semblait ajustable ; elle ne l'était pas.
+#
+# -XX:MaxRAMPercentage=65 : la JVM lit le cgroup du conteneur et prend 65 % de
+#   la limite, soit ~499 Mo de heap pour 768 Mo. Changer la limite du conteneur
+#   suffit désormais à redimensionner l'application.
+#
+#   Le budget hors heap se répartit ainsi sur les ~269 Mo restants :
+#     metaspace     ~110-130 Mo observés (le plafond de 192 Mo est une borne
+#                   de sécurité, pas une réservation)
+#     code cache    ~40-50 Mo
+#     stacks + GC + buffers directs  ~40 Mo
+#   La marge est réelle mais pas confortable. À 70 % (~537 Mo de heap) elle
+#   devenait négative dans le pire cas — d'où 65. La vraie confirmation se lit
+#   sur "docker stats" une fois l'image déployée : si la RSS plafonne bien
+#   sous 768 Mo, on peut remonter.
+# -XX:InitialRAMPercentage=40 : évite au GC de redimensionner le heap pendant
+#   la phase de démarrage de Spring.
+# -Xss256k     : taille de stack par thread (défaut 1 Mo — 256k suffit ici et
+#   compte, car les virtual threads sont activés).
+# -XX:+UseG1GC : bon compromis pause/débit sur petite RAM.
+# -XX:MaxMetaspaceSize=192m : borne les classes chargées (Spring en charge
+#   beaucoup) pour que la metaspace n'empiète pas sur le budget du conteneur.
+# -Djava.security.egd=... : /dev/urandom, évite un blocage au démarrage.
 # =============================================================================
 ENTRYPOINT ["java", \
-    "-Xmx600m", \
-    "-Xms256m", \
+    "-XX:MaxRAMPercentage=65", \
+    "-XX:InitialRAMPercentage=40", \
     "-Xss256k", \
     "-XX:+UseG1GC", \
-    "-XX:MaxMetaspaceSize=256m", \
+    "-XX:MaxMetaspaceSize=192m", \
     "-XX:+OptimizeStringConcat", \
     "-Djava.security.egd=file:/dev/./urandom", \
     "org.springframework.boot.loader.launch.JarLauncher"]

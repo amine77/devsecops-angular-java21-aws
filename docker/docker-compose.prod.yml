@@ -38,8 +38,25 @@ services:
     restart: always    # Redémarre automatiquement si le conteneur crashe
     ports: []          # Override : supprime l'exposition du port 5432
                        # Accessible uniquement via le réseau interne Docker
+    # !override remplace la liste héritée de docker-compose.yml au lieu de s'y
+    # ajouter : sans cela, "portfolio-network" resterait et le frontend
+    # retrouverait une route vers la base.
+    networks: !override [data]
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire en prod}
+      # Le backend pointe sur "portfolio_prod" (voir SPRING_DATASOURCE_URL plus
+      # bas) alors que docker-compose.yml ne crée que "portfolio_dev" : sans
+      # cette ligne, Flyway échoue au démarrage sur une base inexistante.
+      POSTGRES_DB: portfolio_prod
+    # Volume dédié : la simulation de production ne doit pas écrire dans la base
+    # de développement. POSTGRES_DB n'est de toute façon pris en compte que sur
+    # un volume vierge — réutiliser celui de dev laisserait "portfolio_prod"
+    # introuvable pour toujours.
+    volumes: !override
+      - postgres_prod_data:/var/lib/postgresql/data
+    # Le healthcheck hérité interroge "portfolio_dev", qui n'existe pas ici.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio_user -d portfolio_prod"]
     deploy:
       resources:
         limits:
@@ -52,6 +69,25 @@ services:
     restart: always
     ports: []           # Override : supprime l'exposition du port 8080
                         # Accessible uniquement depuis frontend via le réseau interne
+    # ATTENTION — ce fichier est une SURCHARGE de docker-compose.yml, qui définit
+    # un "entrypoint" taillé pour le développement local. Sans ce !reset, la
+    # fusion le conservait, avec deux conséquences qui vidaient ce fichier de
+    # son sens :
+    #   1. "-Dspring.profiles.active=dev" l'emportait sur SPRING_PROFILES_ACTIVE
+    #      ci-dessous (une propriété -D prime sur une variable d'environnement
+    #      dans l'ordre de résolution Spring) → la "simulation prod" tournait
+    #      en profil dev.
+    #   2. "-Xmx512m" masquait l'ENTRYPOINT de l'image, donc le dimensionnement
+    #      mémoire réellement livré en production n'était jamais testé ici —
+    #      et 512 Mo de heap dans un conteneur limité à 400 Mo, c'est l'OOM
+    #      killer garanti sous charge.
+    #
+    # !reset supprime la clé de la configuration fusionnée : l'ENTRYPOINT de
+    # l'image s'applique, comme sur EC2 où le compose généré n'en définit aucun.
+    entrypoint: !reset null
+    # Seul service présent sur les deux segments : il fait le pont entre NGINX
+    # et la base, ce qui est exactement son rôle.
+    networks: !override [edge, data]
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_prod
@@ -60,14 +96,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET est obligatoire en prod}
       JWT_EXPIRATION_MS: 86400000   # 24h
       SERVER_PORT: 8080
-      # JVM optimisée pour EC2 t2.micro (1GB RAM)
-      JAVA_OPTS: >-
-        -Xmx300m
-        -Xms128m
-        -Xss256k
-        -XX:+UseG1GC
-        -XX:MaxMetaspaceSize=128m
-        -Djava.security.egd=file:/dev/./urandom
+      # Pas de JAVA_OPTS ici : l'ENTRYPOINT du Dockerfile est en forme exec
+      # (sans shell), donc cette variable n'était jamais lue — elle donnait
+      # l'illusion d'un réglage actif. Le heap suit désormais automatiquement
+      # "deploy.resources.limits.memory" ci-dessous via -XX:MaxRAMPercentage.
+      # Pour donner plus de mémoire à la JVM, augmenter cette limite.
     # Sécurité : filesystem en lecture seule
     # Le tmpfs permet aux fichiers temporaires Java d'exister en mémoire
     read_only: true
@@ -80,7 +113,17 @@ services:
     deploy:
       resources:
         limits:
-          memory: 400M    # Limite stricte — simulation EC2 t2.micro
+          # 768M : valeur EXACTE du compose généré sur l'EC2
+          # (terraform/modules/ec2/user-data.sh.tpl). L'ancienne valeur de 400M
+          # se réclamait d'une "simulation EC2 t2.micro" alors que l'instance
+          # déployée est une t3.small — la simulation contredisait la prod.
+          #
+          # Ça n'a rien d'un détail : le heap est dimensionné en POURCENTAGE de
+          # cette limite (-XX:MaxRAMPercentage dans le Dockerfile). Simuler avec
+          # une limite fausse, c'est tester un dimensionnement mémoire qui ne
+          # sera jamais celui de la production. Mesuré à 400M, le conteneur
+          # tournait à 97,7 % d'occupation.
+          memory: 768M
           cpus: "0.5"     # Limite CPU (simulation)
         reservations:
           memory: 128M    # Mémoire garantie au démarrage
@@ -92,6 +135,8 @@ services:
     restart: always
     ports:
       - "80:80"         # En prod, seul le port 80 est exposé (HTTPS géré par l'Ingress)
+    # Absent de "data" : une faille dans NGINX ne donne aucune route vers la base.
+    networks: !override [edge]
     # Filesystem en lecture seule pour NGINX
     read_only: true
     tmpfs:
@@ -103,17 +148,48 @@ services:
     deploy:
       resources:
         limits:
-          memory: 64M     # NGINX est très léger en prod
+          memory: 128M    # Aligné sur le compose généré sur l'EC2
           cpus: "0.25"
         reservations:
           memory: 32M
 
 # ===========================================================================
-# Réseau production — isolation renforcée
+# Réseaux production — isolation par segmentation
 # ===========================================================================
+# CE QUI ÉTAIT FAIT AVANT, ET POURQUOI ÇA NE POUVAIT PAS MARCHER
+#
+# Ce fichier posait "com.docker.network.bridge.enable_icc: false" sur l'unique
+# réseau, en annonçant que « les conteneurs ne peuvent se parler que via les
+# règles explicites ». Ces règles explicites n'existent pas : sur un réseau
+# défini par l'utilisateur, enable_icc=false bloque TOUT trafic entre
+# conteneurs, et le seul mécanisme de dérogation (--link) est hérité du bridge
+# par défaut et ne s'applique pas ici.
+#
+# Effet réel : le backend n'atteignait jamais PostgreSQL (SocketTimeout au
+# démarrage de Flyway, redémarrage en boucle) et NGINX n'atteignait jamais le
+# backend. La « simulation de production » ne pouvait donc rien simuler.
+#
+# CE QUI EST FAIT MAINTENANT
+#
+# L'intention — que le frontend ne puisse pas parler à la base — est conservée,
+# mais exprimée par la segmentation, qui est le mécanisme prévu pour ça :
+#
+#   frontend ──edge──> backend ──data──> postgres
+#
+# Le frontend n'est pas sur "data" : il n'a aucune route vers PostgreSQL.
+# "internal: true" prive en plus le segment data de route vers l'extérieur,
+# donc la base n'a aucun accès sortant à Internet.
 networks:
-  portfolio-network:
+  edge:
+    name: portfolio-edge
     driver: bridge
-    driver_opts:
-      com.docker.network.bridge.enable_icc: "false"  # Isolation inter-conteneurs désactivée
-      # Les conteneurs ne peuvent se parler que via les règles explicites
+  data:
+    name: portfolio-data
+    driver: bridge
+    internal: true
+
+# Volume propre à la simulation, distinct de "portfolio_postgres_data" utilisé
+# par le mode développement.
+volumes:
+  postgres_prod_data:
+    name: portfolio_postgres_prod_data
