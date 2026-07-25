@@ -247,11 +247,15 @@ variable "jwt_secret" {
 variable "deployment_mode" {
   description = <<-EOT
     Mode de déploiement de l'EC2 :
-      "docker" → Docker Compose (Phase 6 — simple, stable)
-      "k3s"    → K3s + ArgoCD GitOps (Phase 20 — Kubernetes Free Tier avec SWAP)
+      "docker" → Docker Compose (Phase 6 — mode RÉELLEMENT déployé aujourd'hui)
+      "k3s"    → K3s + ArgoCD GitOps (Phase 20 — écrit et testé, non déployé)
+
+    Le défaut est "docker" pour refléter la production réelle : un clone du
+    dépôt sans terraform.tfvars doit reconstruire ce qui tourne, pas une
+    variante jamais mise en service.
   EOT
-  type    = string
-  default = "k3s"
+  type        = string
+  default     = "docker"
 
   validation {
     condition     = contains(["docker", "k3s"], var.deployment_mode)
@@ -271,7 +275,7 @@ variable "argocd_admin_password" {
     Affiché dans l'UI ArgoCD et nécessaire pour argocd CLI login.
     Generate: openssl rand -base64 16
   EOT
-  type      = string
-  sensitive = true
-  default   = ""
+  type        = string
+  sensitive   = true
+  default     = ""
 }

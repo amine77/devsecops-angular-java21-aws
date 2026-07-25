@@ -25,9 +25,9 @@ variable "instance_type" {
 }
 
 variable "deployment_mode" {
-  description = "Mode de déploiement : 'docker' (Compose, Phase 6) ou 'k3s' (Kubernetes, Phase 20)"
+  description = "Mode de déploiement : 'docker' (Compose, Phase 6 — en production) ou 'k3s' (Kubernetes, Phase 20 — non déployé)"
   type        = string
-  default     = "k3s"
+  default     = "docker"
 
   validation {
     condition     = contains(["docker", "k3s"], var.deployment_mode)
