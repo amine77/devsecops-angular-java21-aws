@@ -226,14 +226,18 @@ resource "aws_instance" "main" {
   # POURQUOI base64gzip PLUTÔT QUE user_data BRUT
   # EC2 plafonne le user_data à 16 384 octets avant encodage, et c'est une
   # limite d'API : elle fait échouer le "terraform plan", pas seulement l'apply.
-  # user-data.sh.tpl pèse ~17 Ko une fois le script de sauvegarde et le script
-  # de déploiement intégrés — soit déjà au-dessus du plafond.
+  # user-data.sh.tpl pèse 18 618 octets une fois le script de sauvegarde et le
+  # script de déploiement intégrés — soit déjà au-dessus du plafond.
   #
   # cloud-init reconnaît les octets magiques gzip et décompresse le payload
   # avant de l'exécuter : le script arrive intact côté instance. Le texte étant
-  # très redondant (commentaires, indentation), on retombe autour de 5 Ko, ce
-  # qui redonne de la marge au lieu de rogner les commentaires jusqu'au
-  # prochain dépassement.
+  # très redondant (commentaires, indentation), on retombe à 6 496 octets
+  # (8 664 une fois encodé en base64), ce qui redonne de la marge au lieu de
+  # rogner les commentaires jusqu'au prochain dépassement.
+  #
+  # Validé de bout en bout sur instance jetable le 2026-07-25 : cloud-init a
+  # décompressé et exécuté le script sans erreur, stack applicative complète en
+  # 160 s, aller-retour backup → restauration conforme.
   user_data_base64 = base64gzip(var.deployment_mode == "k3s" ? templatefile("${path.module}/user-data-k3s.sh.tpl", {
     aws_region            = var.aws_region
     ecr_backend_url       = var.ecr_backend_url

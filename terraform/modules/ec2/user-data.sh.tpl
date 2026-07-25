@@ -304,7 +304,18 @@ if [ -z "$BUCKET" ]; then
 fi
 
 STAMP=$(date -u +%Y%m%d-%H%M%S)
-KEY="postgres/$DB_NAME-$STAMP.sql.gz"
+
+# Discriminant d'instance dans la clé S3 : plusieurs instances peuvent écrire
+# dans le même bucket (recréation par Terraform, instance de test, bascule
+# bleu/vert). Sans lui, deux dumps de bases différentes portent exactement le
+# même nom et rien ne permet de savoir lequel restaurer.
+IMDS_TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 60" --max-time 5 || true)
+INSTANCE_ID=$(curl -s --max-time 5 -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" \
+  http://169.254.169.254/latest/meta-data/instance-id || true)
+[ -n "$INSTANCE_ID" ] || INSTANCE_ID="unknown"
+
+KEY="postgres/$DB_NAME-$STAMP-$INSTANCE_ID.sql.gz"
 TMP=$(mktemp /tmp/pgdump-XXXXXX.sql.gz)
 # Le fichier temporaire ne doit jamais rester sur disque en cas d'échec
 trap 'rm -f "$TMP"' EXIT
@@ -376,7 +387,24 @@ gunzip -c "$TMP" | docker exec -i portfolio-postgres psql -U "$DB_USERNAME" -d "
 
 echo "[restore] Redémarrage du backend..."
 docker compose -f /opt/portfolio/docker-compose.yml start backend
-echo "[restore] Terminé."
+
+# "start" rend la main dès que le conteneur tourne, alors que Spring Boot met
+# encore ~1 min à être prêt. Sans cette attente le script annonçait "Terminé"
+# pendant que le site répondait encore 502, ce qui donne à croire que la
+# restauration a échoué.
+echo "[restore] Attente de la disponibilité du backend..."
+for _ in $(seq 1 40); do
+  HEALTH=$(docker inspect -f '{{.State.Health.Status}}' portfolio-backend 2>/dev/null || echo starting)
+  if [ "$HEALTH" = "healthy" ]; then
+    echo "[restore] Terminé — backend disponible."
+    exit 0
+  fi
+  sleep 10
+done
+
+echo "[restore] Base restaurée, mais le backend n'est pas 'healthy' après 400 s." >&2
+echo "[restore] Vérifier : docker logs portfolio-backend" >&2
+exit 1
 RESTORE
 
 # Injection des valeurs Terraform dans les deux scripts (heredocs 'quoted' :
