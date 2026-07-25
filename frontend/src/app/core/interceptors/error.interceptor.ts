@@ -25,6 +25,20 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       switch (error.status) {
         case 401:
+          // Un 401 sur la requête de connexion elle-même veut dire « identifiants
+          // refusés », pas « session expirée » : il n'y a aucune session à
+          // nettoyer et le composant de login affiche déjà le bon message.
+          //
+          // Sans cette exclusion, chaque tentative ratée renaviguait vers
+          // /auth/login en passant l'URL courante comme returnUrl — or cette
+          // URL contenait déjà un returnUrl. La chaîne doublait de longueur à
+          // chaque essai (observé : ~500 caractères après 6 tentatives) et
+          // finissait par dépasser les limites d'URL du navigateur et les
+          // tampons d'en-têtes de NGINX.
+          if (req.url.includes('/auth/login')) {
+            break;
+          }
+
           // Token expiré ou invalide → nettoyer et rediriger
           storage.clear();
           void router.navigate(['/auth/login'], {
