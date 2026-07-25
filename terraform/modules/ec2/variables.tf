@@ -118,3 +118,14 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "db_backup_bucket" {
+  description = <<-EOT
+    Nom du bucket S3 recevant les dumps PostgreSQL quotidiens (préfixe postgres/).
+    Chaîne vide = backup désactivé (aucune policy IAM créée, script inerte).
+    Depuis la suppression de RDS, c'est la seule protection contre la perte de
+    données : le volume Docker ne survit pas à une terminaison d'instance.
+  EOT
+  type        = string
+  default     = ""
+}

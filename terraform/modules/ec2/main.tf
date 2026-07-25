@@ -141,22 +141,46 @@ resource "aws_iam_role_policy" "cloudwatch_logs" {
   })
 }
 
-# --- Policy : backups DB (pg_dump quotidien vers S3, hors EC2) ---
+# --- Policy : backups DB (pg_dump quotidien vers S3) ---
 # RDS supprimé le 24/07/2026 — PostgreSQL tourne en container sur l'EC2, donc
-# plus aucun backup automatique géré par AWS. Écriture seule, scopée au préfixe
-# db-backups/ du bucket state existant (pas de bucket dédié pour un simple blog).
+# plus aucun backup automatique géré par AWS.
+#
+# La version précédente n'autorisait que s3:PutObject sur le bucket de state.
+# Deux problèmes : (1) sans GetObject, la restauration était IMPOSSIBLE — le
+# backup n'en était pas un ; (2) sans ListBucket/DeleteObject, aucune purge des
+# vieux dumps. On scope désormais sur un bucket dédié (rayon d'action séparé du
+# state Terraform) avec les 4 actions nécessaires au cycle de vie complet.
 resource "aws_iam_role_policy" "db_backup_s3" {
+  count = var.db_backup_bucket == "" ? 0 : 1
+
   name = "${var.name_prefix}-db-backup-s3"
   role = aws_iam_role.ec2.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Sid      = "DbBackupWriteOnly"
-      Effect   = "Allow"
-      Action   = ["s3:PutObject"]
-      Resource = "arn:aws:s3:::portfolio-terraform-state-583931058666/db-backups/*"
-    }]
+    Statement = [
+      {
+        # Lister : nécessaire à la purge de rétention et au listing de restore
+        Sid      = "DbBackupList"
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = "arn:aws:s3:::${var.db_backup_bucket}"
+        Condition = {
+          StringLike = { "s3:prefix" = ["postgres/*"] }
+        }
+      },
+      {
+        # Écrire, relire (restauration) et purger, uniquement sous postgres/
+        Sid    = "DbBackupObjects"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "arn:aws:s3:::${var.db_backup_bucket}/postgres/*"
+      }
+    ]
   })
 }
 
@@ -198,20 +222,32 @@ resource "aws_instance" "main" {
   # User data : script de bootstrap sélectionné selon deployment_mode
   #   "docker" → user-data.sh.tpl    : Docker Compose (Phase 6 — Free Tier)
   #   "k3s"   → user-data-k3s.sh.tpl : K3s + ArgoCD (Phase 20 — Free Tier avec SWAP)
-  user_data = var.deployment_mode == "k3s" ? templatefile("${path.module}/user-data-k3s.sh.tpl", {
-    aws_region             = var.aws_region
-    ecr_backend_url        = var.ecr_backend_url
-    ecr_frontend_url       = var.ecr_frontend_url
-    rds_host               = var.rds_host
-    rds_port               = var.rds_port
-    db_name                = var.db_name
-    db_username            = var.db_username
-    db_password            = var.db_password
-    jwt_secret             = var.jwt_secret
-    environment            = var.environment
-    github_repo            = var.github_repo
-    argocd_admin_password  = var.argocd_admin_password
-  }) : templatefile("${path.module}/user-data.sh.tpl", {
+  #
+  # POURQUOI base64gzip PLUTÔT QUE user_data BRUT
+  # EC2 plafonne le user_data à 16 384 octets avant encodage, et c'est une
+  # limite d'API : elle fait échouer le "terraform plan", pas seulement l'apply.
+  # user-data.sh.tpl pèse ~17 Ko une fois le script de sauvegarde et le script
+  # de déploiement intégrés — soit déjà au-dessus du plafond.
+  #
+  # cloud-init reconnaît les octets magiques gzip et décompresse le payload
+  # avant de l'exécuter : le script arrive intact côté instance. Le texte étant
+  # très redondant (commentaires, indentation), on retombe autour de 5 Ko, ce
+  # qui redonne de la marge au lieu de rogner les commentaires jusqu'au
+  # prochain dépassement.
+  user_data_base64 = base64gzip(var.deployment_mode == "k3s" ? templatefile("${path.module}/user-data-k3s.sh.tpl", {
+    aws_region            = var.aws_region
+    ecr_backend_url       = var.ecr_backend_url
+    ecr_frontend_url      = var.ecr_frontend_url
+    rds_host              = var.rds_host
+    rds_port              = var.rds_port
+    db_name               = var.db_name
+    db_username           = var.db_username
+    db_password           = var.db_password
+    jwt_secret            = var.jwt_secret
+    environment           = var.environment
+    github_repo           = var.github_repo
+    argocd_admin_password = var.argocd_admin_password
+    }) : templatefile("${path.module}/user-data.sh.tpl", {
     aws_region       = var.aws_region
     ecr_backend_url  = var.ecr_backend_url
     ecr_frontend_url = var.ecr_frontend_url
@@ -223,7 +259,8 @@ resource "aws_instance" "main" {
     db_password      = var.db_password
     jwt_secret       = var.jwt_secret
     environment      = var.environment
-  })
+    db_backup_bucket = var.db_backup_bucket
+  }))
 
   # Remplacer l'instance si le user_data change (force un redéploiement)
   # Raison : user_data ne peut pas être modifié sur une instance en cours d'exécution
@@ -244,10 +281,32 @@ resource "aws_instance" "main" {
   }
 
   lifecycle {
-    # Evite la recreation de l'EC2 quand Amazon Linux publie une nouvelle AMI
-    # ou quand user_data change. L'EC2 est gere manuellement (docker-compose,
-    # NGINX, Certbot). Une recreation perdrait toute la configuration.
-    ignore_changes = [ami, user_data]
+    # ATTENTION — ce bloc neutralise "user_data_replace_on_change" ci-dessus :
+    # modifier user-data.sh.tpl n'a AUCUN effet sur l'instance en cours.
+    #
+    # C'est volontaire et nécessaire tant que la base vit dans un volume Docker
+    # sur cette instance : sans cela, la moindre retouche du template
+    # détruirait et recréerait l'EC2, donc la base.
+    #
+    # Conséquence à assumer : le template n'est pas "ce qui tourne", c'est
+    # "ce qui serait reconstruit". Les deux ne peuvent diverger sans risque que
+    # si on vérifie régulièrement que le template reconstruit bien la prod.
+    #
+    # PROCÉDURE DE VALIDATION (à rejouer après toute modif du template) :
+    #   1. sudo /opt/portfolio/backup-db.sh          # dump frais vers S3
+    #   2. déployer une instance jetable avec le même template
+    #   3. y restaurer le dump via restore-db.sh, vérifier l'app
+    #   4. détruire l'instance jetable
+    #
+    # ignore_changes sur "ami" évite en plus une recréation surprise lorsque
+    # Amazon Linux publie une nouvelle image.
+    #
+    # user_data ET user_data_base64 sont tous deux listés : l'instance en
+    # service a été créée avec l'attribut "user_data", que la configuration ne
+    # renseigne plus. Sans l'entrée "user_data_base64", le passage d'un
+    # attribut à l'autre serait vu comme un changement de user_data et
+    # déclencherait le remplacement de l'instance — donc la perte de la base.
+    ignore_changes = [ami, user_data, user_data_base64]
   }
 }
 
