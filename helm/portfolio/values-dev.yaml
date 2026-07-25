@@ -10,7 +10,7 @@ global:
   imageRegistry: "ACCOUNT_ID.dkr.ecr.eu-west-3.amazonaws.com"
 backend:
   image:
-    tag: sha-5a8ee646305fa55c6d7f11905935ebfc4b6e239a # ← CI-GITOPS-TAG-BACKEND (remplacé par sha-XXXXXXX)
+    tag: sha-08c771d9573ae1ac3c1312d132ab3cf8275a362e # ← CI-GITOPS-TAG-BACKEND (remplacé par sha-XXXXXXX)
   replicas: 1 # 1 replica suffit en dev
   resources:
     requests:
@@ -21,7 +21,7 @@ backend:
       cpu: "300m"
 frontend:
   image:
-    tag: sha-5a8ee646305fa55c6d7f11905935ebfc4b6e239a # ← CI-GITOPS-TAG-FRONTEND (remplacé par sha-XXXXXXX)
+    tag: sha-08c771d9573ae1ac3c1312d132ab3cf8275a362e # ← CI-GITOPS-TAG-FRONTEND (remplacé par sha-XXXXXXX)
   replicas: 1
 ingress:
   host: portfolio-dev.local
