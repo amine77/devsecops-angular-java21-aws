@@ -196,14 +196,18 @@ terraform/
     ├── cloudwatch/             # Alarmes + log groups applicatifs
     ├── lambda-contact-form/    # Phase 15 — Lambda serverless
     ├── lambda-image-resize/    # Phase 15 — Lambda serverless
-    ├── lambda-weekly-report/   # Phase 15 — Lambda serverless
-    └── rds/                    # ⚠️ Code orphelin — retiré de main.tf le 24/07/2026, non instancié
+    └── lambda-weekly-report/   # Phase 15 — Lambda serverless
 ```
+
+Le module `rds/` a été retiré de `main.tf` le 24/07/2026 puis supprimé du dépôt :
+laisser du code orphelin dans `modules/` entretient l'illusion qu'il est encore
+utilisé et le fait scanner par la CI sans qu'il soit jamais appliqué.
 
 ## Sécurité
 
 - **Secrets** : jamais dans le state ou le code → variables sensibles + terraform.tfvars non committé
-- **PostgreSQL** : conteneurisé sur l'EC2, pas d'exposition réseau externe (`ports: []` en prod), plus de RDS/subnet privé dédié depuis le 24/07/2026
+- **PostgreSQL** : conteneurisé sur l'EC2, aucune clé `ports:` déclarée sur le service en production — sans publication, la base n'est joignable que depuis le réseau Docker. Plus de RDS/subnet privé dédié depuis le 24/07/2026
+  > ⚠️ Écrire `ports: []` dans un fichier d'override Compose **n'annule rien** : Compose *fusionne* les listes au lieu de les remplacer. Il faut `ports: !override []`. Piège vérifié le 25/07/2026 sur `docker-compose.prod.yml`, où le 8080 du backend était réellement publié malgré un `ports: []`.
 - **EC2** : IMDSv2 obligatoire, chiffrement root volume, IAM moindre privilège (dont policy `s3:PutObject` scopée au préfixe `db-backups/*` pour les backups Postgres)
 - **SG** : principe du moindre privilège, pas de règles overly permissive
 - **VPC Flow Logs** : audit de tout le trafic réseau

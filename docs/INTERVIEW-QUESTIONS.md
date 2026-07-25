@@ -165,7 +165,7 @@ Trois raisons fondamentales :
 2. **State management** : Terraform garde l'état de l'infra et calcule uniquement le diff nécessaire. Pas de scripts bash qui échouent à mi-chemin sans rollback.
 3. **Documentation vivante** : les fichiers `.tf` décrivent l'architecture aussi clairement qu'un diagramme, mais sont exécutables et vérifiables par code review.
 
-Dans ce projet, 78 ressources AWS gérées en code, avec modules réutilisables (vpc, ec2, rds, ecr, lambda, cloudwatch, secrets-manager).
+Dans ce projet, 9 modules réutilisables (vpc, ec2, ecr, security-groups, cloudwatch, secrets-manager, 3× lambda). Le module `rds/` a été supprimé le 25/07/2026 après migration de la base vers un conteneur PostgreSQL sur l'EC2 — décision de coût (~18 $/mois) assumée avec son compromis : SPOF app+DB, compensé par un `pg_dump` quotidien vers S3.
 
 ---
 
@@ -4208,7 +4208,7 @@ terraform/
 │   │   ├── variables.tf
 │   │   └── outputs.tf
 │   ├── ec2/
-│   ├── rds/
+│   ├── secrets-manager/
 │   ├── lambda-contact-form/
 │   ├── lambda-image-resize/
 │   └── lambda-weekly-report/

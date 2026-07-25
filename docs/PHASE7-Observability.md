@@ -85,6 +85,7 @@ fields @timestamp, message, requestId
 |---------------------|-------------|-----------------|
 | `auth_login_success_total` | Logins réussis | `AuthService.login()` |
 | `auth_login_failure_total` | Échecs d'auth | `GlobalExceptionHandler.handleUnauthorized()` |
+| `auth_login_rate_limited_total{reason}` | Requêtes de login rejetées par le limiteur — `reason="locked_out"` (5 échecs/15 min) ou `"throttled"` (20 req/min) | `LoginRateLimitFilter` |
 | `http_errors_total{status, status_family}` | Erreurs HTTP | `GlobalExceptionHandler.handleUnauthorized()` |
 | `operation_duration_seconds{operation}` | Durée opérations métier | Usage manuel via `Timer` |
 
@@ -108,6 +109,7 @@ curl http://localhost:8080/actuator/prometheus
 # Exemple de sortie
 auth_login_success_total{result="success"} 42.0
 auth_login_failure_total{result="failure"} 3.0
+auth_login_rate_limited_total{reason="locked_out"} 2.0
 http_errors_total{status="401",status_family="4xx"} 3.0
 http_server_requests_seconds_count{method="POST",status="200",uri="/api/auth/login"} 42.0
 ```

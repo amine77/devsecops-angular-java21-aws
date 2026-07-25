@@ -247,9 +247,9 @@ COMMUNICATION ENTRE CONTENEURS (réseau Docker "portfolio-network")
 
 | Aspect | Choix | Pourquoi |
 |--------|-------|----------|
-| Hébergement | **Conteneur Docker** (`postgres:15-alpine`) sur l'EC2, service `postgres` de `/opt/portfolio/docker-compose.yml` | Ex-RDS managé jusqu'au 23/07/2026 — migré pour réduire le coût (~18 $/mois de RDS en moins). Compromis assumé : plus de SPOF app+DB sur le même EC2/EBS |
-| Volume | Volume Docker nommé `postgres_data` | Persistance des données indépendante du cycle de vie du conteneur |
-| Connexion | Réseau Docker interne `portfolio-network` | Le backend résout `postgres` par DNS Docker, pas d'exposition réseau externe (`ports: []` en prod) |
+| Hébergement | **Conteneur Docker** (`postgres:16-alpine`) sur l'EC2, service `postgres` de `/opt/portfolio/docker-compose.yml` | Ex-RDS managé jusqu'au 23/07/2026 — migré pour réduire le coût (~18 $/mois de RDS en moins). Compromis assumé : plus de SPOF app+DB sur le même EC2/EBS |
+| Volume | Volume Docker nommé `postgres-data` | Persistance des données indépendante du cycle de vie du conteneur |
+| Connexion | Réseau Docker interne | Le backend résout `postgres` par DNS Docker. **Aucune clé `ports:` n'est déclarée** sur le service en production : sans publication, la base n'est joignable que depuis le réseau Docker. C'est ce qui remplace le security group RDS d'avant la migration |
 | Pool | HikariCP (défaut Spring) | Pool de connexions performant |
 | Backup | `pg_dump` quotidien (systemd timer, 03h00 UTC) → upload S3 (`db-backups/`), rétention locale 14 jours | Remplace les backups automatiques RDS, seul filet de sécurité hors-EC2 depuis la suppression de RDS le 24/07/2026 |
 
@@ -412,9 +412,8 @@ devsecops-angular-java21-aws/              ← Racine du monorepo
 │       ├── cloudwatch/
 │       ├── lambda-contact-form/
 │       ├── lambda-image-resize/
-│       ├── lambda-weekly-report/
-│       └── rds/                           ← Code encore présent mais non référencé dans main.tf
-│                                             (orphelin depuis la suppression du 24/07/2026)
+│       └── lambda-weekly-report/          ← (plus de module rds/ : supprimé du dépôt le 25/07/2026,
+│                                             après avoir été retiré de main.tf le 24/07/2026)
 │
 ├── k8s/ , helm/ , argocd/                  ← Manifests bruts, charts Helm, config ArgoCD
 │                                             (mode alternatif K3s — PHASE18/19/20)

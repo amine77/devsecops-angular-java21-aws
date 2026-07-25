@@ -28,7 +28,8 @@ La Phase 16 renforce la posture de sécurité du portfolio en ajoutant :
 │ (secrets scan)  │ Semgrep (SAST)    │ Trivy images                  │
 │                 │ Checkstyle        │ Docker Bench Security         │
 │ Dependabot      │ ESLint            │                               │
-│ (CVE alerts)    │                   │                               │
+│ (CVE alerts)    │                   │ Rate limiting ★NEW            │
+│                 │                   │ NGINX + backend (2 niveaux)   │
 │                 ├───────────────────┤                               │
 │                 │ SonarCloud ★NEW   │                               │
 │                 │ Quality Gate      │                               │
@@ -274,6 +275,79 @@ gitleaks detect --config .gitleaks.toml --source . --log-opts="HEAD~1..HEAD"
 
 ---
 
+## 7. Rate limiting — protection anti-brute-force de `/auth/login`
+
+BCrypt cost=12 rend chaque essai coûteux, mais ne limite pas *le nombre*
+d'essais. Sans plafond, un attaquant dispose d'un oracle illimité sur le
+formulaire de connexion. Deux limiteurs indépendants s'en chargent, à deux
+niveaux de la pile — si l'un est mal configuré ou contourné, l'autre tient.
+
+### Fichiers
+
+- [backend/.../security/LoginRateLimiter.java](../backend/src/main/java/com/portfolio/backend/security/LoginRateLimiter.java) — compteurs Caffeine
+- [backend/.../security/LoginRateLimitFilter.java](../backend/src/main/java/com/portfolio/backend/security/LoginRateLimitFilter.java) — filtre servlet devant Spring Security
+- [backend/.../security/ClientIpResolver.java](../backend/src/main/java/com/portfolio/backend/security/ClientIpResolver.java) — résolution de l'IP réelle derrière le proxy
+- [frontend/nginx.conf](../frontend/nginx.conf) — `limit_req_zone` / `limit_req`
+
+### Les deux niveaux
+
+| Niveau | Règle | Réponse |
+|--------|-------|---------|
+| **Backend** — verrouillage | 5 échecs / 15 min par IP | `429` + `Retry-After` (secondes restantes) |
+| **Backend** — débit | 20 requêtes / 1 min par IP | `429` + `Retry-After` |
+| **NGINX** — débit | `rate=10r/m`, `burst=5 nodelay` | `429` (`limit_req_status 429`) |
+
+Tout est configurable par variables d'environnement
+(`RATE_LIMIT_MAX_FAILURES`, `RATE_LIMIT_FAILURE_WINDOW`, `RATE_LIMIT_MAX_ATTEMPTS`,
+`RATE_LIMIT_ATTEMPT_WINDOW`, `RATE_LIMIT_ENABLED`).
+
+### Le piège de l'IP cliente
+
+Derrière un reverse proxy, `request.getRemoteAddr()` renvoie l'IP de NGINX :
+tout le trafic partagerait un seul compteur et le premier attaquant
+verrouillerait le site entier. `ClientIpResolver` lit donc les en-têtes — mais
+tous ne se valent pas :
+
+- **`X-Real-IP`** : NGINX l'**écrase** à chaque requête (`proxy_set_header`),
+  un client ne peut donc pas le falsifier. C'est celui qui fait foi.
+- **`X-Forwarded-For`** : *concaténé* — un client qui envoie déjà cet en-tête
+  voit sa valeur préservée en tête de liste. D'où `split(",")[0]` et un usage
+  en repli seulement.
+
+`app.rate-limit.behind-proxy=false` ignore les deux en-têtes : indispensable si
+le backend est un jour exposé directement, sinon n'importe qui se forge une IP.
+
+### Observabilité
+
+`auth_login_rate_limited_total{reason="locked_out"|"throttled"}` distingue le
+verrouillage après échecs répétés du simple dépassement de débit. Une hausse de
+`locked_out` signale une attaque ; une hausse de `throttled` signale plutôt un
+client mal codé.
+
+### Vérification en conditions réelles
+
+Testé sur la simulation de production, en passant par le port 80 (donc à
+travers NGINX), le 25/07/2026 :
+
+| Tentative | Réponse | Origine |
+|-----------|---------|---------|
+| 1 – 5 | `401` | authentification |
+| 6 – 7 | `429` + `Retry-After: 895` | backend (verrouillage) |
+| 8 – 9 | `429` sans `Retry-After` | NGINX (débit) |
+
+La présence ou non de `Retry-After` identifie le limiteur qui a répondu — c'est
+d'ailleurs ce que le frontend exploite pour afficher soit « Réessayez dans
+N min », soit un message d'attente générique.
+
+### Limite connue
+
+Les compteurs Caffeine sont **en mémoire** : ils repartent à zéro au
+redémarrage du backend et ne sont pas partagés entre instances. Acceptable sur
+un déploiement mono-instance ; une montée en charge horizontale imposerait de
+déporter les compteurs dans Redis.
+
+---
+
 ## Résumé des fichiers créés
 
 ```
@@ -314,5 +388,6 @@ make security-phase16      # SBOM + Trivy en une commande
 | Supply Chain Security | SBOM CycloneDX + Cosign SLSA |
 | Vulnerability Management | Dependabot + OWASP DC |
 | Secrets Management | Gitleaks custom config |
+| Défense en profondeur runtime | Rate limiting NGINX + backend, métriques dédiées |
 | OSS Best Practices | OpenSSF Scorecard |
 | Compliance SBOM | Executive Order 14028 / NTIA |

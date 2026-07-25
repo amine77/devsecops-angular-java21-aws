@@ -12,14 +12,14 @@ et développement assisté par IA (Claude Code + MCP).
 |--------|-------------|
 | Frontend | Angular 21 (zoneless), TypeScript, Angular Material 3 (dark theme), Signals |
 | Backend | Spring Boot 3.5, Java 21, Virtual Threads (Project Loom) |
-| Base de données | PostgreSQL 15, Flyway migrations |
+| Base de données | PostgreSQL conteneurisé sur l'EC2 (16 en production, 15 en local), Flyway migrations, backup `pg_dump` quotidien vers S3 |
 | Cache | Redis 7.2 — Spring Cache `@Cacheable`, TTL 5/10 min |
 | Messaging | Apache Kafka KRaft (sans Zookeeper) — événements métier asynchrones |
 | Serverless | AWS Lambda (Node.js 20) — 3 fonctions : rapport hebdomadaire, resize images, formulaire contact |
-| Sécurité | JWT (HS384), BCrypt cost=12, Spring Security, OWASP Dependency Check, OWASP ZAP DAST |
+| Sécurité | JWT (HS384), BCrypt cost=12, Spring Security, rate limiting anti-brute-force (backend + NGINX), OWASP Dependency Check, OWASP ZAP DAST |
 | Observabilité | Prometheus, Grafana (3 dashboards), Logback JSON + MDC, Micrometer |
-| Tests | JUnit 5 + Mockito (47 tests), Jest (53 tests), Cypress E2E (20 specs), Gatling load tests (3 simulations) |
-| Infrastructure | AWS — EC2, RDS, ECR, VPC, CloudWatch, Lambda, S3, API Gateway, SES via Terraform |
+| Tests | JUnit 5 + Mockito (86 tests), Jest (141 tests), Cypress E2E (24 tests), Gatling load tests (3 simulations) |
+| Infrastructure | AWS — EC2, ECR, VPC, CloudWatch, Lambda, S3, API Gateway, SES, Secrets Manager via Terraform |
 | CI/CD | GitHub Actions — build, test, SAST (CodeQL), Trivy, OWASP DC, deploy |
 | **GitOps** | **ArgoCD — App of Apps · Helm Chart · Kustomize overlays · modèle pull** |
 | **IA & Outillage** | **Claude Code CLI · 21st Magic MCP · Model Context Protocol** |
@@ -329,9 +329,9 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   ├── modules/
 │   │   ├── vpc/                          # VPC + subnets + IGW
 │   │   ├── ecr/                          # Registres Docker privés
-│   │   ├── security-groups/              # Règles firewall EC2/RDS
-│   │   ├── rds/                          # PostgreSQL RDS Free Tier
-│   │   ├── ec2/                          # Serveur applicatif t2.micro
+│   │   ├── security-groups/              # Règles firewall EC2 (80/443/22)
+│   │   ├── ec2/                          # Serveur applicatif t3.small + EIP + IAM (dont backup S3)
+│   │   ├── secrets-manager/              # Secrets applicatifs (JWT, DB) — Phase 21
 │   │   ├── cloudwatch/                   # Logs + métriques + alertes
 │   │   ├── lambda-weekly-report/         # IAM + Lambda + EventBridge Scheduler
 │   │   ├── lambda-image-resize/          # IAM + Lambda + S3 bucket + notification
@@ -548,7 +548,7 @@ Injectées via GitHub Actions Secrets :
 | Variable | Description |
 |----------|-------------|
 | `JWT_SECRET` | Clé HMAC ≥ 32 chars (`openssl rand -base64 64`) |
-| `SPRING_DATASOURCE_URL` | JDBC URL RDS PostgreSQL |
+| `SPRING_DATASOURCE_URL` | JDBC URL du PostgreSQL conteneurisé (`jdbc:postgresql://postgres:5432/...`) |
 | `SPRING_DATASOURCE_USERNAME` | Utilisateur DB |
 | `SPRING_DATASOURCE_PASSWORD` | Mot de passe DB |
 | `REDIS_HOST` | Host Redis (ElastiCache ou service Docker) |
@@ -558,3 +558,5 @@ Injectées via GitHub Actions Secrets :
 | `TF_VAR_lambda_sender_email` | Email SES vérifié (expéditeur Lambdas) |
 | `TF_VAR_lambda_recipient_email` | Email de réception des rapports et contacts |
 | `SERVER_PORT` | Port HTTP (défaut : 8080) |
+| `RATE_LIMIT_MAX_FAILURES` / `RATE_LIMIT_FAILURE_WINDOW` | Verrouillage anti-brute-force (défaut : 5 échecs / `PT15M`) |
+| `RATE_LIMIT_MAX_ATTEMPTS` / `RATE_LIMIT_ATTEMPT_WINDOW` | Plafond de débit sur `/auth/login` (défaut : 20 req / `PT1M`) |

@@ -96,6 +96,29 @@ return RedisCacheManager.builder(connectionFactory)
 
 Évite de cacher une réponse 404 — si `GET /projects/999` retourne null, la prochaine requête ira en base de données (pas de null poisoning).
 
+### Dégradation gracieuse quand Redis est indisponible
+
+Spring utilise par défaut `SimpleCacheErrorHandler`, qui **propage** les
+exceptions du cache. Une simple indisponibilité de Redis transformait donc
+`GET /projects` — la page publique la plus visitée — en **HTTP 500**, alors que
+la donnée est parfaitement lisible en base.
+
+`CacheConfig` implémente `CachingConfigurer` et fournit un `CacheErrorHandler`
+qui journalise puis avale l'erreur :
+
+```java
+@Override
+public CacheErrorHandler errorHandler() {
+    return new CacheErrorHandler() { /* log WARN, pas de rethrow */ };
+}
+```
+
+Le cache est une optimisation, pas une dépendance dure : Redis à terre, le site
+sert la même donnée depuis PostgreSQL, plus lentement. Les quatre méthodes du
+handler sont couvertes (`get`, `put`, `evict`, `clear`) — n'en traiter qu'une
+laisserait le 500 revenir par une autre porte, typiquement l'éviction déclenchée
+par une écriture admin.
+
 ---
 
 ## 3. Clés Redis
