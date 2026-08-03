@@ -1,7 +1,7 @@
 # =============================================================================
 # ZAP Alert Suppression Rules — Portfolio DevSecOps API
 # =============================================================================
-# Format : <rule_id><TAB><IGNORE|WARN|FAIL><TAB>[parameter]<TAB>[evidence]<TAB>[url]
+# Format : <rule_id><TAB><IGNORE|WARN|FAIL><TAB><url_regex> (3 colonnes tab-séparées minimum, url_regex=.* pour toutes les URLs)
 #
 # Ces règles filtrent les faux positifs propres à une API REST pure (JSON).
 # Une API REST ne génère pas de HTML, ne sert pas de pages web, et n'a pas
@@ -20,42 +20,42 @@
 # 10038 : Content-Security-Policy Header Not Set
 # Raison : CSP protège contre XSS dans les navigateurs. Une API JSON ne renvoie
 # jamais de HTML — CSP n'a aucun sens ici.
-10038	IGNORE
+10038	IGNORE	.*
 
 # 10063 : Permissions-Policy Header Not Set
 # Raison : Permissions-Policy contrôle les fonctionnalités navigateur (caméra,
 # géolocalisation...). Inapplicable à une API JSON.
-10063	IGNORE
+10063	IGNORE	.*
 
 # 10020 : Anti-clickjacking Header (X-Frame-Options)
 # Raison : X-Frame-Options empêche l'intégration dans des iframes. Une API REST
 # ne renvoie pas de HTML — pas de risque de clickjacking.
-10020	IGNORE
+10020	IGNORE	.*
 
 # --- Faux positifs documentés ------------------------------------------------
 
 # 10027 : Information Disclosure - Suspicious Comments
 # Raison : ZAP détecte des "commentaires suspects" dans la spec OpenAPI JSON
 # (/v3/api-docs). Ces descriptions font partie de la documentation, pas du code.
-10027	IGNORE
+10027	IGNORE	.*
 
 # 10096 : Timestamp Disclosure - Unix
 # Raison : Les timestamps dans les réponses JSON (ex: "timestamp": "2024-01-01T...")
 # sont une fonctionnalité intentionnelle de ApiResponse, pas une fuite.
-10096	IGNORE
+10096	IGNORE	.*
 
 # 90003 : Sub Resource Integrity Attribute Missing
 # Raison : Concerne les balises <script> et <link> HTML. Inapplicable à une API JSON.
-90003	IGNORE
+90003	IGNORE	.*
 
 # --- Alertes à surveiller (WARN = log mais ne bloque pas) --------------------
 
 # 10021 : X-Content-Type-Options Header Missing
 # Spring Security devrait l'ajouter automatiquement. Si présent → bug Spring Security.
 # Laisser en WARN pour détecter une régression de configuration.
-10021	WARN
+10021	WARN	.*
 
 # 10035 : Strict-Transport-Security Header
 # HSTS est nécessaire en production HTTPS. En local/CI (HTTP), c'est normal.
 # Laisser en WARN — à vérifier sur l'environnement de prod.
-10035	WARN
+10035	WARN	.*
