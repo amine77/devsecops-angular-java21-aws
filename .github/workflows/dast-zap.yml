@@ -149,7 +149,7 @@ jobs:
       # fail_action: false → ne pas échouer le build sur des alertes (rapport seul)
       - name: ZAP — API Scan (OpenAPI + scan actif)
         if: inputs.scan_type == 'api' || inputs.scan_type == ''
-        uses: zaproxy/action-api-scan@v0.7.0
+        uses: zaproxy/action-api-scan@v0.10.0
         with:
           target: '${{ env.BACKEND_URL }}/v3/api-docs'
           format: openapi
@@ -164,7 +164,7 @@ jobs:
       # Plus rapide, moins intrusif — idéal pour pre-merge check
       - name: ZAP — Baseline Scan (passif uniquement)
         if: inputs.scan_type == 'baseline'
-        uses: zaproxy/action-baseline@v0.12.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
           target: '${{ env.BACKEND_URL }}'
           fail_action: false
