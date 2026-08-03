@@ -166,7 +166,7 @@ jobs:
           # En production : exit-code: '1' pour bloquer sur CRITICAL
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v4.37.4
         if: always()
         with:
           sarif_file: trivy-backend-deploy.sarif
@@ -254,7 +254,7 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v4.37.4
         if: always()
         with:
           sarif_file: trivy-frontend-deploy.sarif

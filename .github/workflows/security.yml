@@ -55,7 +55,7 @@ jobs:
           fetch-depth: 0  # Historique complet — GitLeaks scanne tous les commits
 
       - name: GitLeaks scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # Optionnel pour les orgs
@@ -88,7 +88,7 @@ jobs:
           cache: 'maven'
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v4.37.4
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
@@ -100,10 +100,10 @@ jobs:
 
       - name: Autobuild TypeScript
         if: matrix.language == 'javascript-typescript'
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@v4.37.4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v4.37.4
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -133,7 +133,7 @@ jobs:
           skip-dirs: 'backend/target,frontend/node_modules,frontend/dist'
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v4.37.4
         if: always()
         continue-on-error: true
         with:
