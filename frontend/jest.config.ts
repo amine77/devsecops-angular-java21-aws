@@ -25,7 +25,7 @@ const config: Config = {
   // Patterns de fichiers de tests.
   // testMatch accepte des glob patterns (pas des regex).
   // Propriété config : testMatch (testPathPattern est réservé à la CLI)
-  testMatch: ['<rootDir>/src/**/*.spec.ts'],
+  testMatch: ['**/src/**/*.spec.ts'],
 
   collectCoverageFrom: [
     'src/app/**/*.ts',
