@@ -14,12 +14,15 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 import { ProjectCardComponent } from '@shared/components/project-card/project-card.component';
+import { ArticleCardComponent } from '@shared/components/article-card/article-card.component';
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directive';
 import { LanguageService } from '@core/services/language.service';
 import { ProjectService } from '@core/services/project.service';
+import { ArticleService } from '@core/services/article.service';
 import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { Project } from '@shared/models/project.model';
+import { Article } from '@shared/models/article.model';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 /**
@@ -44,6 +47,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
   imports: [
     RouterLink,
     ProjectCardComponent,
+    ArticleCardComponent,
     LoadingSpinnerComponent,
     TranslatePipe,
     ScrollRevealDirective,
@@ -54,6 +58,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 })
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly projectService = inject(ProjectService);
+  private readonly articleService = inject(ArticleService);
   private readonly lang = inject(LanguageService);
   private readonly scrollAnim = inject(ScrollAnimationService);
 
@@ -70,6 +75,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly featuredProjects = signal<Project[]>([]);
   protected readonly isLoading = signal(true);
   protected readonly error = signal<string | null>(null);
+
+  protected readonly latestArticles = signal<Article[]>([]);
+  protected readonly isLoadingArticles = signal(true);
+  protected readonly articlesError = signal<string | null>(null);
 
   protected readonly techStack = [
     'Angular 21',
@@ -93,6 +102,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadFeaturedProjects();
+    this.loadLatestArticles();
   }
 
   ngAfterViewInit(): void {
@@ -117,6 +127,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadFeaturedProjects();
   }
 
+  protected retryArticlesLoad(): void {
+    this.articlesError.set(null);
+    this.isLoadingArticles.set(true);
+    this.loadLatestArticles();
+  }
+
   private loadFeaturedProjects(): void {
     this.projectService.getFeaturedProjects().subscribe({
       next: (projects) => {
@@ -126,6 +142,19 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       error: () => {
         this.error.set(this.lang.translate('home.featured.error'));
         this.isLoading.set(false);
+      },
+    });
+  }
+
+  private loadLatestArticles(): void {
+    this.articleService.getArticles(0, 3).subscribe({
+      next: (page) => {
+        this.latestArticles.set(page.content);
+        this.isLoadingArticles.set(false);
+      },
+      error: () => {
+        this.articlesError.set(this.lang.translate('home.latest.error'));
+        this.isLoadingArticles.set(false);
       },
     });
   }
