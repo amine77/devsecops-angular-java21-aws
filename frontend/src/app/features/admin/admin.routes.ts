@@ -23,4 +23,18 @@ export const adminRoutes: Routes = [
       import('./project-form/project-form.component').then((m) => m.ProjectFormComponent),
     title: 'Modifier le projet',
   },
+  {
+    path: 'articles/new',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./article-form/article-form.component').then((m) => m.ArticleFormComponent),
+    title: 'Nouvel article',
+  },
+  {
+    path: 'articles/:id/edit',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./article-form/article-form.component').then((m) => m.ArticleFormComponent),
+    title: 'Modifier l\'article',
+  },
 ];
