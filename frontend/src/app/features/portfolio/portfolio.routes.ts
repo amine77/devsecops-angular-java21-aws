@@ -21,6 +21,18 @@ export const portfolioRoutes: Routes = [
     title: 'Projet — Portfolio',
   },
   {
+    path: 'blog',
+    loadComponent: () =>
+      import('./blog/blog-list/blog-list.component').then((m) => m.BlogListComponent),
+    title: 'Blog — Portfolio',
+  },
+  {
+    path: 'blog/:slug',
+    loadComponent: () =>
+      import('./blog/blog-detail/blog-detail.component').then((m) => m.BlogDetailComponent),
+    title: 'Article — Portfolio',
+  },
+  {
     path: 'skills',
     loadComponent: () => import('./skills/skills.component').then((m) => m.SkillsComponent),
     title: 'Compétences — Portfolio',

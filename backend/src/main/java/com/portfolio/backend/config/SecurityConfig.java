@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -101,34 +102,9 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
-            // Règles d'autorisation par URL
-            .authorizeHttpRequests(auth -> auth
-                // Authentification publique
-                .requestMatchers("/auth", "/auth/**").permitAll()
-                // Portfolio public (GET seulement) - separate matchers for each pattern
-                .requestMatchers(HttpMethod.GET, "/projects").permitAll()
-                .requestMatchers(HttpMethod.GET, "/projects/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/skills").permitAll()
-                .requestMatchers(HttpMethod.GET, "/skills/**").permitAll()
-                // Kubernetes probes + Prometheus scraping (Prometheus n'envoie pas de JWT)
-                // Sécurité prod : à protéger par IP restriction (SG AWS) ou management.server.port séparé
-                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
-                .requestMatchers("/actuator/prometheus").permitAll()
-                // Swagger UI (utile pour les recruteurs)
-                .requestMatchers(
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/v3/api-docs/**"
-                ).permitAll()
-                // Admin: HTTP-level protection for write operations on /projects
-                .requestMatchers(HttpMethod.POST, "/projects").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/projects/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/projects/**").hasRole("ADMIN")
-                // Admin: ROLE_ADMIN uniquement
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                // Tout le reste : authentification requise
-                .anyRequest().authenticated()
-            )
+            // Règles d'autorisation par URL (extrait dans une méthode dédiée
+            // pour respecter la limite Checkstyle de longueur de méthode)
+            .authorizeHttpRequests(this::configureAuthorization)
 
             // Handlers d'erreurs HTTP : 401 pour non-authentifié, 403 pour non-autorisé
             .exceptionHandling(ex -> ex
@@ -146,6 +122,55 @@ public class SecurityConfig {
             .addFilterBefore(loginRateLimitFilter, JwtAuthenticationFilter.class)
 
             .build();
+    }
+
+    /**
+     * Règles d'autorisation par URL, extraites de {@link #securityFilterChain}
+     * pour respecter la limite Checkstyle de longueur de méthode.
+     *
+     * <p>Important : les routes /articles/admin* (ROLE_ADMIN) doivent être
+     * déclarées AVANT les routes publiques /articles* — Spring Security
+     * évalue les matchers dans l'ordre de déclaration (premier match gagnant).
+     */
+    private void configureAuthorization(
+        AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth
+    ) {
+        auth
+            // Authentification publique
+            .requestMatchers("/auth", "/auth/**").permitAll()
+            // Portfolio public (GET seulement) - separate matchers for each pattern
+            .requestMatchers(HttpMethod.GET, "/projects").permitAll()
+            .requestMatchers(HttpMethod.GET, "/projects/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/skills").permitAll()
+            .requestMatchers(HttpMethod.GET, "/skills/**").permitAll()
+            // Articles : les routes /articles/admin* (ROLE_ADMIN) doivent être déclarées
+            // AVANT les routes publiques /articles* — Spring Security évalue les
+            // matchers dans l'ordre de déclaration (premier match gagnant).
+            .requestMatchers(HttpMethod.GET, "/articles/admin").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.GET, "/articles/admin/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.GET, "/articles").permitAll()
+            .requestMatchers(HttpMethod.GET, "/articles/**").permitAll()
+            // Kubernetes probes + Prometheus scraping (Prometheus n'envoie pas de JWT)
+            // Sécurité prod : à protéger par IP restriction (SG AWS) ou management.server.port séparé
+            .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+            .requestMatchers("/actuator/prometheus").permitAll()
+            // Swagger UI (utile pour les recruteurs)
+            .requestMatchers(
+                "/swagger-ui/**",
+                "/swagger-ui.html",
+                "/v3/api-docs/**"
+            ).permitAll()
+            // Admin: HTTP-level protection for write operations on /projects
+            .requestMatchers(HttpMethod.POST, "/projects").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/projects/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/projects/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.POST, "/articles").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/articles/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/articles/**").hasRole("ADMIN")
+            // Admin: ROLE_ADMIN uniquement
+            .requestMatchers("/admin/**").hasRole("ADMIN")
+            // Tout le reste : authentification requise
+            .anyRequest().authenticated();
     }
 
     /**

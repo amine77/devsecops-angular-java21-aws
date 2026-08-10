@@ -14,8 +14,23 @@
 import type { Config } from 'jest';
 import { createCjsPreset } from 'jest-preset-angular/presets/index.js';
 
+const cjsPreset = createCjsPreset();
+
 const config: Config = {
-  ...createCjsPreset(),
+  ...cjsPreset,
+
+  // `marked` (>= v18) est distribué en ESM pur (pas de build CJS) : le preset
+  // Jest/Angular par défaut n'essaie de transpiler que les fichiers .mjs.
+  // On transpile explicitement son fichier .esm.js via Babel (modules-commonjs)
+  // avant d'appliquer le transform générique ts-jest du preset.
+  transformIgnorePatterns: ['node_modules/(?!(.*\\.mjs$|@angular/common/locales/.*\\.js$|marked/.*\\.js$))'],
+  transform: {
+    'node_modules[\\\\/]marked[\\\\/].*\\.js$': [
+      'babel-jest',
+      { plugins: ['@babel/plugin-transform-modules-commonjs'] },
+    ],
+    ...cjsPreset.transform,
+  },
 
   // Fichier de setup exécuté APRÈS l'installation du framework de test.
   // Initialise jest-preset-angular (setup des zones, TestBed, etc.)
@@ -25,7 +40,7 @@ const config: Config = {
   // Patterns de fichiers de tests.
   // testMatch accepte des glob patterns (pas des regex).
   // Propriété config : testMatch (testPathPattern est réservé à la CLI)
-  testMatch: ['<rootDir>/src/**/*.spec.ts'],
+  testMatch: ['**/src/**/*.spec.ts'],
 
   collectCoverageFrom: [
     'src/app/**/*.ts',

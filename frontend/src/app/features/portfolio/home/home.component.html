@@ -145,6 +145,36 @@
   </div>
 </section>
 
+<!-- ========== LATEST ARTICLES ========== -->
+<section class="section featured">
+  <div class="container">
+    <h2 class="section-title">{{ 'home.latest.title' | translate }}</h2>
+
+    @if (isLoadingArticles()) {
+      <app-loading-spinner [message]="'blog.loading' | translate" />
+    } @else if (articlesError()) {
+      <div class="error-state">
+        <p>{{ 'home.latest.error' | translate }}</p>
+        <button class="btn btn-outline" (click)="retryArticlesLoad()">{{ 'home.latest.retry' | translate }}</button>
+      </div>
+    } @else if (latestArticles().length === 0) {
+      <div class="empty-state">
+        <p>{{ 'home.latest.empty' | translate }}</p>
+      </div>
+    } @else {
+      <div class="grid-projects">
+        @for (article of latestArticles(); track article.id) {
+          <app-article-card [article]="article" />
+        }
+      </div>
+
+      <div class="featured__cta">
+        <a routerLink="/portfolio/blog" class="btn btn-outline">{{ 'home.latest.all' | translate }} →</a>
+      </div>
+    }
+  </div>
+</section>
+
 <!-- ========== STATS SECTION ========== -->
 <section class="section stats" #statsSection>
   <div class="container">

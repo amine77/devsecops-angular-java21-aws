@@ -9,8 +9,10 @@ import { signal } from '@angular/core';
 
 import { DashboardComponent } from './dashboard.component';
 import { ProjectService } from '@core/services/project.service';
+import { ArticleService } from '@core/services/article.service';
 import { AuthService } from '@core/services/auth.service';
 import { Project } from '@shared/models/project.model';
+import { Article } from '@shared/models/article.model';
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
@@ -20,10 +22,10 @@ describe('DashboardComponent', () => {
     id: 1,
     title: 'Test',
     description: 'Desc',
-    summary: null,
-    githubUrl: null,
-    demoUrl: null,
-    imageUrl: null,
+    summary: undefined,
+    githubUrl: undefined,
+    demoUrl: undefined,
+    imageUrl: undefined,
     featured: false,
     sortOrder: 1,
     status: 'ACTIVE',
@@ -32,9 +34,29 @@ describe('DashboardComponent', () => {
     updatedAt: '',
   };
 
+  const mockArticle: Article = {
+    id: 1,
+    title: 'Mon article',
+    slug: 'mon-article',
+    summary: 'Résumé',
+    content: 'Contenu',
+    coverImageUrl: undefined,
+    tags: ['kubernetes'],
+    status: 'DRAFT',
+    publishedAt: undefined,
+    authorName: 'Amine Charrad',
+    createdAt: '',
+    updatedAt: '',
+  };
+
   const mockProjectService = {
     getProjects: jest.fn(),
     deleteProject: jest.fn(),
+  };
+
+  const mockArticleService = {
+    getArticlesForAdmin: jest.fn(),
+    deleteArticle: jest.fn(),
   };
 
   const mockAuthService = {
@@ -45,7 +67,10 @@ describe('DashboardComponent', () => {
 
   beforeEach(async () => {
     mockProjectService.getProjects.mockReturnValue(
-      of({ content: [mockProject], totalElements: 1, totalPages: 1, size: 50, number: 0 })
+      of({ content: [mockProject], page: 0, size: 50, totalElements: 1, totalPages: 1, first: true, last: true })
+    );
+    mockArticleService.getArticlesForAdmin.mockReturnValue(
+      of({ content: [mockArticle], page: 0, size: 50, totalElements: 1, totalPages: 1, first: true, last: true })
     );
 
     await TestBed.configureTestingModule({
@@ -59,6 +84,7 @@ describe('DashboardComponent', () => {
       ],
       providers: [
         { provide: ProjectService, useValue: mockProjectService },
+        { provide: ArticleService, useValue: mockArticleService },
         { provide: AuthService, useValue: mockAuthService },
       ],
     }).compileComponents();
@@ -78,6 +104,12 @@ describe('DashboardComponent', () => {
     expect(mockProjectService.getProjects).toHaveBeenCalledWith(0, 50);
     expect(component['isLoading']()).toBe(false);
     expect(component['projects']()).toHaveLength(1);
+  });
+
+  it('should load articles on init', () => {
+    expect(mockArticleService.getArticlesForAdmin).toHaveBeenCalledWith(0, 50);
+    expect(component['isLoadingArticles']()).toBe(false);
+    expect(component['articles']()).toHaveLength(1);
   });
 
   it('should open confirm dialog on confirmDelete', () => {
@@ -100,5 +132,27 @@ describe('DashboardComponent', () => {
 
     expect(mockProjectService.deleteProject).toHaveBeenCalledWith(1);
     expect(component['projects']()).toHaveLength(0);
+  });
+
+  it('should open confirm dialog on confirmDeleteArticle', () => {
+    const openSpy = jest.spyOn(component['dialog'], 'open').mockReturnValue({
+      afterClosed: () => of(false),
+    } as never);
+
+    component.confirmDeleteArticle(mockArticle);
+
+    expect(openSpy).toHaveBeenCalled();
+  });
+
+  it('should hard-delete the article when dialog confirmed', () => {
+    mockArticleService.deleteArticle.mockReturnValue(of(void 0));
+    jest.spyOn(component['dialog'], 'open').mockReturnValue({
+      afterClosed: () => of(true),
+    } as never);
+
+    component.confirmDeleteArticle(mockArticle);
+
+    expect(mockArticleService.deleteArticle).toHaveBeenCalledWith(1);
+    expect(component['articles']()).toHaveLength(0);
   });
 });
