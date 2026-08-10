@@ -153,18 +153,20 @@ export class BlogListComponent implements OnInit {
     this.isLoading.set(true);
     this.error.set(null);
 
-    this.articleService.getArticles(this.currentPage, 9, this.selectedTag() ?? undefined).subscribe({
-      next: (data) => {
-        this.pageData.set(data);
-        this.isLoading.set(false);
-        this.updateKnownTags(data.content);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-      error: () => {
-        this.error.set(this.lang.translate('blog.error'));
-        this.isLoading.set(false);
-      },
-    });
+    this.articleService
+      .getArticles(this.currentPage, 9, this.selectedTag() ?? undefined)
+      .subscribe({
+        next: (data) => {
+          this.pageData.set(data);
+          this.isLoading.set(false);
+          this.updateKnownTags(data.content);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        error: () => {
+          this.error.set(this.lang.translate('blog.error'));
+          this.isLoading.set(false);
+        },
+      });
   }
 
   protected filterByTag(tag: string | null): void {

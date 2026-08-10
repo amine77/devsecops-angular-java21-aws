@@ -46,7 +46,15 @@ describe('ArticleService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({
       success: true,
-      data: { content: [mockArticle], page: 0, size: 9, totalElements: 1, totalPages: 1, first: true, last: true },
+      data: {
+        content: [mockArticle],
+        page: 0,
+        size: 9,
+        totalElements: 1,
+        totalPages: 1,
+        first: true,
+        last: true,
+      },
     });
   });
 
@@ -57,7 +65,15 @@ describe('ArticleService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({
       success: true,
-      data: { content: [], page: 0, size: 9, totalElements: 0, totalPages: 0, first: true, last: true },
+      data: {
+        content: [],
+        page: 0,
+        size: 9,
+        totalElements: 0,
+        totalPages: 0,
+        first: true,
+        last: true,
+      },
     });
   });
 
@@ -80,7 +96,15 @@ describe('ArticleService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({
       success: true,
-      data: { content: [mockArticle], page: 0, size: 50, totalElements: 1, totalPages: 1, first: true, last: true },
+      data: {
+        content: [mockArticle],
+        page: 0,
+        size: 50,
+        totalElements: 1,
+        totalPages: 1,
+        first: true,
+        last: true,
+      },
     });
   });
 

@@ -55,7 +55,15 @@ describe('HomeComponent', () => {
 
   beforeEach(async () => {
     mockArticleService.getArticles.mockReturnValue(
-      of({ content: [], page: 0, size: 3, totalElements: 0, totalPages: 0, first: true, last: true })
+      of({
+        content: [],
+        page: 0,
+        size: 3,
+        totalElements: 0,
+        totalPages: 0,
+        first: true,
+        last: true,
+      })
     );
 
     await TestBed.configureTestingModule({

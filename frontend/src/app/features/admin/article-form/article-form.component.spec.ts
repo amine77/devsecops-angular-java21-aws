@@ -94,9 +94,7 @@ describe('ArticleFormComponent', () => {
 
   it('should show an error message when the save fails', () => {
     fixture.detectChanges();
-    mockArticleService.createArticle.mockReturnValue(
-      throwError(() => ({ status: 0 }))
-    );
+    mockArticleService.createArticle.mockReturnValue(throwError(() => ({ status: 0 })));
 
     component['form'].patchValue({ title: 'Nouveau titre', content: 'Contenu suffisant' });
     component.onSubmit();

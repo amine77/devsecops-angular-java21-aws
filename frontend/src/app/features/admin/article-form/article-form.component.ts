@@ -46,14 +46,21 @@ const URL_PATTERN = /^https?:\/\/.+/;
             <mat-icon>arrow_back</mat-icon>
           </a>
           <h1>
-            {{ (isEditMode ? 'admin.form.article.title.edit' : 'admin.form.article.title.create') | translate }}
+            {{
+              (isEditMode ? 'admin.form.article.title.edit' : 'admin.form.article.title.create')
+                | translate
+            }}
           </h1>
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="article-form">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>{{ 'admin.form.field.title' | translate }}</mat-label>
-            <input matInput formControlName="title" [placeholder]="'admin.form.placeholder.title' | translate" />
+            <input
+              matInput
+              formControlName="title"
+              [placeholder]="'admin.form.placeholder.title' | translate"
+            />
             @if (isInvalid('title')) {
               <mat-error>{{ 'admin.form.field.title.error' | translate }}</mat-error>
             }
@@ -114,8 +121,12 @@ const URL_PATTERN = /^https?:\/\/.+/;
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>{{ 'admin.form.field.status' | translate }}</mat-label>
             <mat-select formControlName="status">
-              <mat-option value="DRAFT">{{ 'admin.form.field.status.draft' | translate }}</mat-option>
-              <mat-option value="PUBLISHED">{{ 'admin.form.field.status.published' | translate }}</mat-option>
+              <mat-option value="DRAFT">{{
+                'admin.form.field.status.draft' | translate
+              }}</mat-option>
+              <mat-option value="PUBLISHED">{{
+                'admin.form.field.status.published' | translate
+              }}</mat-option>
             </mat-select>
           </mat-form-field>
 

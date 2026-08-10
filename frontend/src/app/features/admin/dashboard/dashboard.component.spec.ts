@@ -67,10 +67,26 @@ describe('DashboardComponent', () => {
 
   beforeEach(async () => {
     mockProjectService.getProjects.mockReturnValue(
-      of({ content: [mockProject], page: 0, size: 50, totalElements: 1, totalPages: 1, first: true, last: true })
+      of({
+        content: [mockProject],
+        page: 0,
+        size: 50,
+        totalElements: 1,
+        totalPages: 1,
+        first: true,
+        last: true,
+      })
     );
     mockArticleService.getArticlesForAdmin.mockReturnValue(
-      of({ content: [mockArticle], page: 0, size: 50, totalElements: 1, totalPages: 1, first: true, last: true })
+      of({
+        content: [mockArticle],
+        page: 0,
+        size: 50,
+        totalElements: 1,
+        totalPages: 1,
+        first: true,
+        last: true,
+      })
     );
 
     await TestBed.configureTestingModule({

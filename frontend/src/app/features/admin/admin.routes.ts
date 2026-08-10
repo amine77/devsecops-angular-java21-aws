@@ -35,6 +35,6 @@ export const adminRoutes: Routes = [
     canActivate: [adminGuard],
     loadComponent: () =>
       import('./article-form/article-form.component').then((m) => m.ArticleFormComponent),
-    title: 'Modifier l\'article',
+    title: "Modifier l'article",
   },
 ];

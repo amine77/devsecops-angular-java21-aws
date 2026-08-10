@@ -24,9 +24,7 @@ export class ArticleService {
   }
 
   getArticleBySlug(slug: string): Observable<Article> {
-    return this.http
-      .get<ApiResponse<Article>>(`${this.baseUrl}/${slug}`)
-      .pipe(map((r) => r.data!));
+    return this.http.get<ApiResponse<Article>>(`${this.baseUrl}/${slug}`).pipe(map((r) => r.data!));
   }
 
   getArticlesForAdmin(page = 0, size = 50): Observable<PageResponse<Article>> {
