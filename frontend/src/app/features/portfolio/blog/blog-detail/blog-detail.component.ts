@@ -159,7 +159,7 @@ export class BlogDetailComponent implements OnInit {
 
   protected renderedContent(): string {
     const content = this.article()?.content ?? '';
-    const rawHtml = marked.parse(content, { async: false }) as string;
+    const rawHtml = marked.parse(content, { async: false });
     return DOMPurify.sanitize(rawHtml);
   }
 

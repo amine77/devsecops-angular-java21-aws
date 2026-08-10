@@ -258,7 +258,7 @@ export class ArticleFormComponent implements OnInit {
 
   protected previewHtml(): string {
     const content = this.form.get('content')?.value ?? '';
-    const rawHtml = marked.parse(content, { async: false }) as string;
+    const rawHtml = marked.parse(content, { async: false });
     return DOMPurify.sanitize(rawHtml);
   }
 
