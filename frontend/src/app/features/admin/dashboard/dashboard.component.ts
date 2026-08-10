@@ -23,10 +23,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import gsap from 'gsap';
 
 import { ProjectService } from '@core/services/project.service';
+import { ArticleService } from '@core/services/article.service';
 import { AuthService } from '@core/services/auth.service';
 import { LanguageService } from '@core/services/language.service';
 import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { Project } from '@shared/models/project.model';
+import { Article } from '@shared/models/article.model';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog.component';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
@@ -63,7 +65,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             <mat-spinner diameter="48" />
           </div>
         } @else {
-          <div class="mat-elevation-z2" #tableContainer>
+          <div class="mat-elevation-z2 projects-table-container" #tableContainer>
             <table mat-table [dataSource]="projects()" class="dashboard-table">
               <ng-container matColumnDef="title">
                 <th mat-header-cell *matHeaderCellDef>
@@ -103,9 +105,6 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                   {{ 'admin.dashboard.col.actions' | translate }}
                 </th>
                 <td mat-cell *matCellDef="let p" class="actions-cell">
-                  <!-- Le flex vit sur ce div interne, PAS sur le <td> :
-                       un td en display:flex sort du layout table et sa
-                       bordure basse se désaligne des autres colonnes -->
                   <div class="actions-wrap">
                     <a
                       [routerLink]="['/admin/projects', p.id, 'edit']"
@@ -138,6 +137,81 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             </table>
           </div>
         }
+
+        <div class="dashboard-header dashboard-header--articles">
+          <h2>{{ 'admin.dashboard.tab.articles' | translate }}</h2>
+          <a routerLink="/admin/articles/new" mat-raised-button color="primary">
+            <mat-icon>add</mat-icon>
+            {{ 'admin.dashboard.new.article' | translate }}
+          </a>
+        </div>
+
+        @if (isLoadingArticles()) {
+          <div class="dashboard-loading">
+            <mat-spinner diameter="48" />
+          </div>
+        } @else {
+          <div class="mat-elevation-z2 articles-table-container">
+            <table mat-table [dataSource]="articles()" class="dashboard-table">
+              <ng-container matColumnDef="title">
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.title' | translate }}
+                </th>
+                <td mat-cell *matCellDef="let a">{{ a.title }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.status' | translate }}
+                </th>
+                <td mat-cell *matCellDef="let a">
+                  <mat-chip [class]="a.status === 'PUBLISHED' ? 'chip-active' : 'chip-archived'">
+                    {{
+                      a.status === 'PUBLISHED'
+                        ? ('admin.dashboard.status.published' | translate)
+                        : ('admin.dashboard.status.draft' | translate)
+                    }}
+                  </mat-chip>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.actions' | translate }}
+                </th>
+                <td mat-cell *matCellDef="let a" class="actions-cell">
+                  <div class="actions-wrap">
+                    <a
+                      [routerLink]="['/admin/articles', a.id, 'edit']"
+                      mat-icon-button
+                      matTooltip="{{ 'admin.dashboard.edit' | translate }}"
+                      color="primary"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </a>
+                    <button
+                      mat-icon-button
+                      matTooltip="{{ 'admin.dashboard.delete' | translate }}"
+                      color="warn"
+                      (click)="confirmDeleteArticle(a)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="articleColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: articleColumns"></tr>
+
+              <tr class="mat-row" *matNoDataRow>
+                <td class="mat-cell no-data" [attr.colspan]="articleColumns.length">
+                  {{ 'admin.dashboard.empty' | translate }}
+                </td>
+              </tr>
+            </table>
+          </div>
+        }
       </div>
     </div>
   `,
@@ -152,6 +226,9 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           margin-top: 0.25rem;
           color: var(--color-text-secondary);
         }
+      }
+      .dashboard-header--articles {
+        margin-top: 3rem;
       }
       .dashboard-loading {
         display: flex;
@@ -190,6 +267,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 })
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly projectService = inject(ProjectService);
+  private readonly articleService = inject(ArticleService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly scrollAnim = inject(ScrollAnimationService);
@@ -199,20 +277,33 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly lang = inject(LanguageService);
 
   protected readonly columns = ['title', 'status', 'featured', 'actions'];
+  protected readonly articleColumns = ['title', 'status', 'actions'];
   protected readonly projects = signal<Project[]>([]);
+  protected readonly articles = signal<Article[]>([]);
   protected readonly isLoading = signal(true);
+  protected readonly isLoadingArticles = signal(true);
 
   private headerTl?: gsap.core.Timeline;
-  private tableAnimated = false;
+  private projectsTableAnimated = false;
+  private articlesTableAnimated = false;
 
   constructor() {
-    // Animer la table dès que les données arrivent
     effect(() => {
       const list = this.projects();
-      if (list.length > 0 && !this.tableAnimated && !this.scrollAnim.reducedMotion) {
-        this.tableAnimated = true;
+      if (list.length > 0 && !this.projectsTableAnimated && !this.scrollAnim.reducedMotion) {
+        this.projectsTableAnimated = true;
         untracked(() => {
-          setTimeout(() => this.animateTable(), 30);
+          setTimeout(() => this.animateTable('.projects-table-container'), 30);
+        });
+      }
+    });
+
+    effect(() => {
+      const list = this.articles();
+      if (list.length > 0 && !this.articlesTableAnimated && !this.scrollAnim.reducedMotion) {
+        this.articlesTableAnimated = true;
+        untracked(() => {
+          setTimeout(() => this.animateTable('.articles-table-container'), 30);
         });
       }
     });
@@ -225,6 +316,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isLoading.set(false);
       },
       error: () => this.isLoading.set(false),
+    });
+
+    this.articleService.getArticlesForAdmin(0, 50).subscribe({
+      next: (data) => {
+        this.articles.set(data.content);
+        this.isLoadingArticles.set(false);
+      },
+      error: () => this.isLoadingArticles.set(false),
     });
   }
 
@@ -246,13 +345,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private animateTable(): void {
-    const table = this.el.nativeElement.querySelector<HTMLElement>('.mat-elevation-z2');
-    const rows = Array.from(this.el.nativeElement.querySelectorAll<HTMLElement>('tr.mat-mdc-row'));
-    if (!table) return;
+  private animateTable(containerSelector: string): void {
+    const container = this.el.nativeElement.querySelector<HTMLElement>(containerSelector);
+    if (!container) return;
+    const rows = Array.from(container.querySelectorAll<HTMLElement>('tr.mat-mdc-row'));
 
     this.ngZone.runOutsideAngular(() => {
-      gsap.from(table, { opacity: 0, y: 20, duration: 0.5, ease: 'power2.out' });
+      gsap.from(container, { opacity: 0, y: 20, duration: 0.5, ease: 'power2.out' });
       if (rows.length > 0) {
         gsap.from(rows, {
           opacity: 0,
@@ -287,6 +386,34 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         },
         error: () => {
           this.snackBar.open(this.lang.translate('admin.dashboard.archived.error'), 'OK', {
+            duration: 4000,
+          });
+        },
+      });
+    });
+  }
+
+  confirmDeleteArticle(article: Article): void {
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: this.lang.translate('admin.confirm.delete.title'),
+        message: `${this.lang.translate('admin.confirm.delete.title')} « ${article.title} » ?`,
+        confirmLabel: this.lang.translate('admin.confirm.delete.confirm'),
+        confirmColor: 'warn',
+      },
+    });
+
+    ref.afterClosed().subscribe((confirmed) => {
+      if (!confirmed) return;
+      this.articleService.deleteArticle(article.id).subscribe({
+        next: () => {
+          this.articles.update((list) => list.filter((a) => a.id !== article.id));
+          this.snackBar.open(this.lang.translate('admin.dashboard.deleted.success'), 'OK', {
+            duration: 3000,
+          });
+        },
+        error: () => {
+          this.snackBar.open(this.lang.translate('admin.dashboard.deleted.error'), 'OK', {
             duration: 4000,
           });
         },
