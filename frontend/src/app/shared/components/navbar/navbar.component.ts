@@ -52,7 +52,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             />
           </svg>
         </span>
-        <span class="navbar__title">DevSecOps</span>
+        <span class="navbar__title">charrad.dev</span>
       </a>
 
       <nav class="navbar__links" aria-label="Navigation principale" #navLinks>
