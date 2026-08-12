@@ -30,7 +30,6 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             <ul>
               <li>{{ 'privacy.section2.item1' | translate }}</li>
               <li>{{ 'privacy.section2.item2' | translate }}</li>
-              <li>{{ 'privacy.section2.item3' | translate }}</li>
             </ul>
             <p>{{ 'privacy.section2.note' | translate }}</p>
           </section>
@@ -54,11 +53,6 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                   <td>{{ 'privacy.table.row2.purpose' | translate }}</td>
                   <td>{{ 'privacy.table.row2.basis' | translate }}</td>
                   <td>{{ 'privacy.table.row2.duration' | translate }}</td>
-                </tr>
-                <tr>
-                  <td>{{ 'privacy.table.row3.purpose' | translate }}</td>
-                  <td>{{ 'privacy.table.row3.basis' | translate }}</td>
-                  <td>{{ 'privacy.table.row3.duration' | translate }}</td>
                 </tr>
               </tbody>
             </table>
