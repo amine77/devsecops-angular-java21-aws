@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { LegalNoticeComponent } from './legal-notice.component';
@@ -9,7 +10,7 @@ describe('LegalNoticeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LegalNoticeComponent, RouterTestingModule],
+      imports: [LegalNoticeComponent, RouterTestingModule, HttpClientTestingModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LegalNoticeComponent);
@@ -23,7 +24,7 @@ describe('LegalNoticeComponent', () => {
 
   it('should render the legal notice title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Mentions légales');
+    expect(compiled.querySelector('h1')?.textContent).toContain('legalNotice.title');
   });
 
   it('should contain a back link to /portfolio', () => {

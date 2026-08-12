@@ -1,44 +1,44 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 @Component({
   selector: 'app-legal-notice',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="section">
       <div class="container container--narrow">
         <div class="legal-header">
-          <a routerLink="/portfolio" class="back-link">← Retour au portfolio</a>
-          <h1 class="legal-title">Mentions légales</h1>
+          <a routerLink="/portfolio" class="back-link">{{ 'legalNotice.back' | translate }}</a>
+          <h1 class="legal-title">{{ 'legalNotice.title' | translate }}</h1>
         </div>
         <div class="legal-content">
           <section class="legal-section">
-            <h2>Éditeur du site</h2>
-            <p>Amine Charrad — personne physique, site personnel non commercial</p>
-            <p>Contact : <a href="mailto:contact@charrad.dev">contact@charrad.dev</a></p>
-          </section>
-          <section class="legal-section">
-            <h2>Directeur de la publication</h2>
-            <p>Amine Charrad</p>
-          </section>
-          <section class="legal-section">
-            <h2>Hébergeur</h2>
-            <p>Amazon Web Services EMEA SARL</p>
-            <p>38 avenue John F. Kennedy, L-1855 Luxembourg</p>
-          </section>
-          <section class="legal-section">
-            <h2>Nom de domaine</h2>
-            <p>Enregistré auprès d'OVH SAS — 2 rue Kellermann, 59100 Roubaix, France</p>
-          </section>
-          <section class="legal-section">
-            <h2>Propriété intellectuelle</h2>
+            <h2>{{ 'legalNotice.section1.title' | translate }}</h2>
+            <p>{{ 'legalNotice.section1.body' | translate }}</p>
             <p>
-              L'ensemble du contenu de ce site (textes, code source, éléments graphiques) est la
-              propriété exclusive d'Amine Charrad, sauf mention contraire. Toute reproduction totale
-              ou partielle sans autorisation préalable est interdite.
+              {{ 'legalNotice.section1.contact' | translate }}
+              <a href="mailto:contact@charrad.dev">contact@charrad.dev</a>
             </p>
+          </section>
+          <section class="legal-section">
+            <h2>{{ 'legalNotice.section2.title' | translate }}</h2>
+            <p>{{ 'legalNotice.section2.body' | translate }}</p>
+          </section>
+          <section class="legal-section">
+            <h2>{{ 'legalNotice.section3.title' | translate }}</h2>
+            <p>{{ 'legalNotice.section3.body1' | translate }}</p>
+            <p>{{ 'legalNotice.section3.body2' | translate }}</p>
+          </section>
+          <section class="legal-section">
+            <h2>{{ 'legalNotice.section4.title' | translate }}</h2>
+            <p>{{ 'legalNotice.section4.body' | translate }}</p>
+          </section>
+          <section class="legal-section">
+            <h2>{{ 'legalNotice.section5.title' | translate }}</h2>
+            <p>{{ 'legalNotice.section5.body' | translate }}</p>
           </section>
         </div>
       </div>
