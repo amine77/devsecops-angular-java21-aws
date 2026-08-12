@@ -42,6 +42,11 @@ export const routes: Routes = [
       import('./features/legal/privacy.component').then((m) => m.PrivacyComponent),
   },
   {
+    path: 'mentions-legales',
+    loadComponent: () =>
+      import('./features/legal/legal-notice.component').then((m) => m.LegalNoticeComponent),
+  },
+  {
     path: '**',
     redirectTo: '/portfolio',
   },

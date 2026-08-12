@@ -70,6 +70,10 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             <a routerLink="/privacy" class="footer__legal-link">{{
               'footer.privacy' | translate
             }}</a>
+            ·
+            <a routerLink="/mentions-legales" class="footer__legal-link">{{
+              'footer.legalNotice' | translate
+            }}</a>
           </p>
           <div class="footer__social">
             <!-- LinkedIn -->

@@ -21,7 +21,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             <p>{{ 'privacy.section1.body' | translate }}</p>
             <p>
               {{ 'privacy.section1.contact' | translate }}
-              <a href="mailto:amine.charrad@gmail.com">amine.charrad@gmail.com</a>
+              <a href="mailto:contact@charrad.dev">contact@charrad.dev</a>
             </p>
           </section>
           <section class="privacy-section">
@@ -66,6 +66,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           <section class="privacy-section">
             <h2>{{ 'privacy.section4.title' | translate }}</h2>
             <p>{{ 'privacy.section4.body' | translate }}</p>
+            <p>{{ 'privacy.section4.body2' | translate }}</p>
           </section>
           <section class="privacy-section">
             <h2>{{ 'privacy.section5.title' | translate }}</h2>
