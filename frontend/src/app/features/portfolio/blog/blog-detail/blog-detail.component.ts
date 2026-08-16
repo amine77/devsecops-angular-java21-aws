@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
+import { RichHtmlArticleComponent } from '@shared/components/rich-html-article/rich-html-article.component';
 import { ArticleService } from '@core/services/article.service';
 import { LanguageService } from '@core/services/language.service';
 import { Article } from '@shared/models/article.model';
@@ -18,7 +19,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
  */
 @Component({
   selector: 'app-blog-detail',
-  imports: [RouterLink, LoadingSpinnerComponent, TranslatePipe],
+  imports: [RouterLink, LoadingSpinnerComponent, TranslatePipe, RichHtmlArticleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (isLoading()) {
@@ -49,7 +50,11 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           @if (article()!.coverImageUrl) {
             <img [src]="article()!.coverImageUrl" [alt]="article()!.title" class="bd-image" />
           }
-          <div class="bd-content" [innerHTML]="renderedHtml()"></div>
+          @if (article()!.contentType === 'HTML') {
+            <app-rich-html-article [content]="article()!.content" />
+          } @else {
+            <div class="bd-content" [innerHTML]="renderedHtml()"></div>
+          }
         </div>
       </div>
     }

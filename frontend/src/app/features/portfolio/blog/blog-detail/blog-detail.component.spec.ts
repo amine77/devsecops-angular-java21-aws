@@ -80,4 +80,14 @@ describe('BlogDetailComponent', () => {
     expect(component['error']()).toBeTruthy();
     expect(component['isLoading']()).toBe(false);
   });
+
+  it('should render app-rich-html-article when contentType is HTML', () => {
+    mockArticleService.getArticleBySlug.mockReturnValue(
+      of({ ...mockArticle, contentType: 'HTML', content: '<html><body><p>Design</p></body></html>' })
+    );
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-rich-html-article')).toBeTruthy();
+  });
 });
