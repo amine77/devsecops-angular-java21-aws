@@ -3,6 +3,7 @@ package com.portfolio.backend.service;
 import com.portfolio.backend.dto.request.ArticleRequest;
 import com.portfolio.backend.dto.response.ArticleResponse;
 import com.portfolio.backend.entity.Article;
+import com.portfolio.backend.entity.ArticleContentType;
 import com.portfolio.backend.entity.ArticleStatus;
 import com.portfolio.backend.entity.User;
 import com.portfolio.backend.exception.ResourceNotFoundException;
@@ -75,7 +76,7 @@ class ArticleServiceTest {
             .build();
 
         testArticleResponse = new ArticleResponse(
-            1L, "Mon article", "mon-article", null, "Contenu Markdown", null,
+            1L, "Mon article", "mon-article", null, "Contenu Markdown", ArticleContentType.MARKDOWN, null,
             List.of(), ArticleStatus.DRAFT, null, "Amine Charrad", null, null
         );
     }
@@ -93,7 +94,7 @@ class ArticleServiceTest {
         @DisplayName("Génère un slug normalisé depuis le titre")
         void shouldGenerateSlugFromTitle() {
             ArticleRequest request = new ArticleRequest(
-                "Découvrir Kubernetes & l'Auto-scaling", null, "Contenu", null, List.of(), ArticleStatus.DRAFT
+                "Découvrir Kubernetes & l'Auto-scaling", null, "Contenu", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.DRAFT
             );
             given(articleRepository.existsBySlug("decouvrir-kubernetes-l-auto-scaling")).willReturn(false);
             given(articleRepository.save(any(Article.class))).willReturn(testArticle);
@@ -110,7 +111,7 @@ class ArticleServiceTest {
         @DisplayName("Ajoute un suffixe -2 en cas de collision de slug")
         void shouldAppendSuffixOnSlugCollision() {
             ArticleRequest request = new ArticleRequest(
-                "Mon article", null, "Contenu", null, List.of(), ArticleStatus.DRAFT
+                "Mon article", null, "Contenu", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.DRAFT
             );
             given(articleRepository.existsBySlug("mon-article")).willReturn(true);
             given(articleRepository.existsBySlug("mon-article-2")).willReturn(false);
@@ -133,7 +134,7 @@ class ArticleServiceTest {
         @DisplayName("Fixe publishedAt à la création si le statut est PUBLISHED")
         void shouldSetPublishedAtWhenCreatedAsPublished() {
             ArticleRequest request = new ArticleRequest(
-                "Article publié", null, "Contenu", null, List.of(), ArticleStatus.PUBLISHED
+                "Article publié", null, "Contenu", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.PUBLISHED
             );
             given(articleRepository.existsBySlug(any())).willReturn(false);
             given(articleRepository.save(any(Article.class))).willReturn(testArticle);
@@ -150,7 +151,7 @@ class ArticleServiceTest {
         @DisplayName("Ne fixe pas publishedAt à la création si le statut est DRAFT")
         void shouldNotSetPublishedAtWhenCreatedAsDraft() {
             ArticleRequest request = new ArticleRequest(
-                "Brouillon", null, "Contenu", null, List.of(), ArticleStatus.DRAFT
+                "Brouillon", null, "Contenu", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.DRAFT
             );
             given(articleRepository.existsBySlug(any())).willReturn(false);
             given(articleRepository.save(any(Article.class))).willReturn(testArticle);
@@ -169,7 +170,7 @@ class ArticleServiceTest {
             testArticle.setStatus(ArticleStatus.DRAFT);
             testArticle.setPublishedAt(null);
             ArticleRequest request = new ArticleRequest(
-                "Mon article", null, "Contenu modifié", null, List.of(), ArticleStatus.PUBLISHED
+                "Mon article", null, "Contenu modifié", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.PUBLISHED
             );
             given(articleRepository.findById(1L)).willReturn(Optional.of(testArticle));
             given(articleRepository.save(any(Article.class))).willReturn(testArticle);
@@ -187,7 +188,7 @@ class ArticleServiceTest {
             testArticle.setStatus(ArticleStatus.PUBLISHED);
             testArticle.setPublishedAt(originalPublishedAt);
             ArticleRequest request = new ArticleRequest(
-                "Mon article modifié", null, "Contenu modifié", null, List.of(), ArticleStatus.PUBLISHED
+                "Mon article modifié", null, "Contenu modifié", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.PUBLISHED
             );
             given(articleRepository.findById(1L)).willReturn(Optional.of(testArticle));
             given(articleRepository.save(any(Article.class))).willReturn(testArticle);
@@ -196,6 +197,46 @@ class ArticleServiceTest {
             articleService.updateArticle(1L, request);
 
             assertThat(testArticle.getPublishedAt()).isEqualTo(originalPublishedAt);
+        }
+    }
+
+    @Nested
+    @DisplayName("contentType — round-trip create/update")
+    class ContentTypeTests {
+
+        @Test
+        @DisplayName("Persiste contentType=HTML à la création")
+        void shouldPersistHtmlContentTypeOnCreate() {
+            ArticleRequest request = new ArticleRequest(
+                "Article designé", null, "<html><body>...</body></html>", ArticleContentType.HTML,
+                null, List.of(), ArticleStatus.DRAFT
+            );
+            given(articleRepository.existsBySlug(any())).willReturn(false);
+            given(articleRepository.save(any(Article.class))).willReturn(testArticle);
+            given(articleMapper.toResponse(testArticle)).willReturn(testArticleResponse);
+
+            articleService.createArticle(request);
+
+            ArgumentCaptor<Article> captor = ArgumentCaptor.forClass(Article.class);
+            verify(articleRepository).save(captor.capture());
+            assertThat(captor.getValue().getContentType()).isEqualTo(ArticleContentType.HTML);
+        }
+
+        @Test
+        @DisplayName("Met à jour contentType de MARKDOWN vers HTML")
+        void shouldUpdateContentTypeToHtml() {
+            testArticle.setContentType(ArticleContentType.MARKDOWN);
+            ArticleRequest request = new ArticleRequest(
+                "Mon article", null, "<html><body>...</body></html>", ArticleContentType.HTML,
+                null, List.of(), ArticleStatus.DRAFT
+            );
+            given(articleRepository.findById(1L)).willReturn(Optional.of(testArticle));
+            given(articleRepository.save(any(Article.class))).willReturn(testArticle);
+            given(articleMapper.toResponse(testArticle)).willReturn(testArticleResponse);
+
+            articleService.updateArticle(1L, request);
+
+            assertThat(testArticle.getContentType()).isEqualTo(ArticleContentType.HTML);
         }
     }
 

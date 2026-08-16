@@ -16,6 +16,7 @@ public class ArticleMapper {
             article.getSlug(),
             article.getSummary(),
             article.getContent(),
+            article.getContentType(),
             article.getCoverImageUrl(),
             article.getTags(),
             article.getStatus(),

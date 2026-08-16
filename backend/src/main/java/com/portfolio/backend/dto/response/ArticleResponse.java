@@ -1,5 +1,6 @@
 package com.portfolio.backend.dto.response;
 
+import com.portfolio.backend.entity.ArticleContentType;
 import com.portfolio.backend.entity.ArticleStatus;
 
 import java.time.LocalDateTime;
@@ -11,6 +12,7 @@ public record ArticleResponse(
     String slug,
     String summary,
     String content,
+    ArticleContentType contentType,
     String coverImageUrl,
     List<String> tags,
     ArticleStatus status,

@@ -75,6 +75,7 @@ public class ArticleService {
             .slug(slug)
             .summary(request.summary())
             .content(request.content())
+            .contentType(request.contentType())
             .coverImageUrl(request.coverImageUrl())
             .tags(request.tags() != null ? new ArrayList<>(request.tags()) : new ArrayList<>())
             .status(request.status())
@@ -97,6 +98,7 @@ public class ArticleService {
         article.setTitle(request.title());
         article.setSummary(request.summary());
         article.setContent(request.content());
+        article.setContentType(request.contentType());
         article.setCoverImageUrl(request.coverImageUrl());
         article.setTags(request.tags() != null ? new ArrayList<>(request.tags()) : new ArrayList<>());
         article.setStatus(request.status());

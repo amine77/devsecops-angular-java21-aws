@@ -1,5 +1,6 @@
 package com.portfolio.backend.dto.request;
 
+import com.portfolio.backend.entity.ArticleContentType;
 import com.portfolio.backend.entity.ArticleStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +19,9 @@ public record ArticleRequest(
 
     @NotBlank(message = "Le contenu est obligatoire")
     String content,
+
+    @NotNull(message = "Le type de contenu est obligatoire")
+    ArticleContentType contentType,
 
     @URL(message = "L'URL doit commencer par http:// ou https://")
     String coverImageUrl,
