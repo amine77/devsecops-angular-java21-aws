@@ -15,6 +15,11 @@ const ALLOWED_FONT_ORIGINS = ['https://fonts.googleapis.com', 'https://fonts.gst
 const RICH_HTML_SANITIZE_CONFIG = {
   ADD_TAGS: ['style', 'link'],
   ADD_ATTR: ['rel', 'href', 'crossorigin'],
+  // Designed articles have no legitimate need for interactive forms; a <form> rendered
+  // inside the Shadow DOM would still submit to whatever origin its action points at
+  // (the shadow boundary does not restrict form submission), which is a phishing surface
+  // hosted on our own origin. Strip the whole family.
+  FORBID_TAGS: ['form', 'input', 'button', 'textarea', 'select'],
   // Without this, DOMPurify's internal DOMParser().parseFromString(dirty, 'text/html')
   // auto-hoists the leading <link>/<style> tags into an implicit <head> (standard HTML5
   // fragment-parsing behavior), and DOMPurify's default (non-WHOLE_DOCUMENT) sanitize only
@@ -35,6 +40,24 @@ function isAllowedFontOrigin(href: string | null): boolean {
   } catch {
     return false;
   }
+}
+
+// The <link>-level origin whitelist only guards <link href="...">; CSS itself can load
+// arbitrary remote resources via @import and url(...) (stylesheets, fonts, background
+// images), both in <style> tag bodies and in inline style="" attributes. Neither is
+// touched by DOMPurify (it doesn't parse CSS), so this closes that gap by stripping
+// @import outright and rewriting url(...) to keep only data: URIs and the same allowed
+// font origins already enforced on <link>.
+function sanitizeCssUrls(css: string): string {
+  let result = css.replace(/@import\s+[^;]*;?/gi, '');
+  result = result.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (match, _quote, rawUrl) => {
+    const trimmed = rawUrl.trim();
+    if (trimmed.startsWith('data:')) {
+      return match;
+    }
+    return isAllowedFontOrigin(trimmed) ? match : 'url()';
+  });
+  return result;
 }
 
 const purifier = createDOMPurify(window);
@@ -84,14 +107,24 @@ export class RichHtmlArticleComponent implements AfterViewInit, OnChanges {
   private buildSanitizedMarkup(rawDocument: string): string {
     const parsed = new DOMParser().parseFromString(rawDocument, 'text/html');
 
-    const links = Array.from(parsed.querySelectorAll('link'))
+    const linkElements = Array.from(parsed.querySelectorAll('link'));
+    const links = linkElements
       .filter((link) => isAllowedFontOrigin(link.getAttribute('href')))
       .map((link) => link.outerHTML)
       .join('\n');
 
-    const style = Array.from(parsed.querySelectorAll('style'))
-      .map((el) => this.rewriteRootToHost(el.textContent ?? ''))
+    const styleElements = Array.from(parsed.querySelectorAll('style'));
+    const style = styleElements
+      .map((el) => this.sanitizeStyleContent(el.textContent ?? ''))
       .join('\n');
+
+    // Remove the harvested <link>/<style> elements from the parsed tree so no
+    // unrewritten/unfiltered duplicate survives inside parsed.body.innerHTML below.
+    [...linkElements, ...styleElements].forEach((el) => el.remove());
+
+    Array.from(parsed.body?.querySelectorAll('[style]') ?? []).forEach((el) => {
+      el.setAttribute('style', sanitizeCssUrls(el.getAttribute('style') ?? ''));
+    });
 
     const body = parsed.body?.innerHTML ?? '';
 
@@ -100,7 +133,7 @@ export class RichHtmlArticleComponent implements AfterViewInit, OnChanges {
     return purifier.sanitize(combined, RICH_HTML_SANITIZE_CONFIG);
   }
 
-  private rewriteRootToHost(css: string): string {
-    return css.replace(/:root\b/g, ':host');
+  private sanitizeStyleContent(css: string): string {
+    return sanitizeCssUrls(css).replace(/:root\b/g, ':host');
   }
 }

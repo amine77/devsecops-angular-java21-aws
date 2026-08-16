@@ -94,4 +94,56 @@ describe('RichHtmlArticleComponent', () => {
     expect(shadowRoot().innerHTML).toContain('Second');
     expect(shadowRoot().innerHTML).not.toContain('Premier');
   });
+
+  it('should strip @import rules from <style> tag content', () => {
+    component.content =
+      '<html><head><style>@import url("https://evil.example/x.css"); body{background:url(https://evil.example/track.png)}</style></head><body><p>Texte</p></body></html>';
+    fixture.detectChanges();
+
+    const styleTag = shadowRoot().querySelector('style');
+    expect(styleTag?.textContent).not.toContain('@import');
+    expect(styleTag?.textContent).not.toContain('evil.example');
+  });
+
+  it('should neutralize disallowed url() origins in <style> CSS while preserving allowed font origins', () => {
+    component.content = `<html><head><style>
+      body { background: url(https://evil.example/x.png); }
+      @font-face { src: url(https://fonts.gstatic.com/s/inter/v1/font.woff2); }
+    </style></head><body><p>Texte</p></body></html>`;
+    fixture.detectChanges();
+
+    const styleTag = shadowRoot().querySelector('style');
+    expect(styleTag?.textContent).not.toContain('evil.example');
+    expect(styleTag?.textContent).toContain('url(https://fonts.gstatic.com/s/inter/v1/font.woff2)');
+  });
+
+  it('should neutralize a disallowed url() inside an inline style="" attribute', () => {
+    component.content =
+      '<html><body><p style="background:url(https://evil.example/x.png)">Texte</p></body></html>';
+    fixture.detectChanges();
+
+    expect(shadowRoot().innerHTML).not.toContain('evil.example');
+  });
+
+  it('should produce exactly one copy of a body-level <style> tag content in the shadow root', () => {
+    component.content = '<html><body><style>:root{--ink:#111;}</style><p>Texte</p></body></html>';
+    fixture.detectChanges();
+
+    const styleTags = shadowRoot().querySelectorAll('style');
+    expect(styleTags.length).toBe(1);
+    const occurrences = shadowRoot().innerHTML.split('--ink:#111;').length - 1;
+    expect(occurrences).toBe(1);
+  });
+
+  it('should strip <form>/<input>/<button> tags (phishing surface) while keeping sibling content', () => {
+    component.content =
+      '<html><body><form action="https://evil.example/x"><input><button>Submit</button></form><p>Texte sûr</p></body></html>';
+    fixture.detectChanges();
+
+    const html = shadowRoot().innerHTML;
+    expect(html).not.toContain('<form');
+    expect(html).not.toContain('<input');
+    expect(html).not.toContain('<button');
+    expect(html).toContain('Texte sûr');
+  });
 });
