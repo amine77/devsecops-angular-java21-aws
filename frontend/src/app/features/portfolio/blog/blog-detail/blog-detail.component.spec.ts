@@ -17,6 +17,7 @@ describe('BlogDetailComponent', () => {
     slug: 'mon-article',
     summary: 'Résumé',
     content: '# Titre\n\nContenu **gras** et `code`.',
+    contentType: 'MARKDOWN',
     coverImageUrl: undefined,
     tags: ['kubernetes'],
     status: 'PUBLISHED',

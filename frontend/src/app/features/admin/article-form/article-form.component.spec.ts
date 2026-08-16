@@ -20,6 +20,7 @@ describe('ArticleFormComponent', () => {
     slug: 'mon-article',
     summary: 'Résumé',
     content: 'Contenu Markdown',
+    contentType: 'MARKDOWN',
     coverImageUrl: undefined,
     tags: ['kubernetes'],
     status: 'DRAFT',
