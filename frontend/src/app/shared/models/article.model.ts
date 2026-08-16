@@ -1,4 +1,5 @@
 export type ArticleStatus = 'DRAFT' | 'PUBLISHED';
+export type ArticleContentType = 'MARKDOWN' | 'HTML';
 
 /**
  * Modèle article — miroir de ArticleResponse Java.
@@ -10,6 +11,7 @@ export interface Article {
   readonly slug: string;
   readonly summary?: string;
   readonly content: string;
+  readonly contentType: ArticleContentType;
   readonly coverImageUrl?: string;
   readonly tags: string[];
   readonly status: ArticleStatus;
@@ -27,6 +29,7 @@ export interface ArticleFormData {
   title: string;
   summary?: string;
   content: string;
+  contentType: ArticleContentType;
   coverImageUrl?: string;
   tags: string[];
   status: ArticleStatus;
