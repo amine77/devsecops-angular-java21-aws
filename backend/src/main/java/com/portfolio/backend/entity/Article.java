@@ -48,6 +48,11 @@ public class Article {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "content_type", nullable = false, length = 20)
+    @Builder.Default
+    private ArticleContentType contentType = ArticleContentType.MARKDOWN;
+
     @Column(name = "cover_image_url", length = 500)
     private String coverImageUrl;
 
