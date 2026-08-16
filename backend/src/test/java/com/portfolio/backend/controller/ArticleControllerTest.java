@@ -6,6 +6,7 @@ import com.portfolio.backend.config.SecurityConfig;
 import com.portfolio.backend.dto.request.ArticleRequest;
 import com.portfolio.backend.dto.response.ArticleResponse;
 import com.portfolio.backend.dto.response.PageResponse;
+import com.portfolio.backend.entity.ArticleContentType;
 import com.portfolio.backend.entity.ArticleStatus;
 import com.portfolio.backend.exception.GlobalExceptionHandler;
 import com.portfolio.backend.exception.ResourceNotFoundException;
@@ -67,7 +68,7 @@ class ArticleControllerTest {
     private AppMetrics appMetrics;
 
     private final ArticleResponse sampleArticle = new ArticleResponse(
-        1L, "Mon article", "mon-article", "Résumé", "Contenu Markdown", null,
+        1L, "Mon article", "mon-article", "Résumé", "Contenu Markdown", ArticleContentType.MARKDOWN, null,
         List.of("kubernetes"), ArticleStatus.PUBLISHED, null, "Amine Charrad", null, null
     );
 
@@ -174,7 +175,7 @@ class ArticleControllerTest {
         @DisplayName("POST /articles retourne 403 avec ROLE_USER")
         void shouldReturn403WithUserRole() throws Exception {
             ArticleRequest request = new ArticleRequest(
-                "Test", null, "Contenu suffisant", null, List.of(), ArticleStatus.DRAFT
+                "Test", null, "Contenu suffisant", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.DRAFT
             );
 
             mockMvc.perform(post("/articles")
@@ -189,7 +190,7 @@ class ArticleControllerTest {
         @DisplayName("POST /articles retourne 201 avec ROLE_ADMIN et données valides")
         void shouldReturn201WithAdminRole() throws Exception {
             ArticleRequest request = new ArticleRequest(
-                "Mon article", "Résumé", "Contenu Markdown", null, List.of("kubernetes"), ArticleStatus.DRAFT
+                "Mon article", "Résumé", "Contenu Markdown", ArticleContentType.MARKDOWN, null, List.of("kubernetes"), ArticleStatus.DRAFT
             );
 
             given(articleService.createArticle(any(ArticleRequest.class))).willReturn(sampleArticle);
@@ -205,10 +206,32 @@ class ArticleControllerTest {
 
         @Test
         @WithMockUser(roles = "ADMIN")
+        @DisplayName("POST /articles transmet et retourne contentType=HTML")
+        void shouldRoundTripHtmlContentType() throws Exception {
+            ArticleRequest request = new ArticleRequest(
+                "Article designé", "Résumé", "<html><body>...</body></html>", ArticleContentType.HTML,
+                null, List.of(), ArticleStatus.DRAFT
+            );
+            ArticleResponse htmlResponse = new ArticleResponse(
+                2L, "Article designé", "article-designe", "Résumé", "<html><body>...</body></html>",
+                ArticleContentType.HTML, null, List.of(), ArticleStatus.DRAFT, null, "Amine Charrad", null, null
+            );
+            given(articleService.createArticle(any(ArticleRequest.class))).willReturn(htmlResponse);
+
+            mockMvc.perform(post("/articles")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.contentType").value("HTML"));
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
         @DisplayName("POST /articles retourne 400 avec titre vide")
         void shouldReturn400WithBlankTitle() throws Exception {
             ArticleRequest invalidRequest = new ArticleRequest(
-                "", null, "Contenu suffisant", null, List.of(), ArticleStatus.DRAFT
+                "", null, "Contenu suffisant", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.DRAFT
             );
 
             mockMvc.perform(post("/articles")
@@ -224,7 +247,7 @@ class ArticleControllerTest {
         @DisplayName("PUT /articles/{id} retourne 200 avec ROLE_ADMIN et données valides")
         void shouldReturn200OnValidUpdate() throws Exception {
             ArticleRequest request = new ArticleRequest(
-                "Mon article modifié", "Résumé", "Contenu modifié", null, List.of(), ArticleStatus.PUBLISHED
+                "Mon article modifié", "Résumé", "Contenu modifié", ArticleContentType.MARKDOWN, null, List.of(), ArticleStatus.PUBLISHED
             );
 
             given(articleService.updateArticle(eq(1L), any(ArticleRequest.class))).willReturn(sampleArticle);
