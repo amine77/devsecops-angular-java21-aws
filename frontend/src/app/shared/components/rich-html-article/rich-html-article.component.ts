@@ -66,7 +66,7 @@ const CSS_ORIGIN_TOKEN_RE = /(['"]?)(https?:\/\/[^\s'")]+|\/\/[^\s'")]+)\1/gi;
 function sanitizeCssUrls(css: string): string {
   const withoutComments = css.replace(CSS_COMMENT_RE, '');
   const withoutImports = withoutComments.replace(CSS_IMPORT_RE, '');
-  return withoutImports.replace(CSS_ORIGIN_TOKEN_RE, (match, _quote, rawUrl) => {
+  return withoutImports.replace(CSS_ORIGIN_TOKEN_RE, (match: string, _quote: string, rawUrl: string) => {
     const trimmed = rawUrl.trim();
     if (trimmed.startsWith('data:') || isAllowedFontOrigin(trimmed)) {
       return match;
@@ -113,7 +113,7 @@ purifier.addHook('afterSanitizeAttributes', (node) => {
 export class RichHtmlArticleComponent implements AfterViewInit, OnChanges {
   @Input() content = '';
 
-  @ViewChild('host', { static: true }) private hostRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('host', { static: true }) private readonly hostRef!: ElementRef<HTMLDivElement>;
 
   private shadowRoot: ShadowRoot | null = null;
   private viewReady = false;
