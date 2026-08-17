@@ -43,21 +43,53 @@ function isAllowedFontOrigin(href: string | null): boolean {
 }
 
 // The <link>-level origin whitelist only guards <link href="...">; CSS itself can load
-// arbitrary remote resources via @import and url(...) (stylesheets, fonts, background
-// images), both in <style> tag bodies and in inline style="" attributes. Neither is
-// touched by DOMPurify (it doesn't parse CSS), so this closes that gap by stripping
-// @import outright and rewriting url(...) to keep only data: URIs and the same allowed
-// font origins already enforced on <link>.
+// arbitrary remote resources via @import and url(...)-like functions (stylesheets, fonts,
+// background images), both in <style> tag bodies and in inline style="" attributes. Neither
+// is touched by DOMPurify (it doesn't parse CSS), so this closes that gap by stripping
+// @import outright and neutralizing any absolute-URL token to keep only data: URIs and the
+// same allowed font origins already enforced on <link>.
+//
+// CSS comments are stripped first: a comment between a function name and its argument
+// (e.g. `url(/*c*/"...")`) would otherwise hide the URL from the passes below, and this
+// also closes off comment-based obfuscation of `@import` itself (e.g. `@im/**/port`).
+const CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
+// `\b` (not `\s+`) because CSS syntax allows `@import` immediately followed by a string
+// token with zero whitespace, e.g. `@import"https://evil.example/x.css";`.
+const CSS_IMPORT_RE = /@import\b[^;]*;?/gi;
+// A generic origin-token scan rather than a `url(...)`-specific regex: `url()` is not the
+// only CSS function that can carry an absolute URL (`image-set()`, `-webkit-image-set()`,
+// `cross-fade()`, and others), so instead of enumerating function names this matches any
+// quoted-or-bare `http://`/`https://`/`//`-prefixed token wherever it appears in the CSS
+// text, covering every current and future URL-bearing function in a single pass.
+const CSS_ORIGIN_TOKEN_RE = /(['"]?)(https?:\/\/[^\s'")]+|\/\/[^\s'")]+)\1/gi;
+
 function sanitizeCssUrls(css: string): string {
-  let result = css.replace(/@import\s+[^;]*;?/gi, '');
-  result = result.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (match, _quote, rawUrl) => {
+  const withoutComments = css.replace(CSS_COMMENT_RE, '');
+  const withoutImports = withoutComments.replace(CSS_IMPORT_RE, '');
+  return withoutImports.replace(CSS_ORIGIN_TOKEN_RE, (match, _quote, rawUrl) => {
     const trimmed = rawUrl.trim();
-    if (trimmed.startsWith('data:')) {
+    if (trimmed.startsWith('data:') || isAllowedFontOrigin(trimmed)) {
       return match;
     }
-    return isAllowedFontOrigin(trimmed) ? match : 'url()';
+    return '';
   });
-  return result;
+}
+
+// There is no <body>/<html> element inside a Shadow DOM tree, so any CSS rule selecting
+// `body` or `html` as a type selector never matches anything once the article is rendered
+// — silently dropping the article's base typography (font-family, font-size, color) when
+// those are set on `body{...}` in the source document. Rewrite `body`/`html` to `:host`,
+// but only when it is a complete, standalone simple selector: it must start right after
+// `{`, `}`, `,`, or the very start of the CSS text (with only whitespace in between), and
+// be immediately followed by whitespace-then-`{`, a `,` (selector list continuation), or a
+// pseudo-class colon (e.g. `body:hover`). This deliberately excludes compound selectors
+// (`body.dark`, `.article-body`, `body#x`) and descendant selectors (`.wrap body`) — those
+// are dead-but-harmless CSS, out of scope for this fix, and a false-positive rewrite of the
+// substring "body" inside a class name would be worse than leaving them alone.
+const BODY_HTML_SELECTOR_RE = /(^|[{},])(\s*)(?:body|html)(?=\s*[{,:])/gi;
+
+function sanitizeBodyHtmlSelectors(css: string): string {
+  return css.replace(BODY_HTML_SELECTOR_RE, (_match, boundary: string, whitespace: string) => `${boundary}${whitespace}:host`);
 }
 
 const purifier = createDOMPurify(window);
@@ -134,6 +166,6 @@ export class RichHtmlArticleComponent implements AfterViewInit, OnChanges {
   }
 
   private sanitizeStyleContent(css: string): string {
-    return sanitizeCssUrls(css).replace(/:root\b/g, ':host');
+    return sanitizeBodyHtmlSelectors(sanitizeCssUrls(css).replace(/:root\b/g, ':host'));
   }
 }

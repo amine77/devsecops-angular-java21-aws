@@ -14,6 +14,7 @@ describe('ArticleService', () => {
     slug: 'mon-article',
     summary: 'Résumé',
     content: 'Contenu **Markdown**',
+    contentType: 'MARKDOWN',
     coverImageUrl: undefined,
     tags: ['kubernetes'],
     status: 'PUBLISHED',
@@ -122,6 +123,7 @@ describe('ArticleService', () => {
     const formData: ArticleFormData = {
       title: 'Nouveau',
       content: 'Contenu',
+      contentType: 'MARKDOWN',
       tags: [],
       status: 'DRAFT',
     };
@@ -139,6 +141,7 @@ describe('ArticleService', () => {
     const formData: ArticleFormData = {
       title: 'Modifié',
       content: 'Contenu modifié',
+      contentType: 'MARKDOWN',
       tags: ['kubernetes'],
       status: 'PUBLISHED',
     };

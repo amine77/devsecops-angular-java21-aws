@@ -18,6 +18,7 @@ describe('BlogListComponent', () => {
     slug: 'mon-article',
     summary: 'Résumé',
     content: 'Contenu',
+    contentType: 'MARKDOWN',
     coverImageUrl: undefined,
     tags: ['kubernetes'],
     status: 'PUBLISHED',
