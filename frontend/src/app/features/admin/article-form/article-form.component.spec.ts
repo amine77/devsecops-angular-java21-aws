@@ -130,7 +130,11 @@ describe('ArticleFormComponent', () => {
 
   it('should patch contentType and show the rich HTML preview for an existing HTML article', () => {
     mockArticleService.getArticleByIdForAdmin.mockReturnValue(
-      of({ ...mockArticle, contentType: 'HTML', content: '<html><body><p>Design</p></body></html>' })
+      of({
+        ...mockArticle,
+        contentType: 'HTML',
+        content: '<html><body><p>Design</p></body></html>',
+      })
     );
     component.id = '1';
 

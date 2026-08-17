@@ -48,7 +48,9 @@ describe('RichHtmlArticleComponent', () => {
     `;
     fixture.detectChanges();
 
-    const hrefs = Array.from(shadowRoot().querySelectorAll('link')).map((l) => l.getAttribute('href'));
+    const hrefs = Array.from(shadowRoot().querySelectorAll('link')).map((l) =>
+      l.getAttribute('href')
+    );
     expect(hrefs).toContain('https://fonts.gstatic.com');
     expect(hrefs.some((h) => h?.startsWith('https://fonts.googleapis.com'))).toBe(true);
     expect(hrefs.some((h) => h?.includes('evil.example'))).toBe(false);
@@ -149,7 +151,8 @@ describe('RichHtmlArticleComponent', () => {
 
   describe('body/html type-selector rewrite (Shadow DOM has no <body>/<html> to match)', () => {
     it('rewrites a standalone body{...} rule to :host{...}', () => {
-      component.content = '<html><head><style>body{margin:0;color:red;}</style></head><body><p>Texte</p></body></html>';
+      component.content =
+        '<html><head><style>body{margin:0;color:red;}</style></head><body><p>Texte</p></body></html>';
       fixture.detectChanges();
 
       const css = shadowRoot().querySelector('style')?.textContent ?? '';
@@ -180,7 +183,8 @@ describe('RichHtmlArticleComponent', () => {
     });
 
     it('does NOT touch a descendant selector like ".wrap body"', () => {
-      component.content = '<html><head><style>.wrap body{color:blue;}</style></head><body><p>Texte</p></body></html>';
+      component.content =
+        '<html><head><style>.wrap body{color:blue;}</style></head><body><p>Texte</p></body></html>';
       fixture.detectChanges();
 
       const css = shadowRoot().querySelector('style')?.textContent ?? '';
@@ -197,7 +201,8 @@ describe('RichHtmlArticleComponent', () => {
     });
 
     it('does NOT touch the substring "body" inside a class name like ".article-body"', () => {
-      component.content = '<html><head><style>.article-body{padding:1rem;}</style></head><body><p>Texte</p></body></html>';
+      component.content =
+        '<html><head><style>.article-body{padding:1rem;}</style></head><body><p>Texte</p></body></html>';
       fixture.detectChanges();
 
       const css = shadowRoot().querySelector('style')?.textContent ?? '';
@@ -216,7 +221,8 @@ describe('RichHtmlArticleComponent', () => {
 
   describe('sanitizeCssUrls hardening (comment-broken url(), no-whitespace @import, image-set())', () => {
     it('strips a no-whitespace @import ("@import" immediately followed by the string token)', () => {
-      component.content = '<html><head><style>@import"https://evil.example/x.css";</style></head><body><p>Texte</p></body></html>';
+      component.content =
+        '<html><head><style>@import"https://evil.example/x.css";</style></head><body><p>Texte</p></body></html>';
       fixture.detectChanges();
 
       const css = shadowRoot().querySelector('style')?.textContent ?? '';

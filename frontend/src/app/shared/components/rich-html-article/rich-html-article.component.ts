@@ -66,13 +66,16 @@ const CSS_ORIGIN_TOKEN_RE = /(['"]?)(https?:\/\/[^\s'")]+|\/\/[^\s'")]+)\1/gi;
 function sanitizeCssUrls(css: string): string {
   const withoutComments = css.replace(CSS_COMMENT_RE, '');
   const withoutImports = withoutComments.replace(CSS_IMPORT_RE, '');
-  return withoutImports.replace(CSS_ORIGIN_TOKEN_RE, (match: string, _quote: string, rawUrl: string) => {
-    const trimmed = rawUrl.trim();
-    if (trimmed.startsWith('data:') || isAllowedFontOrigin(trimmed)) {
-      return match;
+  return withoutImports.replace(
+    CSS_ORIGIN_TOKEN_RE,
+    (match: string, _quote: string, rawUrl: string) => {
+      const trimmed = rawUrl.trim();
+      if (trimmed.startsWith('data:') || isAllowedFontOrigin(trimmed)) {
+        return match;
+      }
+      return '';
     }
-    return '';
-  });
+  );
 }
 
 // There is no <body>/<html> element inside a Shadow DOM tree, so any CSS rule selecting
@@ -89,7 +92,10 @@ function sanitizeCssUrls(css: string): string {
 const BODY_HTML_SELECTOR_RE = /(^|[{},])(\s*)(?:body|html)(?=\s*[{,:])/gi;
 
 function sanitizeBodyHtmlSelectors(css: string): string {
-  return css.replace(BODY_HTML_SELECTOR_RE, (_match, boundary: string, whitespace: string) => `${boundary}${whitespace}:host`);
+  return css.replace(
+    BODY_HTML_SELECTOR_RE,
+    (_match, boundary: string, whitespace: string) => `${boundary}${whitespace}:host`
+  );
 }
 
 const purifier = createDOMPurify(window);

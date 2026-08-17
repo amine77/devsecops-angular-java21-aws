@@ -83,7 +83,11 @@ describe('BlogDetailComponent', () => {
 
   it('should render app-rich-html-article when contentType is HTML', () => {
     mockArticleService.getArticleBySlug.mockReturnValue(
-      of({ ...mockArticle, contentType: 'HTML', content: '<html><body><p>Design</p></body></html>' })
+      of({
+        ...mockArticle,
+        contentType: 'HTML',
+        content: '<html><body><p>Design</p></body></html>',
+      })
     );
 
     fixture.detectChanges();

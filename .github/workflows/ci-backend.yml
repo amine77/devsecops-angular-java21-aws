@@ -188,11 +188,25 @@ jobs:
             owasp-nvd-
 
       - name: OWASP Dependency Check
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
+          # Sans clé API NVD, le plugin échoue désormais sur l'appel d'update
+          # ("Invalid API Key, length of 0") au lieu de continuer avec le cache
+          # local comme avant — pas de secret NVD_API_KEY configuré sur ce repo.
+          # Fallback : -DautoUpdate=false réutilise le cache restauré par l'étape
+          # précédente sans tenter de contacter l'API. Si NVD_API_KEY est ajouté
+          # comme secret GitHub, l'update live reprend automatiquement.
+          if [ -n "$NVD_API_KEY" ]; then
+            NVD_ARGS="-DnvdApiKey=$NVD_API_KEY"
+          else
+            NVD_ARGS="-DautoUpdate=false"
+          fi
           mvn org.owasp:dependency-check-maven:check \
             -DfailBuildOnCVSS=9 \
             -DsuppressionFile=../owasp-suppressions.xml \
             -Dformats=HTML,SARIF \
+            $NVD_ARGS \
             -B
           # BLOQUANT sur CVSS >= 9 (CRITICAL) : les false positives se gèrent
           # via owasp-suppressions.xml, pas en ignorant l'exit code.
