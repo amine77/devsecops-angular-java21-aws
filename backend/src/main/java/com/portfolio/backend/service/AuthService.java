@@ -1,11 +1,14 @@
 package com.portfolio.backend.service;
 
+import com.portfolio.backend.dto.request.ChangePasswordRequest;
 import com.portfolio.backend.dto.request.LoginRequest;
 import com.portfolio.backend.dto.response.AuthResponse;
 import com.portfolio.backend.entity.User;
+import com.portfolio.backend.exception.UnauthorizedException;
 import com.portfolio.backend.kafka.EventPublisher;
 import com.portfolio.backend.kafka.event.UserLoginEvent;
 import com.portfolio.backend.observability.AppMetrics;
+import com.portfolio.backend.repository.UserRepository;
 import com.portfolio.backend.security.JwtTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +17,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 /**
  * Service d'authentification.
@@ -40,6 +46,8 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AppMetrics metrics;
     private final EventPublisher eventPublisher;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
@@ -48,12 +56,16 @@ public class AuthService {
         AuthenticationManager authenticationManager,
         JwtTokenProvider jwtTokenProvider,
         AppMetrics metrics,
-        EventPublisher eventPublisher
+        EventPublisher eventPublisher,
+        UserRepository userRepository,
+        PasswordEncoder passwordEncoder
     ) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
         this.metrics = metrics;
         this.eventPublisher = eventPublisher;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -99,5 +111,32 @@ public class AuthService {
                 user.getRole().name()
             )
         );
+    }
+
+    /**
+     * Change le mot de passe de l'utilisateur authentifié.
+     *
+     * <p>Le mot de passe actuel est revérifié explicitement (BCrypt) même si l'appelant
+     * est déjà authentifié par JWT : un token volé ne doit pas suffire, à lui seul,
+     * à changer définitivement le mot de passe du compte.
+     *
+     * @param email l'email de l'utilisateur authentifié (extrait du JWT par le controller)
+     * @param request mot de passe actuel + nouveau mot de passe
+     * @throws UnauthorizedException si le mot de passe actuel est incorrect
+     */
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new UnauthorizedException("Utilisateur introuvable"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            log.warn("Changement de mot de passe refusé (mot de passe actuel invalide) pour: {}", email);
+            throw new UnauthorizedException("Mot de passe actuel incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        log.info("Mot de passe changé avec succès pour: {}", email);
     }
 }

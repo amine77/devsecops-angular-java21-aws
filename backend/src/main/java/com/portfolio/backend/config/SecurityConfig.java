@@ -136,6 +136,10 @@ public class SecurityConfig {
         AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth
     ) {
         auth
+            // Changement de mot de passe : doit être déclaré AVANT le permitAll de /auth/**
+            // ci-dessous (premier match gagnant) — cette route exige une authentification,
+            // contrairement au reste de /auth/** (login, register).
+            .requestMatchers(HttpMethod.PUT, "/auth/password").authenticated()
             // Authentification publique
             .requestMatchers("/auth", "/auth/**").permitAll()
             // Portfolio public (GET seulement) - separate matchers for each pattern

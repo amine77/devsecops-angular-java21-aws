@@ -1,11 +1,14 @@
 package com.portfolio.backend.service;
 
+import com.portfolio.backend.dto.request.ChangePasswordRequest;
 import com.portfolio.backend.dto.request.LoginRequest;
 import com.portfolio.backend.dto.response.AuthResponse;
 import com.portfolio.backend.entity.Role;
 import com.portfolio.backend.entity.User;
+import com.portfolio.backend.exception.UnauthorizedException;
 import com.portfolio.backend.kafka.EventPublisher;
 import com.portfolio.backend.observability.AppMetrics;
+import com.portfolio.backend.repository.UserRepository;
 import com.portfolio.backend.security.JwtTokenProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +24,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,6 +60,12 @@ class AuthServiceTest {
 
     @Mock
     private EventPublisher eventPublisher;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @Mock
     private Authentication authentication;
@@ -209,6 +221,55 @@ class AuthServiceTest {
 
             // THEN — MDC userId ne doit pas être positionné
             assertThat(MDC.get("userId")).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("changePassword()")
+    class ChangePasswordTests {
+
+        @Test
+        @DisplayName("Change le mot de passe si le mot de passe actuel est correct")
+        void shouldChangePasswordWhenCurrentPasswordCorrect() {
+            // GIVEN
+            ChangePasswordRequest request = new ChangePasswordRequest("Admin@2024!", "NewStrongPassword123!");
+            given(userRepository.findByEmail("admin@portfolio.dev")).willReturn(Optional.of(testUser));
+            given(passwordEncoder.matches("Admin@2024!", testUser.getPassword())).willReturn(true);
+            given(passwordEncoder.encode("NewStrongPassword123!")).willReturn("$2b$12$newHashed");
+
+            // WHEN
+            authService.changePassword("admin@portfolio.dev", request);
+
+            // THEN
+            assertThat(testUser.getPassword()).isEqualTo("$2b$12$newHashed");
+            verify(userRepository).save(testUser);
+        }
+
+        @Test
+        @DisplayName("Rejette avec UnauthorizedException si le mot de passe actuel est incorrect")
+        void shouldRejectWhenCurrentPasswordIncorrect() {
+            // GIVEN
+            ChangePasswordRequest request = new ChangePasswordRequest("WrongCurrent!", "NewStrongPassword123!");
+            given(userRepository.findByEmail("admin@portfolio.dev")).willReturn(Optional.of(testUser));
+            given(passwordEncoder.matches("WrongCurrent!", testUser.getPassword())).willReturn(false);
+
+            // WHEN / THEN
+            assertThatThrownBy(() -> authService.changePassword("admin@portfolio.dev", request))
+                .isInstanceOf(UnauthorizedException.class);
+            verify(userRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Rejette avec UnauthorizedException si l'utilisateur n'existe plus")
+        void shouldRejectWhenUserNotFound() {
+            // GIVEN
+            ChangePasswordRequest request = new ChangePasswordRequest("Admin@2024!", "NewStrongPassword123!");
+            given(userRepository.findByEmail("ghost@portfolio.dev")).willReturn(Optional.empty());
+
+            // WHEN / THEN
+            assertThatThrownBy(() -> authService.changePassword("ghost@portfolio.dev", request))
+                .isInstanceOf(UnauthorizedException.class);
+            verify(userRepository, never()).save(any());
         }
     }
 }
