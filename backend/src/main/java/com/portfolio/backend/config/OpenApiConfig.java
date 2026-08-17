@@ -57,7 +57,7 @@ import org.springframework.context.annotation.Configuration;
     ),
     servers = {
         @Server(url = "http://localhost:8080", description = "Serveur de développement"),
-        @Server(url = "https://monapp.duckdns.org/api", description = "Serveur de production")
+        @Server(url = "https://charrad.dev/api", description = "Serveur de production")
     },
     security = @SecurityRequirement(name = "bearerAuth")
 )

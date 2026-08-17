@@ -19,6 +19,10 @@ backend:
     limits:
       memory: "1Gi"
       cpu: "1000m"
+  config:
+    # Doit rester aligné avec ingress.host ci-dessous (même domaine, deux
+    # endroits différents : NGINX route les requêtes, Spring valide l'Origin)
+    CORS_ALLOWED_ORIGINS: "https://charrad.dev,https://www.charrad.dev"
 
 frontend:
   image:
