@@ -8,10 +8,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - portfolio.amine-charrad.dev
+        - charrad.dev
       secretName: portfolio-tls-cert
   rules:
-    - host: portfolio.amine-charrad.dev
+    - host: charrad.dev
       http:
         paths:
           - path: /api(/|$)(.*)

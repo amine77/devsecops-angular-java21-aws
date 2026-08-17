@@ -26,7 +26,7 @@ frontend:
   replicas: 2
 
 ingress:
-  host: portfolio.amine-charrad.dev
+  host: charrad.dev
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
