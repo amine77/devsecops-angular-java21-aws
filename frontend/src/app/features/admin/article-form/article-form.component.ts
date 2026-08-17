@@ -10,13 +10,15 @@ import { MatChipsModule, MatChipInputEvent } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
 import { ArticleService } from '@core/services/article.service';
 import { LanguageService } from '@core/services/language.service';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
-import { ArticleStatus } from '@shared/models/article.model';
+import { RichHtmlArticleComponent } from '@shared/components/rich-html-article/rich-html-article.component';
+import { ArticleContentType, ArticleStatus } from '@shared/models/article.model';
 import { ErrorResponse } from '@shared/models/api-response.model';
 
 const URL_PATTERN = /^https?:\/\/.+/;
@@ -36,6 +38,8 @@ const URL_PATTERN = /^https?:\/\/.+/;
     MatSelectModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    MatButtonToggleModule,
+    RichHtmlArticleComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -103,6 +107,18 @@ const URL_PATTERN = /^https?:\/\/.+/;
             </mat-chip-grid>
           </div>
 
+          <div class="content-type-toggle">
+            <p class="tags-label">{{ 'admin.form.field.contentType' | translate }}</p>
+            <mat-button-toggle-group formControlName="contentType" aria-label="Type de contenu">
+              <mat-button-toggle value="MARKDOWN">{{
+                'admin.form.field.contentType.markdown' | translate
+              }}</mat-button-toggle>
+              <mat-button-toggle value="HTML">{{
+                'admin.form.field.contentType.html' | translate
+              }}</mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+
           <div class="content-section">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>{{ 'admin.form.field.content' | translate }}</mat-label>
@@ -114,7 +130,11 @@ const URL_PATTERN = /^https?:\/\/.+/;
 
             <div class="content-preview">
               <p class="tags-label">{{ 'admin.form.preview' | translate }}</p>
-              <div class="content-preview__body" [innerHTML]="previewHtml()"></div>
+              @if (form.value.contentType === 'HTML') {
+                <app-rich-html-article [content]="form.value.content ?? ''" />
+              } @else {
+                <div class="content-preview__body" [innerHTML]="previewHtml()"></div>
+              }
             </div>
           </div>
 
@@ -180,6 +200,9 @@ const URL_PATTERN = /^https?:\/\/.+/;
         color: var(--color-text-secondary);
         margin-bottom: 0.5rem;
       }
+      .content-type-toggle {
+        margin: 0.5rem 0;
+      }
       .content-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -244,6 +267,7 @@ export class ArticleFormComponent implements OnInit {
     summary: ['', [Validators.maxLength(500)]],
     coverImageUrl: ['', [Validators.pattern(URL_PATTERN)]],
     content: ['', [Validators.required]],
+    contentType: ['MARKDOWN' as ArticleContentType],
     status: ['DRAFT' as ArticleStatus],
   });
 
@@ -255,6 +279,7 @@ export class ArticleFormComponent implements OnInit {
           summary: a.summary ?? '',
           coverImageUrl: a.coverImageUrl ?? '',
           content: a.content,
+          contentType: a.contentType,
           status: a.status,
         });
         this.tags.set([...a.tags]);
@@ -299,6 +324,7 @@ export class ArticleFormComponent implements OnInit {
       summary: this.form.value.summary || undefined,
       coverImageUrl: this.form.value.coverImageUrl || undefined,
       content: this.form.value.content!,
+      contentType: this.form.value.contentType as ArticleContentType,
       tags: this.tags(),
       status: this.form.value.status as ArticleStatus,
     };

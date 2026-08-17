@@ -121,4 +121,22 @@ describe('ArticleFormComponent', () => {
 
     expect(component['tags']()).toEqual([]);
   });
+
+  it('should default contentType to MARKDOWN for a new article', () => {
+    fixture.detectChanges();
+
+    expect(component['form'].get('contentType')?.value).toBe('MARKDOWN');
+  });
+
+  it('should patch contentType and show the rich HTML preview for an existing HTML article', () => {
+    mockArticleService.getArticleByIdForAdmin.mockReturnValue(
+      of({ ...mockArticle, contentType: 'HTML', content: '<html><body><p>Design</p></body></html>' })
+    );
+    component.id = '1';
+
+    fixture.detectChanges();
+
+    expect(component['form'].get('contentType')?.value).toBe('HTML');
+    expect(fixture.nativeElement.querySelector('app-rich-html-article')).toBeTruthy();
+  });
 });
