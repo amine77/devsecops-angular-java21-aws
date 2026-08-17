@@ -4,6 +4,7 @@ import com.portfolio.backend.dto.response.ArticleResponse;
 import com.portfolio.backend.entity.Article;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -18,7 +19,7 @@ public class ArticleMapper {
             article.getContent(),
             article.getContentType(),
             article.getCoverImageUrl(),
-            article.getTags(),
+            new ArrayList<>(article.getTags()),
             article.getStatus(),
             article.getPublishedAt(),
             article.getUser().getFirstName() + " " + article.getUser().getLastName(),
