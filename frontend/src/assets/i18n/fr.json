@@ -223,6 +223,9 @@
 
   "admin.form.article.title.create": "Nouvel article",
   "admin.form.article.title.edit": "Modifier l'article",
+  "admin.form.field.contentType": "Type de contenu",
+  "admin.form.field.contentType.markdown": "Markdown",
+  "admin.form.field.contentType.html": "HTML designé",
   "admin.form.field.content": "Contenu (Markdown) *",
   "admin.form.field.content.error": "Le contenu est obligatoire",
   "admin.form.field.tags": "Tags",
