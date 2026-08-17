@@ -88,9 +88,6 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
         flex-wrap: wrap;
         gap: var(--spacing-xs);
       }
-      .bd-layout {
-        max-width: 720px;
-      }
       .bd-image {
         width: 100%;
         max-height: 420px;
@@ -99,6 +96,8 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
         margin-bottom: var(--spacing-xl);
       }
       .bd-content {
+        max-width: 760px;
+        margin: 0 auto;
         color: var(--color-text-secondary);
         font-size: var(--font-size-lg);
         line-height: 1.8;
