@@ -188,6 +188,6 @@ export class BlogListComponent implements OnInit {
   private updateKnownTags(articles: Article[]): void {
     const known = new Set(this.allTags());
     articles.forEach((a) => a.tags.forEach((t) => known.add(t)));
-    this.allTags.set(Array.from(known).sort());
+    this.allTags.set(Array.from(known).sort((a, b) => a.localeCompare(b)));
   }
 }
