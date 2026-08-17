@@ -102,6 +102,11 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
         font-size: var(--font-size-lg);
         line-height: 1.8;
       }
+      app-rich-html-article {
+        display: block;
+        max-width: 760px;
+        margin: 0 auto;
+      }
       .bd-content ::ng-deep h1,
       .bd-content ::ng-deep h2,
       .bd-content ::ng-deep h3 {

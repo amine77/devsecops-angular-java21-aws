@@ -98,6 +98,18 @@ function sanitizeBodyHtmlSelectors(css: string): string {
   );
 }
 
+// Long property names in cheat-sheet <code> blocks otherwise overflow their
+// .cheat-card boundary and overlap neighboring columns; articles don't control
+// this consistently themselves, so it's enforced here for every article.
+const SUPPLEMENTAL_CSS = `
+.cheat-card code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+  display: inline-block;
+}
+`;
+
 const purifier = createDOMPurify(window);
 purifier.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'LINK' && !isAllowedFontOrigin(node.getAttribute('href'))) {
@@ -152,9 +164,10 @@ export class RichHtmlArticleComponent implements AfterViewInit, OnChanges {
       .join('\n');
 
     const styleElements = Array.from(parsed.querySelectorAll('style'));
-    const style = styleElements
-      .map((el) => this.sanitizeStyleContent(el.textContent ?? ''))
-      .join('\n');
+    const style =
+      styleElements.map((el) => this.sanitizeStyleContent(el.textContent ?? '')).join('\n') +
+      '\n' +
+      SUPPLEMENTAL_CSS;
 
     // Remove the harvested <link>/<style> elements from the parsed tree so no
     // unrewritten/unfiltered duplicate survives inside parsed.body.innerHTML below.
