@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input, OnInit, inject, signal } from '@angular/core';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { DomSanitizer, Meta, SafeHtml } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
@@ -34,13 +34,15 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
       <div class="bd-hero">
         <div class="container">
           <a routerLink="/portfolio/blog" class="bd-back">{{ 'blog.back' | translate }}</a>
-          <h1 class="bd-hero__title">{{ article()!.title }}</h1>
-          @if (article()!.tags.length > 0) {
-            <div class="bd-hero__tags">
-              @for (tag of article()!.tags; track tag) {
-                <span class="badge badge-blue">{{ tag }}</span>
-              }
-            </div>
+          @if (article()!.contentType !== 'HTML') {
+            <h1 class="bd-hero__title">{{ article()!.title }}</h1>
+            @if (article()!.tags.length > 0) {
+              <div class="bd-hero__tags">
+                @for (tag of article()!.tags; track tag) {
+                  <span class="badge badge-blue">{{ tag }}</span>
+                }
+              </div>
+            }
           }
         </div>
       </div>
@@ -148,6 +150,7 @@ export class BlogDetailComponent implements OnInit {
   private readonly articleService = inject(ArticleService);
   private readonly lang = inject(LanguageService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly meta = inject(Meta);
 
   protected readonly article = signal<Article | null>(null);
   protected readonly isLoading = signal(true);
@@ -158,6 +161,7 @@ export class BlogDetailComponent implements OnInit {
       next: (a) => {
         this.article.set(a);
         this.isLoading.set(false);
+        this.updateSocialMetaTags(a);
       },
       error: () => {
         this.error.set(this.lang.translate('blog.detail.error'));
@@ -179,5 +183,15 @@ export class BlogDetailComponent implements OnInit {
     // ne peut atteindre le DOM. Sonar ne peut pas suivre ce flux inter-méthodes,
     // d'où ce NOSONAR sur un bypass revu et volontaire.
     return this.sanitizer.bypassSecurityTrustHtml(this.renderedContent()); // NOSONAR
+  }
+
+  private updateSocialMetaTags(article: Article): void {
+    this.meta.updateTag({ property: 'og:title', content: article.title });
+    if (article.summary) {
+      this.meta.updateTag({ property: 'og:description', content: article.summary });
+    }
+    if (article.coverImageUrl) {
+      this.meta.updateTag({ property: 'og:image', content: article.coverImageUrl });
+    }
   }
 }
