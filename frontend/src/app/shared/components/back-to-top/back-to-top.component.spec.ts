@@ -23,7 +23,7 @@ describe('BackToTopComponent', () => {
   });
 
   function button(): HTMLButtonElement {
-    return fixture.nativeElement.querySelector('button');
+    return (fixture.nativeElement as HTMLElement).querySelector('button') as HTMLButtonElement;
   }
 
   it('should be created', () => {
