@@ -3,6 +3,7 @@ import { Router, RouterOutlet } from '@angular/router';
 
 import { NavbarComponent } from '@shared/components/navbar/navbar.component';
 import { FooterComponent } from '@shared/components/footer/footer.component';
+import { BackToTopComponent } from '@shared/components/back-to-top/back-to-top.component';
 import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 
 /**
@@ -17,7 +18,7 @@ import { ScrollAnimationService } from '@core/animation/scroll-animation.service
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, NavbarComponent, FooterComponent],
+  imports: [RouterOutlet, NavbarComponent, FooterComponent, BackToTopComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-navbar />
@@ -25,6 +26,7 @@ import { ScrollAnimationService } from '@core/animation/scroll-animation.service
       <router-outlet />
     </main>
     <app-footer />
+    <app-back-to-top />
   `,
   styles: [
     `
