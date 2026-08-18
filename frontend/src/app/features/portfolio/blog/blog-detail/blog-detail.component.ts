@@ -49,9 +49,6 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 
       <div class="section bd-body">
         <div class="container bd-layout">
-          @if (article()!.coverImageUrl) {
-            <img [src]="article()!.coverImageUrl" [alt]="article()!.title" class="bd-image" />
-          }
           @if (article()!.contentType === 'HTML') {
             <app-rich-html-article [content]="article()!.content" />
           } @else {
@@ -89,13 +86,6 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
         display: flex;
         flex-wrap: wrap;
         gap: var(--spacing-xs);
-      }
-      .bd-image {
-        width: 100%;
-        max-height: 420px;
-        object-fit: cover;
-        border-radius: var(--radius-lg);
-        margin-bottom: var(--spacing-xl);
       }
       .bd-content {
         max-width: 760px;
