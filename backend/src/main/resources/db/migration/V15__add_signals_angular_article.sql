@@ -10,6 +10,15 @@
 -- volontairement cité nulle part ailleurs dans ce fichier, y compris en
 -- commentaire, pour ne pas risquer de perturber le parseur de Flyway).
 --
+-- Un exemple de code de l'article contient un template literal JavaScript. La
+-- séquence dollar-accolade qui l'ouvre est justement le préfixe des placeholders
+-- de Flyway, et la substitution s'applique aussi À L'INTÉRIEUR du dollar-quoting :
+-- laissée telle quelle, elle fait échouer le parsing de la migration (et donc le
+-- démarrage du backend). Elle est donc écrite ici sous forme de sentinelle, que
+-- le replace() ci-dessous reconstitue à l'insertion via chr(36) — le caractère
+-- dollar n'apparaît ainsi jamais collé à l'accolade dans le fichier. Le contenu
+-- stocké en base est identique à l'article d'origine.
+--
 -- L'image de couverture est servie en statique par le frontend
 -- (frontend/src/assets/images/articles/), son URL est absolue car elle sert
 -- aussi de og:image (les crawlers sociaux n'acceptent pas les chemins relatifs).
@@ -20,7 +29,7 @@ SELECT
     'Signals : l''état d''un côté, le temps de l''autre',
     'signals-angular-rxjs',
     'Non, les signals ne remplacent pas RxJS. Ils reprennent la moitié du travail que RxJS n''aurait jamais dû faire — et une fois cette frontière comprise, la plupart des débats disparaissent.',
-    $article$
+    replace($article$
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -277,7 +286,7 @@ td:first-child{width:38%}
 
 <span class="c">// 3. Un effet : la sortie du graphe, vers le monde extérieur</span>
 <span class="f">effect</span>(() =&gt; {
-  <span class="t">console</span>.log(<span class="s">`Total : ${total()} €`</span>);
+  <span class="t">console</span>.log(<span class="s">`Total : @@DOLLAR@@{total()} €`</span>);
 });</pre>
 </div>
 
@@ -682,7 +691,7 @@ td:first-child{width:38%}
 </body>
 </html>
 
-$article$,
+$article$, '@@DOLLAR@@', chr(36)),
     'HTML',
     'https://charrad.dev/assets/images/articles/signals-angular-rxjs.png',
     'PUBLISHED',
