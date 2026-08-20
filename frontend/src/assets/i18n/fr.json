@@ -196,7 +196,7 @@
   "home.latest.all": "Voir tous les articles",
 
   "blog.title": "Blog",
-  "blog.subtitle": "Articles techniques sur le cloud, la sécurité et le DevOps",
+  "blog.subtitle": "Java, Spring, Angular et ce qui se passe entre le code et la production",
   "blog.loading": "Chargement des articles...",
   "blog.error": "Impossible de charger les articles.",
   "blog.retry": "Réessayer",

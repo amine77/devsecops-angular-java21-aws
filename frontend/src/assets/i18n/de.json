@@ -184,7 +184,7 @@
   "home.latest.retry": "Erneut versuchen",
   "home.latest.all": "Alle Artikel ansehen",
   "blog.title": "Blog",
-  "blog.subtitle": "Technische Artikel über Cloud, Sicherheit und DevOps",
+  "blog.subtitle": "Java, Spring, Angular und was zwischen Code und Produktion passiert",
   "blog.loading": "Artikel werden geladen...",
   "blog.error": "Artikel konnten nicht geladen werden.",
   "blog.retry": "Erneut versuchen",
