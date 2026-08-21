@@ -1,9 +1,21 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directive';
 import { SkillService } from '@core/services/skill.service';
-import { Skill, SkillCategory, SkillLevel, SKILL_CATEGORY_LABELS } from '@shared/models/skill.model';
+import {
+  Skill,
+  SkillCategory,
+  SkillLevel,
+  SKILL_CATEGORY_LABELS,
+} from '@shared/models/skill.model';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 @Component({
@@ -35,7 +47,10 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                 @for (skill of group.skills; track skill.id; let si = $index) {
                   <div class="skill-card card" appScrollReveal [revealDelay]="gi * 80 + si * 60">
                     <span class="skill-card__name">{{ skill.name }}</span>
-                    <span class="skill-card__level" [class]="'skill-card__level--' + skill.level.toLowerCase()">
+                    <span
+                      class="skill-card__level"
+                      [class]="'skill-card__level--' + skill.level.toLowerCase()"
+                    >
                       <span class="skill-card__dot" aria-hidden="true"></span>
                       {{ levelLabel(skill.level) }}
                     </span>

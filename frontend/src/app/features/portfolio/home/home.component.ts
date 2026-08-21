@@ -156,9 +156,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isLoadingArticles.set(false);
         this.stats.update((current) =>
           current.map((stat) =>
-            stat.key === 'home.stat.articles'
-              ? { ...stat, value: `${page.totalElements}` }
-              : stat
+            stat.key === 'home.stat.articles' ? { ...stat, value: `${page.totalElements}` } : stat
           )
         );
       },
