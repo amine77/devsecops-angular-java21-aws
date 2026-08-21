@@ -50,6 +50,11 @@
   "skills.level.expert": "Expert",
   "skills.level.avance": "Advanced",
   "skills.level.intermediaire": "Intermediate",
+  "skills.category.backend": "Backend",
+  "skills.category.frontend": "Frontend",
+  "skills.category.cloudDevops": "Cloud & DevOps",
+  "skills.category.quality": "Quality & Tests",
+  "skills.category.other": "Other",
 
   "contact.title": "Let's talk about your project",
   "contact.text": "Available for freelance missions or a permanent position, in the Paris area, fully remote, or willing to relocate to Switzerland or Luxembourg.",

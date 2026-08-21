@@ -1,4 +1,4 @@
-export type SkillCategory = 'BACKEND' | 'FRONTEND' | 'DEVOPS' | 'CLOUD' | 'QUALITY' | 'OTHER';
+export type SkillCategory = 'BACKEND' | 'FRONTEND' | 'CLOUD_DEVOPS' | 'QUALITY' | 'OTHER';
 
 export type SkillLevel = 'EXPERT' | 'AVANCE' | 'INTERMEDIAIRE';
 
@@ -11,12 +11,11 @@ export interface Skill {
   readonly sortOrder: number;
 }
 
-/** Map des libellés de catégories (UI). */
-export const SKILL_CATEGORY_LABELS: Record<SkillCategory, string> = {
-  BACKEND: 'Backend',
-  FRONTEND: 'Frontend',
-  DEVOPS: 'DevOps',
-  CLOUD: 'Cloud',
-  QUALITY: 'Qualité & Tests',
-  OTHER: 'Autre',
+/** Map des clés i18n des libellés de catégories (UI). */
+export const SKILL_CATEGORY_LABEL_KEYS: Record<SkillCategory, string> = {
+  BACKEND: 'skills.category.backend',
+  FRONTEND: 'skills.category.frontend',
+  CLOUD_DEVOPS: 'skills.category.cloudDevops',
+  QUALITY: 'skills.category.quality',
+  OTHER: 'skills.category.other',
 };

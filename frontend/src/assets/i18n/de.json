@@ -49,7 +49,12 @@
   "skills.empty": "Noch keine Fähigkeiten.",
   "skills.level.expert": "Experte",
   "skills.level.avance": "Fortgeschritten",
-  "skills.level.intermediaire": "Mittel",
+  "skills.level.intermediaire": "Mittelstufe",
+  "skills.category.backend": "Backend",
+  "skills.category.frontend": "Frontend",
+  "skills.category.cloudDevops": "Cloud & DevOps",
+  "skills.category.quality": "Qualität & Tests",
+  "skills.category.other": "Sonstiges",
 
   "contact.title": "Lassen Sie uns über Ihr Projekt sprechen",
   "contact.text": "Verfügbar für freiberufliche Aufträge oder eine Festanstellung, im Großraum Paris, vollständig remote, oder mit Umzugsbereitschaft in die Schweiz oder nach Luxemburg.",

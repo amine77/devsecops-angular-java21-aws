@@ -433,6 +433,18 @@
   margin-top: var(--spacing-sm);
 }
 
+.contact__email-plain {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-family: var(--font-mono);
+
+  &:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+}
+
 .contact__cv-link {
   font-size: var(--font-size-sm);
   color: var(--color-accent);

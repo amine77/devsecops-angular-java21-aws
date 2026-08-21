@@ -94,7 +94,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   ];
 
   /** Passe à true une fois frontend/src/assets/cv-amine-charrad.pdf ajouté au dépôt. */
-  protected readonly cvAvailable = false;
+  protected readonly cvAvailable = true;
 
   protected readonly stats = signal([
     { value: '12', key: 'home.stat.experience' },

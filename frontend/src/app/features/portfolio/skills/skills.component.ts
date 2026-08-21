@@ -14,7 +14,7 @@ import {
   Skill,
   SkillCategory,
   SkillLevel,
-  SKILL_CATEGORY_LABELS,
+  SKILL_CATEGORY_LABEL_KEYS,
 } from '@shared/models/skill.model';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
@@ -41,7 +41,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                 <span class="skill-group__icon" aria-hidden="true">{{
                   categoryIcon(group.category)
                 }}</span>
-                {{ categoryLabel(group.category) }}
+                {{ categoryLabel(group.category) | translate }}
               </h2>
               <div class="grid-skills">
                 @for (skill of group.skills; track skill.id; let si = $index) {
@@ -52,7 +52,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                       [class]="'skill-card__level--' + skill.level.toLowerCase()"
                     >
                       <span class="skill-card__dot" aria-hidden="true"></span>
-                      {{ levelLabel(skill.level) }}
+                      {{ levelLabel(skill.level) | translate }}
                     </span>
                   </div>
                 }
@@ -155,14 +155,13 @@ export class SkillsComponent implements OnInit {
   }
 
   protected categoryLabel(cat: SkillCategory): string {
-    return SKILL_CATEGORY_LABELS[cat] ?? cat;
+    return SKILL_CATEGORY_LABEL_KEYS[cat] ?? cat;
   }
 
   private static readonly CATEGORY_ICONS: Record<SkillCategory, string> = {
     BACKEND: '⚙️',
     FRONTEND: '🎨',
-    DEVOPS: '🔄',
-    CLOUD: '☁️',
+    CLOUD_DEVOPS: '☁️',
     QUALITY: '✅',
     OTHER: '🔧',
   };
