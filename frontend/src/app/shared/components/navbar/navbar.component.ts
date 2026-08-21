@@ -8,7 +8,7 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
@@ -74,6 +74,9 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
         <a routerLink="/portfolio/blog" routerLinkActive="active" mat-button class="nav-link">
           {{ 'nav.blog' | translate }}
         </a>
+        <a (click)="scrollToContact()" mat-button class="nav-link">
+          {{ 'nav.contact' | translate }}
+        </a>
       </nav>
 
       <span class="toolbar-spacer"></span>
@@ -116,10 +119,6 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             </a>
           }
           <button mat-button (click)="logout()">{{ 'nav.logout' | translate }}</button>
-        } @else {
-          <a routerLink="/auth/login" mat-raised-button color="primary">
-            {{ 'nav.login' | translate }}
-          </a>
         }
       </div>
     </mat-toolbar>
@@ -132,6 +131,7 @@ export class NavbarComponent implements AfterViewInit, OnDestroy {
   protected readonly languages = LANGUAGES;
   private readonly scrollAnim = inject(ScrollAnimationService);
   private readonly ngZone = inject(NgZone);
+  private readonly router = inject(Router);
 
   private readonly toolbarEl = viewChild<ElementRef<HTMLElement>>('toolbar');
   private readonly navLinksEl = viewChild<ElementRef<HTMLElement>>('navLinks');
@@ -172,6 +172,15 @@ export class NavbarComponent implements AfterViewInit, OnDestroy {
 
   setLang(code: Language): void {
     this.langService.setLanguage(code);
+  }
+
+  scrollToContact(): void {
+    const scroll = () => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+    if (this.router.url === '/portfolio' || this.router.url.startsWith('/portfolio#')) {
+      scroll();
+    } else {
+      this.router.navigateByUrl('/portfolio').then(() => setTimeout(scroll, 150));
+    }
   }
 
   logout(): void {

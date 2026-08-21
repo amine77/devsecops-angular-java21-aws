@@ -204,21 +204,11 @@ variable "lambda_sender_email" {
 
 variable "lambda_recipient_email" {
   description = <<-EOT
-    Email address that receives the weekly portfolio report and contact form submissions.
+    Email address that receives the weekly portfolio report.
     Must be verified in SES sandbox mode.
   EOT
   type        = string
   default     = ""
-}
-
-variable "lambda_contact_allowed_origins" {
-  description = <<-EOT
-    Comma-separated CORS origins allowed to call the contact form API.
-    Use the deployed frontend URL (e.g. https://portfolio.example.com).
-    Use "*" in development only.
-  EOT
-  type        = string
-  default     = "*"
 }
 
 # =============================================================================

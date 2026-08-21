@@ -2,6 +2,8 @@ package com.portfolio.backend.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -39,9 +41,10 @@ public class Skill {
     @Column(name = "icon_url", length = 500)
     private String iconUrl;
 
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     @Builder.Default
-    private Integer level = 3;
+    private SkillLevel level = SkillLevel.INTERMEDIAIRE;
 
     @Column(name = "sort_order", nullable = false)
     @Builder.Default

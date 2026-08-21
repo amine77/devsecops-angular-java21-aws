@@ -47,7 +47,7 @@ class SkillControllerTest {
     private AppMetrics appMetrics;
 
     private SkillResponse skill(String name, String cat) {
-        return new SkillResponse(1L, name, cat, null, 1, 1);
+        return new SkillResponse(1L, name, cat, null, "INTERMEDIAIRE", 1);
     }
 
     @Test

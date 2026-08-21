@@ -395,6 +395,55 @@
   }
 }
 
+/* =========== CONTACT =========== */
+.contact {
+  padding: var(--spacing-3xl) 0;
+}
+
+.contact__card {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--spacing-2xl);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.contact__title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.contact__text {
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  margin: 0;
+  max-width: 480px;
+}
+
+.contact__actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--spacing-sm);
+}
+
+.contact__cv-link {
+  font-size: var(--font-size-sm);
+  color: var(--color-accent);
+  text-decoration: none;
+  margin-top: var(--spacing-xs);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 /* =========== ÉTATS =========== */
 .empty-state,
 .error-state {

@@ -157,7 +157,6 @@ jobs:
       - name: Install Lambda dependencies
         run: |
           cd lambdas/weekly-report  && npm ci --omit=dev && cd ../..
-          cd lambdas/contact-form   && npm ci --omit=dev && cd ../..
           cd lambdas/image-resize   && npm ci --omit=dev && cd ../..
 
       - name: Trivy SBOM — Lambdas (CycloneDX JSON)

@@ -122,16 +122,6 @@ output "images_resized_base_url" {
   value       = module.lambda_image_resize.resized_base_url
 }
 
-output "contact_api_endpoint" {
-  description = "HTTPS endpoint for the contact form — set in Angular environment"
-  value       = module.lambda_contact_form.api_endpoint
-}
-
-output "lambda_contact_function_name" {
-  description = "Name of the contact form Lambda function"
-  value       = module.lambda_contact_form.function_name
-}
-
 # =============================================================================
 # COMMANDES PRATIQUES
 # =============================================================================

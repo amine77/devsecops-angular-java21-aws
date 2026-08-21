@@ -65,7 +65,7 @@ public class ProjectMapper {
             skill.getName(),
             skill.getCategory(),
             skill.getIconUrl(),
-            skill.getLevel(),
+            skill.getLevel().name(),
             skill.getSortOrder()
         );
     }

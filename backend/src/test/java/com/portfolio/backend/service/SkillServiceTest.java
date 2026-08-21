@@ -36,7 +36,7 @@ class SkillServiceTest {
     }
 
     private SkillResponse buildSkillResponse(String name, String category) {
-        return new SkillResponse(1L, name, category, null, 1, 1);
+        return new SkillResponse(1L, name, category, null, "INTERMEDIAIRE", 1);
     }
 
     @Nested

@@ -1,24 +1,9 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  NgZone,
-  OnDestroy,
-  OnInit,
-  computed,
-  effect,
-  inject,
-  signal,
-  untracked,
-} from '@angular/core';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directive';
-import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { SkillService } from '@core/services/skill.service';
-import { Skill, SkillCategory, SKILL_CATEGORY_LABELS } from '@shared/models/skill.model';
+import { Skill, SkillCategory, SkillLevel, SKILL_CATEGORY_LABELS } from '@shared/models/skill.model';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 @Component({
@@ -49,20 +34,11 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
               <div class="grid-skills">
                 @for (skill of group.skills; track skill.id; let si = $index) {
                   <div class="skill-card card" appScrollReveal [revealDelay]="gi * 80 + si * 60">
-                    <div class="skill-card__header">
-                      <span class="skill-card__name">{{ skill.name }}</span>
-                      <span class="skill-card__pct">{{ skill.level * 20 }}%</span>
-                    </div>
-                    <div
-                      class="skill-card__bar-track"
-                      role="progressbar"
-                      [attr.aria-valuenow]="skill.level * 20"
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                      [attr.aria-label]="skill.name + ' — niveau ' + skill.level + ' sur 5'"
-                    >
-                      <div class="skill-card__bar-fill" [attr.data-w]="skill.level * 20"></div>
-                    </div>
+                    <span class="skill-card__name">{{ skill.name }}</span>
+                    <span class="skill-card__level" [class]="'skill-card__level--' + skill.level.toLowerCase()">
+                      <span class="skill-card__dot" aria-hidden="true"></span>
+                      {{ levelLabel(skill.level) }}
+                    </span>
                   </div>
                 }
               </div>
@@ -93,50 +69,55 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
       .skill-card {
         padding: var(--spacing-md);
         display: flex;
-        flex-direction: column;
-        gap: var(--spacing-sm);
-      }
-      .skill-card__header {
-        display: flex;
-        justify-content: space-between;
         align-items: center;
+        justify-content: space-between;
+        gap: var(--spacing-sm);
       }
       .skill-card__name {
         font-weight: 600;
         font-size: var(--font-size-sm);
         color: var(--color-text-primary);
       }
-      .skill-card__pct {
-        font-family: var(--font-mono);
+      .skill-card__level {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         font-size: var(--font-size-xs);
-        color: var(--color-accent);
         font-weight: 600;
+        white-space: nowrap;
       }
-      .skill-card__bar-track {
-        height: 4px;
-        background: var(--color-bg-tertiary);
-        border-radius: var(--radius-full);
-        overflow: hidden;
+      .skill-card__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
       }
-      .skill-card__bar-fill {
-        height: 100%;
-        width: 0;
-        background: linear-gradient(90deg, var(--color-accent), #818cf8);
-        border-radius: var(--radius-full);
+      .skill-card__level--expert {
+        color: var(--color-success);
+      }
+      .skill-card__level--expert .skill-card__dot {
+        background: var(--color-success);
+      }
+      .skill-card__level--avance {
+        color: var(--color-accent);
+      }
+      .skill-card__level--avance .skill-card__dot {
+        background: var(--color-accent);
+      }
+      .skill-card__level--intermediaire {
+        color: var(--color-text-muted);
+      }
+      .skill-card__level--intermediaire .skill-card__dot {
+        background: var(--color-text-muted);
       }
     `,
   ],
 })
-export class SkillsComponent implements OnInit, OnDestroy {
+export class SkillsComponent implements OnInit {
   private readonly skillService = inject(SkillService);
-  private readonly scrollAnim = inject(ScrollAnimationService);
-  private readonly ngZone = inject(NgZone);
-  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
 
   private readonly skills = signal<Skill[]>([]);
   protected readonly isLoading = signal(true);
-  private readonly barTriggers: ScrollTrigger[] = [];
-  private barsAnimated = false;
 
   protected readonly skillGroups = computed(() => {
     const grouped = new Map<SkillCategory, Skill[]>();
@@ -148,20 +129,6 @@ export class SkillsComponent implements OnInit, OnDestroy {
     return Array.from(grouped.entries()).map(([category, s]) => ({ category, skills: s }));
   });
 
-  constructor() {
-    // Déclencher l'animation des barres dès que les skills sont chargés et rendus
-    effect(() => {
-      const groups = this.skillGroups();
-      if (groups.length > 0 && !this.barsAnimated) {
-        this.barsAnimated = true;
-        untracked(() => {
-          // Laisser Angular rendre le DOM avant de lire les data-w
-          setTimeout(() => this.animateBars(), 50);
-        });
-      }
-    });
-  }
-
   ngOnInit(): void {
     this.skillService.getAllSkills().subscribe({
       next: (data) => {
@@ -169,37 +136,6 @@ export class SkillsComponent implements OnInit, OnDestroy {
         this.isLoading.set(false);
       },
       error: () => this.isLoading.set(false),
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.barTriggers.forEach((t) => t.kill());
-  }
-
-  private animateBars(): void {
-    if (this.scrollAnim.reducedMotion) return;
-
-    this.ngZone.runOutsideAngular(() => {
-      const bars = Array.from(
-        this.el.nativeElement.querySelectorAll<HTMLElement>('.skill-card__bar-fill')
-      );
-      bars.forEach((bar: HTMLElement, i: number) => {
-        const targetPct = Number(bar.getAttribute('data-w') ?? 0);
-        const trigger = ScrollTrigger.create({
-          trigger: bar,
-          start: 'top 90%',
-          once: true,
-          onEnter: () => {
-            gsap.to(bar, {
-              width: targetPct + '%',
-              duration: 0.75,
-              delay: (i % 6) * 0.06,
-              ease: 'power2.out',
-            });
-          },
-        });
-        this.barTriggers.push(trigger);
-      });
     });
   }
 
@@ -212,10 +148,21 @@ export class SkillsComponent implements OnInit, OnDestroy {
     FRONTEND: '🎨',
     DEVOPS: '🔄',
     CLOUD: '☁️',
+    QUALITY: '✅',
     OTHER: '🔧',
   };
 
   protected categoryIcon(cat: SkillCategory): string {
     return SkillsComponent.CATEGORY_ICONS[cat] ?? '🔧';
+  }
+
+  private static readonly LEVEL_LABEL_KEYS: Record<SkillLevel, string> = {
+    EXPERT: 'skills.level.expert',
+    AVANCE: 'skills.level.avance',
+    INTERMEDIAIRE: 'skills.level.intermediaire',
+  };
+
+  protected levelLabel(level: SkillLevel): string {
+    return SkillsComponent.LEVEL_LABEL_KEYS[level] ?? level;
   }
 }

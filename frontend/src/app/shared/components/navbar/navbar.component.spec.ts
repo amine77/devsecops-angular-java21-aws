@@ -40,11 +40,18 @@ describe('NavbarComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show login button when not authenticated', () => {
+  it('should not show login button when not authenticated (admin access via /auth/login directly)', () => {
     mockAuthService.isAuthenticated.mockReturnValue(false);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('nav.login');
+    expect(compiled.textContent).not.toContain('nav.login');
+  });
+
+  it('should show contact link when not authenticated', () => {
+    mockAuthService.isAuthenticated.mockReturnValue(false);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('nav.contact');
   });
 
   it('should change language on setLang()', () => {

@@ -12,8 +12,8 @@ describe('SkillsComponent', () => {
   let component: SkillsComponent;
 
   const mockSkills: Skill[] = [
-    { id: 1, name: 'Java', category: 'BACKEND', iconUrl: null, level: 4, sortOrder: 1 },
-    { id: 2, name: 'Angular', category: 'FRONTEND', iconUrl: null, level: 3, sortOrder: 1 },
+    { id: 1, name: 'Java', category: 'BACKEND', iconUrl: null, level: 'EXPERT', sortOrder: 1 },
+    { id: 2, name: 'Angular', category: 'FRONTEND', iconUrl: null, level: 'AVANCE', sortOrder: 1 },
   ];
 
   const mockSkillService = {

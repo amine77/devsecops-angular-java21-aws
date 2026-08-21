@@ -52,8 +52,8 @@ TF_VARS          ?= $(TF_DIR)/terraform.tfvars
         cosign-verify scorecard \
         status health \
         tf-init tf-validate tf-plan tf-apply tf-destroy tf-output tf-fmt \
-        lambda-build lambda-build-weekly-report lambda-build-image-resize lambda-build-contact-form \
-        lambda-invoke-weekly-report lambda-test-contact ses-verify
+        lambda-build lambda-build-weekly-report lambda-build-image-resize \
+        lambda-invoke-weekly-report ses-verify
 
 # =============================================================================
 # AIDE — cible par défaut
@@ -462,7 +462,7 @@ tf-ssh: ## SSH vers l'EC2 via les outputs Terraform
 # =============================================================================
 # LAMBDA — Fonctions serverless
 # =============================================================================
-lambda-build: lambda-build-weekly-report lambda-build-image-resize lambda-build-contact-form ## Build toutes les fonctions Lambda (npm ci)
+lambda-build: lambda-build-weekly-report lambda-build-image-resize ## Build toutes les fonctions Lambda (npm ci)
 	@echo "$(GREEN)✔ Toutes les fonctions Lambda buildées$(RESET)"
 
 lambda-build-weekly-report: ## Build la Lambda weekly-report (npm ci --omit=dev)
@@ -478,12 +478,6 @@ lambda-build-image-resize: ## Build la Lambda image-resize (sharp binaire Linux 
 		--platform=linux --arch=x64 --libc=glibc
 	@echo "$(GREEN)✔ Lambda image-resize buildée (sharp Linux x86_64)$(RESET)"
 
-lambda-build-contact-form: ## Build la Lambda contact-form (npm ci --omit=dev)
-	@echo "$(CYAN)▶ Build Lambda contact-form...$(RESET)"
-	@command -v node >/dev/null 2>&1 || (echo "$(RED)✘ Node.js requis$(RESET)" && exit 1)
-	cd lambdas/contact-form && npm ci --omit=dev
-	@echo "$(GREEN)✔ Lambda contact-form buildée$(RESET)"
-
 lambda-invoke-weekly-report: ## Invoque la Lambda weekly-report manuellement (test AWS)
 	@echo "$(CYAN)▶ Invocation Lambda weekly-report...$(RESET)"
 	@FUNC=$$(cd $(TF_DIR) && terraform output -raw lambda_weekly_report_function_name 2>/dev/null || echo "portfolio-dev-weekly-report"); \
@@ -495,15 +489,6 @@ lambda-invoke-weekly-report: ## Invoque la Lambda weekly-report manuellement (te
 		/tmp/lambda-response.json \
 		| python3 -c "import sys,json,base64; r=json.load(sys.stdin); print(base64.b64decode(r.get('LogResult','')).decode())" 2>/dev/null; \
 	echo "$(GREEN)✔ Réponse :$(RESET)" && cat /tmp/lambda-response.json
-
-lambda-test-contact: ## Teste le formulaire de contact via curl (API Gateway déployée)
-	@echo "$(CYAN)▶ Test formulaire de contact...$(RESET)"
-	@API=$$(cd $(TF_DIR) && terraform output -raw contact_api_endpoint 2>/dev/null); \
-	test -n "$$API" || (echo "$(RED)✘ Déployer Terraform d'abord$(RESET)" && exit 1); \
-	curl -s -X POST "$$API" \
-		-H "Content-Type: application/json" \
-		-d '{"name":"Test CI","email":"test@example.com","message":"Message de test depuis le Makefile."}' \
-		| python3 -m json.tool
 
 ses-verify: ## Vérifie les 2 adresses email dans SES (sandbox uniquement)
 	@echo "$(CYAN)▶ Vérification des emails SES...$(RESET)"

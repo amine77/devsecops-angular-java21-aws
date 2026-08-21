@@ -15,7 +15,7 @@ et développement assisté par IA (Claude Code + MCP).
 | Base de données | PostgreSQL conteneurisé sur l'EC2 (16 en production, 15 en local), Flyway migrations, backup `pg_dump` quotidien vers S3 |
 | Cache | Redis 7.2 — Spring Cache `@Cacheable`, TTL 5/10 min |
 | Messaging | Apache Kafka KRaft (sans Zookeeper) — événements métier asynchrones |
-| Serverless | AWS Lambda (Node.js 20) — 3 fonctions : rapport hebdomadaire, resize images, formulaire contact |
+| Serverless | AWS Lambda (Node.js 20) — 2 fonctions : rapport hebdomadaire, resize images |
 | Sécurité | JWT (HS384), BCrypt cost=12, Spring Security, rate limiting anti-brute-force (backend + NGINX), OWASP Dependency Check, OWASP ZAP DAST |
 | Observabilité | Prometheus, Grafana (3 dashboards), Logback JSON + MDC, Micrometer |
 | Tests | JUnit 5 + Mockito (86 tests), Jest (141 tests), Cypress E2E (24 tests), Gatling load tests (3 simulations) |
@@ -80,7 +80,7 @@ npm start
 ### Comptes de démonstration
 
 > Les credentials de démonstration sont disponibles sur demande.
-> Contactez-moi via [LinkedIn](https://www.linkedin.com/in/amine-c-ba36845a/) ou le formulaire de contact du portfolio.
+> Contactez-moi via [LinkedIn](https://www.linkedin.com/in/amine-c-ba36845a/) ou la section Contact du portfolio.
 
 ---
 
@@ -215,13 +215,12 @@ Scan automatique chaque lundi 4h UTC.
 
 ## ⚡ AWS Lambda — Architecture Serverless (Phase 15)
 
-Trois fonctions Lambda Node.js 20 couvrent des cas d'usage **event-driven** que Spring Boot ne doit pas gérer :
+Deux fonctions Lambda Node.js 20 couvrent des cas d'usage **event-driven** que Spring Boot ne doit pas gérer :
 
 | Fonction | Déclencheur | Rôle |
 |---|---|---|
 | `weekly-report` | EventBridge Scheduler (lun. 8h UTC) | Rapport HTML hebdomadaire → SES |
 | `image-resize` | S3 PutObject (`originals/`) | 3 variantes WebP via Sharp (640×360, 320×180, 1200×630) |
-| `contact-form` | API Gateway HTTP POST `/contact` | Formulaire de contact → SES |
 
 **Coût total : $0/mois** (Free Tier AWS à vie pour ces volumes).
 
@@ -231,7 +230,7 @@ Trois fonctions Lambda Node.js 20 couvrent des cas d'usage **event-driven** que 
 # Vérifier les emails dans SES sandbox (une seule fois)
 make ses-verify SENDER_EMAIL=noreply@domaine.com RECIPIENT_EMAIL=admin@gmail.com
 
-# Builder les 3 Lambdas (npm ci)
+# Builder les 2 Lambdas (npm ci)
 make lambda-build
 
 # Déployer via Terraform
@@ -239,7 +238,6 @@ make tf-plan && make tf-apply
 
 # Tester
 make lambda-invoke-weekly-report   # Envoie un rapport immédiatement
-make lambda-test-contact           # Teste le formulaire de contact
 ```
 
 > **Note Sharp :** la Lambda `image-resize` utilise `sharp` (binaires Linux natifs). Le build npm passe `--platform=linux --arch=x64` pour être compatible avec l'environnement d'exécution Lambda depuis Windows ou macOS.
@@ -322,8 +320,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │
 ├── lambdas/                              # Fonctions AWS Lambda (Node.js 20 ESM)
 │   ├── weekly-report/                    # EventBridge → rapport HTML → SES
-│   ├── image-resize/                     # S3 trigger → Sharp → 3 WebP variants
-│   └── contact-form/                     # API Gateway → validation → SES
+│   └── image-resize/                     # S3 trigger → Sharp → 3 WebP variants
 │
 ├── terraform/                            # Infrastructure AWS
 │   ├── modules/
@@ -334,8 +331,7 @@ docker-compose -f docker/docker-compose.dev-stack.yml down -v
 │   │   ├── secrets-manager/              # Secrets applicatifs (JWT, DB) — Phase 21
 │   │   ├── cloudwatch/                   # Logs + métriques + alertes
 │   │   ├── lambda-weekly-report/         # IAM + Lambda + EventBridge Scheduler
-│   │   ├── lambda-image-resize/          # IAM + Lambda + S3 bucket + notification
-│   │   └── lambda-contact-form/          # IAM + Lambda + API Gateway HTTP
+│   │   └── lambda-image-resize/          # IAM + Lambda + S3 bucket + notification
 │   └── terraform.tfvars.example
 │
 ├── .github/workflows/
@@ -556,7 +552,7 @@ Injectées via GitHub Actions Secrets :
 | `KAFKA_BOOTSTRAP_SERVERS` | `kafka:9092` en Docker, MSK endpoint en prod |
 | `CORS_ALLOWED_ORIGINS` | Domaine frontend (ex: `https://monapp.duckdns.org`) |
 | `TF_VAR_lambda_sender_email` | Email SES vérifié (expéditeur Lambdas) |
-| `TF_VAR_lambda_recipient_email` | Email de réception des rapports et contacts |
+| `TF_VAR_lambda_recipient_email` | Email de réception des rapports hebdomadaires |
 | `SERVER_PORT` | Port HTTP (défaut : 8080) |
 | `RATE_LIMIT_MAX_FAILURES` / `RATE_LIMIT_FAILURE_WINDOW` | Verrouillage anti-brute-force (défaut : 5 échecs / `PT15M`) |
 | `RATE_LIMIT_MAX_ATTEMPTS` / `RATE_LIMIT_ATTEMPT_WINDOW` | Plafond de débit sur `/auth/login` (défaut : 20 req / `PT1M`) |

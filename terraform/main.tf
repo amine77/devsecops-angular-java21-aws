@@ -25,7 +25,7 @@
 #   └────────────────────────────────────────────────────────────────────────┘
 #
 #   ECR    : portfolio-backend + portfolio-frontend (repos Docker privés)
-#   Lambda : weekly-report (EventBridge) | image-resize (S3) | contact (APIGW)
+#   Lambda : weekly-report (EventBridge) | image-resize (S3)
 #
 # Coût estimé Free Tier (premiers 12 mois) :
 #   EC2 t2.micro   : GRATUIT (750h/mois)
@@ -295,17 +295,4 @@ module "lambda_image_resize" {
 
   name_prefix = local.name_prefix
   aws_region  = var.aws_region
-}
-
-# =============================================================================
-# MODULE 9 — LAMBDA : Formulaire de contact (API Gateway → Lambda → SES)
-# =============================================================================
-module "lambda_contact_form" {
-  source = "./modules/lambda-contact-form"
-
-  name_prefix     = local.name_prefix
-  aws_region      = var.aws_region
-  sender_email    = var.lambda_sender_email
-  recipient_email = var.lambda_recipient_email
-  allowed_origins = var.lambda_contact_allowed_origins
 }

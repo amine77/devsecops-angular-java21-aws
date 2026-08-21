@@ -93,12 +93,15 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     'GitHub Actions',
   ];
 
-  protected readonly stats = [
-    { value: '10+', key: 'home.stat.experience' },
-    { value: '7+', key: 'home.stat.projects' },
+  /** Passe à true une fois frontend/src/assets/cv-amine-charrad.pdf ajouté au dépôt. */
+  protected readonly cvAvailable = false;
+
+  protected readonly stats = signal([
+    { value: '12', key: 'home.stat.experience' },
     { value: '10+', key: 'home.stat.technologies' },
-    { value: '100%', key: 'home.stat.passion' },
-  ];
+    { value: '5', key: 'home.stat.articles' },
+    { value: '100%', key: 'home.stat.iac' },
+  ]);
 
   ngOnInit(): void {
     this.loadFeaturedProjects();
@@ -151,6 +154,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       next: (page) => {
         this.latestArticles.set(page.content);
         this.isLoadingArticles.set(false);
+        this.stats.update((current) =>
+          current.map((stat) =>
+            stat.key === 'home.stat.articles'
+              ? { ...stat, value: `${page.totalElements}` }
+              : stat
+          )
+        );
       },
       error: () => {
         this.articlesError.set(this.lang.translate('home.latest.error'));

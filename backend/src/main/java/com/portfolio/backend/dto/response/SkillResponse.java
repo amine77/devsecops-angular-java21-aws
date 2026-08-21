@@ -8,6 +8,6 @@ public record SkillResponse(
     String name,
     String category,
     String iconUrl,
-    Integer level,
+    String level,
     Integer sortOrder
 ) { }

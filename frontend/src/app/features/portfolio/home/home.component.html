@@ -178,11 +178,41 @@
 <section class="section stats" #statsSection>
   <div class="container">
     <div class="stats__grid">
-      @for (stat of stats; track stat.key) {
+      @for (stat of stats(); track stat.key) {
         <div class="stat-card card">
           <div class="stat-card__value">{{ stat.value }}</div>
           <div class="stat-card__label">{{ stat.key | translate }}</div>
         </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ========== CONTACT SECTION ========== -->
+<section id="contact" class="section contact" appScrollReveal>
+  <div class="container">
+    <div class="contact__card card">
+      <h2 class="contact__title">{{ 'contact.title' | translate }}</h2>
+      <p class="contact__text">{{ 'contact.text' | translate }}</p>
+
+      <div class="contact__actions">
+        <a href="mailto:contact@charrad.dev" class="btn btn-primary">
+          {{ 'contact.cta.email' | translate }}
+        </a>
+        <a
+          href="https://www.linkedin.com/in/amine-c-ba36845a/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-outline"
+        >
+          {{ 'contact.cta.linkedin' | translate }}
+        </a>
+      </div>
+
+      @if (cvAvailable) {
+        <a href="/assets/cv-amine-charrad.pdf" target="_blank" rel="noopener noreferrer" class="contact__cv-link">
+          {{ 'contact.cta.cv' | translate }}
+        </a>
       }
     </div>
   </div>

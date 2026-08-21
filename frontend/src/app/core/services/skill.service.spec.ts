@@ -13,7 +13,7 @@ describe('SkillService', () => {
     name: 'Java',
     category: 'BACKEND',
     iconUrl: null,
-    level: 1,
+    level: 'INTERMEDIAIRE',
     sortOrder: 1,
   };
 
