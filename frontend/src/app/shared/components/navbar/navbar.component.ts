@@ -175,11 +175,13 @@ export class NavbarComponent implements AfterViewInit, OnDestroy {
   }
 
   scrollToContact(): void {
-    const scroll = () => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+    const scroll = (): void => {
+      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+    };
     if (this.router.url === '/portfolio' || this.router.url.startsWith('/portfolio#')) {
       scroll();
     } else {
-      this.router.navigateByUrl('/portfolio').then(() => setTimeout(scroll, 150));
+      void this.router.navigateByUrl('/portfolio').then(() => setTimeout(scroll, 150));
     }
   }
 
