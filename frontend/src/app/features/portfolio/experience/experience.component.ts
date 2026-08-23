@@ -1,16 +1,22 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  NgZone,
   OnDestroy,
   OnInit,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
+import gsap from 'gsap';
 
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directive';
+import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { ExperienceService } from '@core/services/experience.service';
 import { Experience } from '@shared/models/experience.model';
 import { formatExperiencePeriod } from '@shared/utils/experience-period.util';
@@ -47,13 +53,8 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
           </div>
         } @else {
           <div class="timeline">
-            @for (exp of experiences(); track exp.id; let i = $index) {
-              <article
-                class="timeline-item card"
-                appScrollReveal
-                [revealDelay]="i * 100"
-                revealDirection="left"
-              >
+            @for (exp of experiences(); track exp.id) {
+              <article class="timeline-item card">
                 <div class="timeline-item__header">
                   <div>
                     <h2 class="timeline-item__company">{{ exp.entreprise }}</h2>
@@ -182,10 +183,44 @@ export class ExperienceComponent implements OnInit, OnDestroy {
   private readonly titleService = inject(Title);
   private readonly meta = inject(Meta);
   private readonly document = inject(DOCUMENT);
+  private readonly scrollAnim = inject(ScrollAnimationService);
+  private readonly ngZone = inject(NgZone);
+  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly experiences = signal<Experience[]>([]);
   protected readonly isLoading = signal(true);
   protected readonly error = signal<string | null>(null);
+
+  private itemsTl?: gsap.core.Timeline;
+
+  constructor() {
+    // Les items du timeline sont insérés après le chargement HTTP asynchrone : ScrollTrigger
+    // ne se déclenche pas pour un élément déjà présent dans le viewport à ce moment-là,
+    // on les anime donc directement (même pattern que ProjectListComponent).
+    effect(() => {
+      const data = this.experiences();
+      const loading = this.isLoading();
+      if (loading || data.length === 0 || this.scrollAnim.reducedMotion) return;
+
+      untracked(() => {
+        this.ngZone.runOutsideAngular(() => {
+          setTimeout(() => {
+            this.itemsTl?.kill();
+            const items = Array.from(
+              this.el.nativeElement.querySelectorAll<HTMLElement>('.timeline-item')
+            );
+            if (!items.length) return;
+            this.itemsTl = gsap.timeline();
+            this.itemsTl.fromTo(
+              items,
+              { opacity: 0, x: -32 },
+              { opacity: 1, x: 0, duration: 0.7, ease: 'power3.out', stagger: 0.1 }
+            );
+          }, 0);
+        });
+      });
+    });
+  }
 
   ngOnInit(): void {
     this.updateSeo();
@@ -194,6 +229,7 @@ export class ExperienceComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.document.getElementById('experience-jsonld')?.remove();
+    this.itemsTl?.kill();
   }
 
   protected loadExperiences(): void {
