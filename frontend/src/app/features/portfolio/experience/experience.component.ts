@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
 
@@ -206,7 +213,11 @@ export class ExperienceComponent implements OnInit, OnDestroy {
   }
 
   protected periodLabel(exp: Experience): string {
-    return formatExperiencePeriod(exp, this.lang.current(), this.lang.translate('experience.today'));
+    return formatExperiencePeriod(
+      exp,
+      this.lang.current(),
+      this.lang.translate('experience.today')
+    );
   }
 
   private updateSeo(): void {

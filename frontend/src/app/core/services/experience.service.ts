@@ -13,9 +13,7 @@ export class ExperienceService {
   private readonly baseUrl = `${environment.apiUrl}/experiences`;
 
   getExperiences(): Observable<Experience[]> {
-    return this.http
-      .get<ApiResponse<Experience[]>>(this.baseUrl)
-      .pipe(map((r) => r.data!));
+    return this.http.get<ApiResponse<Experience[]>>(this.baseUrl).pipe(map((r) => r.data!));
   }
 
   getExperienceById(id: number): Observable<Experience> {

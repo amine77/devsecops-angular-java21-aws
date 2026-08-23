@@ -99,7 +99,9 @@ describe('ExperienceService', () => {
   it('deleteExperience() should DELETE by id', () => {
     service.deleteExperience(1).subscribe();
 
-    const req = httpMock.expectOne((r) => r.url.endsWith('/experiences/1') && r.method === 'DELETE');
+    const req = httpMock.expectOne(
+      (r) => r.url.endsWith('/experiences/1') && r.method === 'DELETE'
+    );
     req.flush(null);
   });
 });

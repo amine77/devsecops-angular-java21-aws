@@ -51,7 +51,11 @@ export function formatMonthYear(isoDate: string, lang: Language): string {
   return `${MONTH_NAMES[lang][Number(month) - 1]} ${year}`;
 }
 
-export function formatExperiencePeriod(exp: Experience, lang: Language, todayLabel: string): string {
+export function formatExperiencePeriod(
+  exp: Experience,
+  lang: Language,
+  todayLabel: string
+): string {
   const start = formatMonthYear(exp.dateDebut, lang);
   const end = exp.current ? todayLabel : formatMonthYear(exp.dateFin!, lang);
   return `${start} — ${end}`;

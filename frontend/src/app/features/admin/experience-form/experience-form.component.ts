@@ -44,7 +44,8 @@ import { ErrorResponse } from '@shared/models/api-response.model';
             {{
               (isEditMode
                 ? 'admin.form.experience.title.edit'
-                : 'admin.form.experience.title.create') | translate
+                : 'admin.form.experience.title.create'
+              ) | translate
             }}
           </h1>
         </div>
@@ -156,7 +157,8 @@ import { ErrorResponse } from '@shared/models/api-response.model';
               {{
                 (isEditMode
                   ? 'admin.form.experience.submit.edit'
-                  : 'admin.form.experience.submit.create') | translate
+                  : 'admin.form.experience.submit.create'
+                ) | translate
               }}
             </button>
           </div>

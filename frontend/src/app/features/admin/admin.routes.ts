@@ -27,18 +27,14 @@ export const adminRoutes: Routes = [
     path: 'experiences/new',
     canActivate: [adminGuard],
     loadComponent: () =>
-      import('./experience-form/experience-form.component').then(
-        (m) => m.ExperienceFormComponent
-      ),
+      import('./experience-form/experience-form.component').then((m) => m.ExperienceFormComponent),
     title: 'Nouvelle expérience',
   },
   {
     path: 'experiences/:id/edit',
     canActivate: [adminGuard],
     loadComponent: () =>
-      import('./experience-form/experience-form.component').then(
-        (m) => m.ExperienceFormComponent
-      ),
+      import('./experience-form/experience-form.component').then((m) => m.ExperienceFormComponent),
     title: "Modifier l'expérience",
   },
   {

@@ -152,7 +152,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   protected experiencePeriodLabel(exp: Experience): string {
-    return formatExperiencePeriod(exp, this.lang.current(), this.lang.translate('experience.today'));
+    return formatExperiencePeriod(
+      exp,
+      this.lang.current(),
+      this.lang.translate('experience.today')
+    );
   }
 
   private loadFeaturedProjects(): void {

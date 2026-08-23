@@ -31,7 +31,7 @@ describe('ExperienceComponent', () => {
       id: 2,
       entreprise: 'Société Générale Securities Services',
       poste: 'Ingénieur Java',
-      contexte: 'Banque de financement et d\'investissement',
+      contexte: "Banque de financement et d'investissement",
       dateDebut: '2016-01-01',
       dateFin: '2020-05-31',
       current: false,
@@ -100,7 +100,9 @@ describe('ExperienceComponent', () => {
     const jsonLd = JSON.parse(script!.textContent ?? '{}');
     expect(jsonLd['@type']).toBe('Person');
     expect(jsonLd.worksFor.name).toBe('Allianz France');
-    expect(jsonLd.alumniOf).toEqual([{ '@type': 'Organization', name: 'Société Générale Securities Services' }]);
+    expect(jsonLd.alumniOf).toEqual([
+      { '@type': 'Organization', name: 'Société Générale Securities Services' },
+    ]);
   });
 
   it('should remove the JSON-LD script tag on destroy', () => {

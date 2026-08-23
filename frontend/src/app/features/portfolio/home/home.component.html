@@ -123,7 +123,9 @@
     } @else if (experienceError()) {
       <div class="error-state">
         <p>{{ 'home.experience.error' | translate }}</p>
-        <button class="btn btn-outline" (click)="retryExperienceLoad()">{{ 'home.experience.retry' | translate }}</button>
+        <button class="btn btn-outline" (click)="retryExperienceLoad()">
+          {{ 'home.experience.retry' | translate }}
+        </button>
       </div>
     } @else if (previewExperiences().length > 0) {
       <div class="grid-projects">
