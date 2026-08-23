@@ -10,9 +10,11 @@ import { signal } from '@angular/core';
 import { DashboardComponent } from './dashboard.component';
 import { ProjectService } from '@core/services/project.service';
 import { ArticleService } from '@core/services/article.service';
+import { ExperienceService } from '@core/services/experience.service';
 import { AuthService } from '@core/services/auth.service';
 import { Project } from '@shared/models/project.model';
 import { Article } from '@shared/models/article.model';
+import { Experience } from '@shared/models/experience.model';
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
@@ -60,6 +62,27 @@ describe('DashboardComponent', () => {
     deleteArticle: jest.fn(),
   };
 
+  const mockExperience: Experience = {
+    id: 1,
+    entreprise: 'Allianz France',
+    poste: 'Tech Lead',
+    contexte: "Groupe d'assurance international",
+    dateDebut: '2020-06-01',
+    dateFin: undefined,
+    current: true,
+    description: 'Lead hands-on',
+    realisations: ['Réalisation 1'],
+    stack: ['Java 21'],
+    ordreAffichage: 1,
+    createdAt: '',
+    updatedAt: '',
+  };
+
+  const mockExperienceService = {
+    getExperiences: jest.fn(),
+    deleteExperience: jest.fn(),
+  };
+
   const mockAuthService = {
     displayName: signal('Admin'),
     isAuthenticated: jest.fn().mockReturnValue(true),
@@ -89,6 +112,7 @@ describe('DashboardComponent', () => {
         last: true,
       })
     );
+    mockExperienceService.getExperiences.mockReturnValue(of([mockExperience]));
 
     await TestBed.configureTestingModule({
       imports: [
@@ -102,6 +126,7 @@ describe('DashboardComponent', () => {
       providers: [
         { provide: ProjectService, useValue: mockProjectService },
         { provide: ArticleService, useValue: mockArticleService },
+        { provide: ExperienceService, useValue: mockExperienceService },
         { provide: AuthService, useValue: mockAuthService },
       ],
     }).compileComponents();
@@ -127,6 +152,12 @@ describe('DashboardComponent', () => {
     expect(mockArticleService.getArticlesForAdmin).toHaveBeenCalledWith(0, 50);
     expect(component['isLoadingArticles']()).toBe(false);
     expect(component['articles']()).toHaveLength(1);
+  });
+
+  it('should load experiences on init', () => {
+    expect(mockExperienceService.getExperiences).toHaveBeenCalled();
+    expect(component['isLoadingExperiences']()).toBe(false);
+    expect(component['experiences']()).toHaveLength(1);
   });
 
   it('should open confirm dialog on confirmDelete', () => {
@@ -171,5 +202,27 @@ describe('DashboardComponent', () => {
 
     expect(mockArticleService.deleteArticle).toHaveBeenCalledWith(1);
     expect(component['articles']()).toHaveLength(0);
+  });
+
+  it('should open confirm dialog on confirmDeleteExperience', () => {
+    const openSpy = jest.spyOn(component['dialog'], 'open').mockReturnValue({
+      afterClosed: () => of(false),
+    } as never);
+
+    component.confirmDeleteExperience(mockExperience);
+
+    expect(openSpy).toHaveBeenCalled();
+  });
+
+  it('should delete the experience when dialog confirmed', () => {
+    mockExperienceService.deleteExperience.mockReturnValue(of(void 0));
+    jest.spyOn(component['dialog'], 'open').mockReturnValue({
+      afterClosed: () => of(true),
+    } as never);
+
+    component.confirmDeleteExperience(mockExperience);
+
+    expect(mockExperienceService.deleteExperience).toHaveBeenCalledWith(1);
+    expect(component['experiences']()).toHaveLength(0);
   });
 });

@@ -236,5 +236,48 @@
   "admin.form.preview": "Preview",
   "admin.form.article.submit.create": "Create article",
   "admin.form.article.submit.edit": "Save changes",
-  "admin.form.article.saved": "Article saved."
+  "admin.form.article.saved": "Article saved.",
+
+  "nav.experience": "Experience",
+
+  "experience.title": "My professional experience",
+  "experience.subtitle": "12 years of enterprise missions, from code to production",
+  "experience.loading": "Loading experience...",
+  "experience.error": "Unable to load professional experience.",
+  "experience.retry": "Retry",
+  "experience.empty": "No experience yet.",
+  "experience.current": "Current",
+  "experience.today": "Today",
+
+  "home.experience.title": "Professional experience",
+  "home.experience.cta": "View my full experience →",
+  "home.experience.error": "Unable to load experience.",
+  "home.experience.retry": "Retry",
+
+  "admin.dashboard.tab.experiences": "Experience",
+  "admin.dashboard.new.experience": "New experience",
+  "admin.dashboard.col.entreprise": "Company",
+  "admin.dashboard.col.poste": "Position",
+  "admin.dashboard.col.period": "Period",
+
+  "admin.confirm.delete.experience.title": "Delete experience",
+
+  "admin.form.experience.title.create": "New experience",
+  "admin.form.experience.title.edit": "Edit experience",
+  "admin.form.experience.submit.create": "Create experience",
+  "admin.form.experience.submit.edit": "Save changes",
+  "admin.form.field.entreprise": "Company *",
+  "admin.form.field.entreprise.error": "Company is required (2-200 characters)",
+  "admin.form.field.poste": "Position *",
+  "admin.form.field.poste.error": "Position is required (2-200 characters)",
+  "admin.form.field.contexte": "Context",
+  "admin.form.field.contexte.error": "Context cannot exceed 500 characters",
+  "admin.form.field.dateDebut": "Start date *",
+  "admin.form.field.dateDebut.error": "Start date is required",
+  "admin.form.field.dateFin": "End date",
+  "admin.form.field.current": "Current position",
+  "admin.form.field.realisations": "Achievements",
+  "admin.form.field.realisations.placeholder": "Add an achievement...",
+  "admin.form.field.stack": "Tech stack",
+  "admin.form.field.stack.placeholder": "Add a technology..."
 }

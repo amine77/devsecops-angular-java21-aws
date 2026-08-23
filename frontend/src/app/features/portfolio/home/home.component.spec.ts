@@ -6,8 +6,10 @@ import { of, throwError } from 'rxjs';
 import { HomeComponent } from './home.component';
 import { ProjectService } from '@core/services/project.service';
 import { ArticleService } from '@core/services/article.service';
+import { ExperienceService } from '@core/services/experience.service';
 import { Project } from '@shared/models/project.model';
 import { Article } from '@shared/models/article.model';
+import { Experience } from '@shared/models/experience.model';
 
 describe('HomeComponent', () => {
   let fixture: ComponentFixture<HomeComponent>;
@@ -45,6 +47,22 @@ describe('HomeComponent', () => {
     updatedAt: '',
   };
 
+  const mockExperience: Experience = {
+    id: 1,
+    entreprise: 'Allianz France',
+    poste: 'Tech Lead',
+    contexte: "Groupe d'assurance international",
+    dateDebut: '2020-06-01',
+    dateFin: undefined,
+    current: true,
+    description: 'Lead hands-on',
+    realisations: ['Réalisation 1', 'Réalisation 2', 'Réalisation 3'],
+    stack: ['Java 21'],
+    ordreAffichage: 1,
+    createdAt: '',
+    updatedAt: '',
+  };
+
   const mockProjectService = {
     getFeaturedProjects: jest.fn(),
     getProjects: jest.fn(),
@@ -52,6 +70,10 @@ describe('HomeComponent', () => {
 
   const mockArticleService = {
     getArticles: jest.fn(),
+  };
+
+  const mockExperienceService = {
+    getExperiences: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -66,12 +88,14 @@ describe('HomeComponent', () => {
         last: true,
       })
     );
+    mockExperienceService.getExperiences.mockReturnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [HomeComponent, RouterTestingModule, HttpClientTestingModule],
       providers: [
         { provide: ProjectService, useValue: mockProjectService },
         { provide: ArticleService, useValue: mockArticleService },
+        { provide: ExperienceService, useValue: mockExperienceService },
       ],
     }).compileComponents();
 
@@ -136,5 +160,35 @@ describe('HomeComponent', () => {
 
     expect(component['isLoadingArticles']()).toBe(false);
     expect(component['latestArticles']()).toHaveLength(0);
+  });
+
+  it('should load the experience preview capped at 2 items on init', () => {
+    mockProjectService.getFeaturedProjects.mockReturnValue(of([]));
+    mockExperienceService.getExperiences.mockReturnValue(
+      of([mockExperience, mockExperience, mockExperience])
+    );
+
+    fixture.detectChanges();
+
+    expect(mockExperienceService.getExperiences).toHaveBeenCalled();
+    expect(component['previewExperiences']()).toHaveLength(2);
+    expect(component['isLoadingExperience']()).toBe(false);
+  });
+
+  it('should set experienceError when the experience preview request fails', () => {
+    mockProjectService.getFeaturedProjects.mockReturnValue(of([]));
+    mockExperienceService.getExperiences.mockReturnValue(throwError(() => new Error('network')));
+
+    fixture.detectChanges();
+
+    expect(component['experienceError']()).toBeTruthy();
+    expect(component['isLoadingExperience']()).toBe(false);
+  });
+
+  it('should retry the experience preview load on retryExperienceLoad()', () => {
+    mockProjectService.getFeaturedProjects.mockReturnValue(of([]));
+    fixture.detectChanges();
+    component['retryExperienceLoad']();
+    expect(mockExperienceService.getExperiences).toHaveBeenCalledTimes(2);
   });
 });

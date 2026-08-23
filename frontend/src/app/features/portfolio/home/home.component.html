@@ -113,6 +113,48 @@
   </div>
 </section>
 
+<!-- ========== EXPERIENCE PREVIEW ========== -->
+<section class="section featured">
+  <div class="container">
+    <h2 class="section-title">{{ 'home.experience.title' | translate }}</h2>
+
+    @if (isLoadingExperience()) {
+      <app-loading-spinner [message]="'experience.loading' | translate" />
+    } @else if (experienceError()) {
+      <div class="error-state">
+        <p>{{ 'home.experience.error' | translate }}</p>
+        <button class="btn btn-outline" (click)="retryExperienceLoad()">{{ 'home.experience.retry' | translate }}</button>
+      </div>
+    } @else if (previewExperiences().length > 0) {
+      <div class="grid-projects">
+        @for (exp of previewExperiences(); track exp.id; let i = $index) {
+          <div class="card experience-preview-card" appScrollReveal [revealDelay]="i * 80">
+            <div class="experience-preview-card__header">
+              <div>
+                <h3 class="experience-preview-card__company">{{ exp.entreprise }}</h3>
+                <p class="experience-preview-card__role">{{ exp.poste }}</p>
+              </div>
+              @if (exp.current) {
+                <span class="badge badge-green">{{ 'experience.current' | translate }}</span>
+              }
+            </div>
+            <p class="experience-preview-card__period">{{ experiencePeriodLabel(exp) }}</p>
+            <ul class="experience-preview-card__achievements">
+              @for (item of exp.realisations.slice(0, 2); track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+
+      <div class="featured__cta">
+        <a routerLink="/portfolio/experience" class="btn btn-outline">{{ 'home.experience.cta' | translate }}</a>
+      </div>
+    }
+  </div>
+</section>
+
 <!-- ========== FEATURED PROJECTS ========== -->
 <section class="section featured">
   <div class="container">

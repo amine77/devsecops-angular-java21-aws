@@ -251,5 +251,48 @@
   "admin.form.preview": "Aperçu",
   "admin.form.article.submit.create": "Créer l'article",
   "admin.form.article.submit.edit": "Enregistrer les modifications",
-  "admin.form.article.saved": "Article sauvegardé."
+  "admin.form.article.saved": "Article sauvegardé.",
+
+  "nav.experience": "Expérience",
+
+  "experience.title": "Mon parcours professionnel",
+  "experience.subtitle": "12 ans de missions en grands comptes, du code à la production",
+  "experience.loading": "Chargement du parcours...",
+  "experience.error": "Impossible de charger le parcours professionnel.",
+  "experience.retry": "Réessayer",
+  "experience.empty": "Aucune expérience pour le moment.",
+  "experience.current": "En cours",
+  "experience.today": "Aujourd'hui",
+
+  "home.experience.title": "Parcours professionnel",
+  "home.experience.cta": "Voir tout mon parcours →",
+  "home.experience.error": "Impossible de charger le parcours.",
+  "home.experience.retry": "Réessayer",
+
+  "admin.dashboard.tab.experiences": "Expériences",
+  "admin.dashboard.new.experience": "Nouvelle expérience",
+  "admin.dashboard.col.entreprise": "Entreprise",
+  "admin.dashboard.col.poste": "Poste",
+  "admin.dashboard.col.period": "Période",
+
+  "admin.confirm.delete.experience.title": "Supprimer l'expérience",
+
+  "admin.form.experience.title.create": "Nouvelle expérience",
+  "admin.form.experience.title.edit": "Modifier l'expérience",
+  "admin.form.experience.submit.create": "Créer l'expérience",
+  "admin.form.experience.submit.edit": "Enregistrer les modifications",
+  "admin.form.field.entreprise": "Entreprise *",
+  "admin.form.field.entreprise.error": "L'entreprise est obligatoire (2-200 caractères)",
+  "admin.form.field.poste": "Poste *",
+  "admin.form.field.poste.error": "Le poste est obligatoire (2-200 caractères)",
+  "admin.form.field.contexte": "Contexte",
+  "admin.form.field.contexte.error": "Le contexte ne peut pas dépasser 500 caractères",
+  "admin.form.field.dateDebut": "Date de début *",
+  "admin.form.field.dateDebut.error": "La date de début est obligatoire",
+  "admin.form.field.dateFin": "Date de fin",
+  "admin.form.field.current": "Poste actuel",
+  "admin.form.field.realisations": "Réalisations",
+  "admin.form.field.realisations.placeholder": "Ajouter une réalisation...",
+  "admin.form.field.stack": "Stack technique",
+  "admin.form.field.stack.placeholder": "Ajouter une technologie..."
 }

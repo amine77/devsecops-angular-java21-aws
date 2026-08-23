@@ -364,6 +364,53 @@
   margin-top: var(--spacing-2xl);
 }
 
+/* =========== EXPERIENCE PREVIEW =========== */
+.experience-preview-card {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.experience-preview-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.experience-preview-card__company {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.experience-preview-card__role {
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.experience-preview-card__period {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.experience-preview-card__achievements {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding-left: 1.1rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.experience-preview-card__achievements li {
+  list-style: disc;
+}
+
 /* =========== STATS =========== */
 .stats {
   background: var(--color-bg-secondary);

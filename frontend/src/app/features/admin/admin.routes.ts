@@ -24,6 +24,24 @@ export const adminRoutes: Routes = [
     title: 'Modifier le projet',
   },
   {
+    path: 'experiences/new',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./experience-form/experience-form.component').then(
+        (m) => m.ExperienceFormComponent
+      ),
+    title: 'Nouvelle expérience',
+  },
+  {
+    path: 'experiences/:id/edit',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./experience-form/experience-form.component').then(
+        (m) => m.ExperienceFormComponent
+      ),
+    title: "Modifier l'expérience",
+  },
+  {
     path: 'articles/new',
     canActivate: [adminGuard],
     loadComponent: () =>

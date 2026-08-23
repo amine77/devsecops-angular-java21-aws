@@ -236,5 +236,48 @@
   "admin.form.preview": "Vorschau",
   "admin.form.article.submit.create": "Artikel erstellen",
   "admin.form.article.submit.edit": "Änderungen speichern",
-  "admin.form.article.saved": "Artikel gespeichert."
+  "admin.form.article.saved": "Artikel gespeichert.",
+
+  "nav.experience": "Erfahrung",
+
+  "experience.title": "Mein beruflicher Werdegang",
+  "experience.subtitle": "12 Jahre Einsätze bei Großunternehmen, vom Code bis zur Produktion",
+  "experience.loading": "Werdegang wird geladen...",
+  "experience.error": "Beruflicher Werdegang konnte nicht geladen werden.",
+  "experience.retry": "Erneut versuchen",
+  "experience.empty": "Noch keine Erfahrung.",
+  "experience.current": "Aktuell",
+  "experience.today": "Heute",
+
+  "home.experience.title": "Beruflicher Werdegang",
+  "home.experience.cta": "Meinen gesamten Werdegang ansehen →",
+  "home.experience.error": "Werdegang konnte nicht geladen werden.",
+  "home.experience.retry": "Erneut versuchen",
+
+  "admin.dashboard.tab.experiences": "Erfahrung",
+  "admin.dashboard.new.experience": "Neue Erfahrung",
+  "admin.dashboard.col.entreprise": "Unternehmen",
+  "admin.dashboard.col.poste": "Position",
+  "admin.dashboard.col.period": "Zeitraum",
+
+  "admin.confirm.delete.experience.title": "Erfahrung löschen",
+
+  "admin.form.experience.title.create": "Neue Erfahrung",
+  "admin.form.experience.title.edit": "Erfahrung bearbeiten",
+  "admin.form.experience.submit.create": "Erfahrung erstellen",
+  "admin.form.experience.submit.edit": "Änderungen speichern",
+  "admin.form.field.entreprise": "Unternehmen *",
+  "admin.form.field.entreprise.error": "Unternehmen erforderlich (2-200 Zeichen)",
+  "admin.form.field.poste": "Position *",
+  "admin.form.field.poste.error": "Position erforderlich (2-200 Zeichen)",
+  "admin.form.field.contexte": "Kontext",
+  "admin.form.field.contexte.error": "Kontext darf 500 Zeichen nicht überschreiten",
+  "admin.form.field.dateDebut": "Startdatum *",
+  "admin.form.field.dateDebut.error": "Startdatum ist erforderlich",
+  "admin.form.field.dateFin": "Enddatum",
+  "admin.form.field.current": "Aktuelle Position",
+  "admin.form.field.realisations": "Erfolge",
+  "admin.form.field.realisations.placeholder": "Erfolg hinzufügen...",
+  "admin.form.field.stack": "Technologie-Stack",
+  "admin.form.field.stack.placeholder": "Technologie hinzufügen..."
 }

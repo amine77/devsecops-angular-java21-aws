@@ -154,6 +154,9 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/articles/admin/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.GET, "/articles").permitAll()
             .requestMatchers(HttpMethod.GET, "/articles/**").permitAll()
+            // Expériences professionnelles : lecture publique, écriture ADMIN
+            .requestMatchers(HttpMethod.GET, "/experiences").permitAll()
+            .requestMatchers(HttpMethod.GET, "/experiences/**").permitAll()
             // Kubernetes probes + Prometheus scraping (Prometheus n'envoie pas de JWT)
             // Sécurité prod : à protéger par IP restriction (SG AWS) ou management.server.port séparé
             .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
@@ -171,6 +174,9 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.POST, "/articles").hasRole("ADMIN")
             .requestMatchers(HttpMethod.PUT, "/articles/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/articles/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.POST, "/experiences").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/experiences/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/experiences/**").hasRole("ADMIN")
             // Admin: ROLE_ADMIN uniquement
             .requestMatchers("/admin/**").hasRole("ADMIN")
             // Tout le reste : authentification requise

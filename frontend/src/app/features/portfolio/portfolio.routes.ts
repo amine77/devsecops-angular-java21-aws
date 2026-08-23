@@ -7,6 +7,12 @@ export const portfolioRoutes: Routes = [
     title: 'Portfolio DevSecOps',
   },
   {
+    path: 'experience',
+    loadComponent: () =>
+      import('./experience/experience.component').then((m) => m.ExperienceComponent),
+    title: 'Expérience — Portfolio',
+  },
+  {
     path: 'projects',
     loadComponent: () =>
       import('./projects/project-list/project-list.component').then((m) => m.ProjectListComponent),

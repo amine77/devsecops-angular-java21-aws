@@ -24,11 +24,13 @@ import gsap from 'gsap';
 
 import { ProjectService } from '@core/services/project.service';
 import { ArticleService } from '@core/services/article.service';
+import { ExperienceService } from '@core/services/experience.service';
 import { AuthService } from '@core/services/auth.service';
 import { LanguageService } from '@core/services/language.service';
 import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { Project } from '@shared/models/project.model';
 import { Article } from '@shared/models/article.model';
+import { Experience } from '@shared/models/experience.model';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog.component';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
@@ -212,6 +214,83 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
             </table>
           </div>
         }
+
+        <div class="dashboard-header dashboard-header--articles">
+          <h2>{{ 'admin.dashboard.tab.experiences' | translate }}</h2>
+          <a routerLink="/admin/experiences/new" mat-raised-button color="primary">
+            <mat-icon>add</mat-icon>
+            {{ 'admin.dashboard.new.experience' | translate }}
+          </a>
+        </div>
+
+        @if (isLoadingExperiences()) {
+          <div class="dashboard-loading">
+            <mat-spinner diameter="48" />
+          </div>
+        } @else {
+          <div class="mat-elevation-z2 experiences-table-container">
+            <table mat-table [dataSource]="experiences()" class="dashboard-table">
+              <ng-container matColumnDef="entreprise">
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.entreprise' | translate }}
+                </th>
+                <td mat-cell *matCellDef="let e">{{ e.entreprise }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="poste">
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.poste' | translate }}
+                </th>
+                <td mat-cell *matCellDef="let e">{{ e.poste }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="period">
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.period' | translate }}
+                </th>
+                <td mat-cell *matCellDef="let e">
+                  {{ e.dateDebut }} —
+                  {{ e.current ? ('experience.today' | translate) : e.dateFin }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>
+                  {{ 'admin.dashboard.col.actions' | translate }}
+                </th>
+                <td mat-cell *matCellDef="let e" class="actions-cell">
+                  <div class="actions-wrap">
+                    <a
+                      [routerLink]="['/admin/experiences', e.id, 'edit']"
+                      mat-icon-button
+                      matTooltip="{{ 'admin.dashboard.edit' | translate }}"
+                      color="primary"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </a>
+                    <button
+                      mat-icon-button
+                      matTooltip="{{ 'admin.dashboard.delete' | translate }}"
+                      color="warn"
+                      (click)="confirmDeleteExperience(e)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="experienceColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: experienceColumns"></tr>
+
+              <tr class="mat-row" *matNoDataRow>
+                <td class="mat-cell no-data" [attr.colspan]="experienceColumns.length">
+                  {{ 'admin.dashboard.empty' | translate }}
+                </td>
+              </tr>
+            </table>
+          </div>
+        }
       </div>
     </div>
   `,
@@ -268,6 +347,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly projectService = inject(ProjectService);
   private readonly articleService = inject(ArticleService);
+  private readonly experienceService = inject(ExperienceService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly scrollAnim = inject(ScrollAnimationService);
@@ -278,14 +358,18 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   protected readonly columns = ['title', 'status', 'featured', 'actions'];
   protected readonly articleColumns = ['title', 'status', 'actions'];
+  protected readonly experienceColumns = ['entreprise', 'poste', 'period', 'actions'];
   protected readonly projects = signal<Project[]>([]);
   protected readonly articles = signal<Article[]>([]);
+  protected readonly experiences = signal<Experience[]>([]);
   protected readonly isLoading = signal(true);
   protected readonly isLoadingArticles = signal(true);
+  protected readonly isLoadingExperiences = signal(true);
 
   private headerTl?: gsap.core.Timeline;
   private projectsTableAnimated = false;
   private articlesTableAnimated = false;
+  private experiencesTableAnimated = false;
 
   constructor() {
     effect(() => {
@@ -307,6 +391,16 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         });
       }
     });
+
+    effect(() => {
+      const list = this.experiences();
+      if (list.length > 0 && !this.experiencesTableAnimated && !this.scrollAnim.reducedMotion) {
+        this.experiencesTableAnimated = true;
+        untracked(() => {
+          setTimeout(() => this.animateTable('.experiences-table-container'), 30);
+        });
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -324,6 +418,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isLoadingArticles.set(false);
       },
       error: () => this.isLoadingArticles.set(false),
+    });
+
+    this.experienceService.getExperiences().subscribe({
+      next: (data) => {
+        this.experiences.set(data);
+        this.isLoadingExperiences.set(false);
+      },
+      error: () => this.isLoadingExperiences.set(false),
     });
   }
 
@@ -408,6 +510,34 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       this.articleService.deleteArticle(article.id).subscribe({
         next: () => {
           this.articles.update((list) => list.filter((a) => a.id !== article.id));
+          this.snackBar.open(this.lang.translate('admin.dashboard.deleted.success'), 'OK', {
+            duration: 3000,
+          });
+        },
+        error: () => {
+          this.snackBar.open(this.lang.translate('admin.dashboard.deleted.error'), 'OK', {
+            duration: 4000,
+          });
+        },
+      });
+    });
+  }
+
+  confirmDeleteExperience(experience: Experience): void {
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: this.lang.translate('admin.confirm.delete.experience.title'),
+        message: `${this.lang.translate('admin.confirm.delete.experience.title')} « ${experience.entreprise} » ?`,
+        confirmLabel: this.lang.translate('admin.confirm.delete.confirm'),
+        confirmColor: 'warn',
+      },
+    });
+
+    ref.afterClosed().subscribe((confirmed) => {
+      if (!confirmed) return;
+      this.experienceService.deleteExperience(experience.id).subscribe({
+        next: () => {
+          this.experiences.update((list) => list.filter((e) => e.id !== experience.id));
           this.snackBar.open(this.lang.translate('admin.dashboard.deleted.success'), 'OK', {
             duration: 3000,
           });

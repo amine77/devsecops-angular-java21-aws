@@ -20,9 +20,12 @@ import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directiv
 import { LanguageService } from '@core/services/language.service';
 import { ProjectService } from '@core/services/project.service';
 import { ArticleService } from '@core/services/article.service';
+import { ExperienceService } from '@core/services/experience.service';
 import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { Project } from '@shared/models/project.model';
 import { Article } from '@shared/models/article.model';
+import { Experience } from '@shared/models/experience.model';
+import { formatExperiencePeriod } from '@shared/utils/experience-period.util';
 import { TranslatePipe } from '@core/pipes/translate.pipe';
 
 /**
@@ -59,6 +62,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly projectService = inject(ProjectService);
   private readonly articleService = inject(ArticleService);
+  private readonly experienceService = inject(ExperienceService);
   private readonly lang = inject(LanguageService);
   private readonly scrollAnim = inject(ScrollAnimationService);
 
@@ -79,6 +83,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly latestArticles = signal<Article[]>([]);
   protected readonly isLoadingArticles = signal(true);
   protected readonly articlesError = signal<string | null>(null);
+
+  protected readonly previewExperiences = signal<Experience[]>([]);
+  protected readonly isLoadingExperience = signal(true);
+  protected readonly experienceError = signal<string | null>(null);
 
   protected readonly techStack = [
     'Angular 21',
@@ -106,6 +114,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.loadFeaturedProjects();
     this.loadLatestArticles();
+    this.loadExperiencePreview();
   }
 
   ngAfterViewInit(): void {
@@ -136,6 +145,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadLatestArticles();
   }
 
+  protected retryExperienceLoad(): void {
+    this.experienceError.set(null);
+    this.isLoadingExperience.set(true);
+    this.loadExperiencePreview();
+  }
+
+  protected experiencePeriodLabel(exp: Experience): string {
+    return formatExperiencePeriod(exp, this.lang.current(), this.lang.translate('experience.today'));
+  }
+
   private loadFeaturedProjects(): void {
     this.projectService.getFeaturedProjects().subscribe({
       next: (projects) => {
@@ -145,6 +164,19 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       error: () => {
         this.error.set(this.lang.translate('home.featured.error'));
         this.isLoading.set(false);
+      },
+    });
+  }
+
+  private loadExperiencePreview(): void {
+    this.experienceService.getExperiences().subscribe({
+      next: (experiences) => {
+        this.previewExperiences.set(experiences.slice(0, 2));
+        this.isLoadingExperience.set(false);
+      },
+      error: () => {
+        this.experienceError.set(this.lang.translate('home.experience.error'));
+        this.isLoadingExperience.set(false);
       },
     });
   }

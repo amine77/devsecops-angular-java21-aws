@@ -65,6 +65,9 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
         >
           {{ 'nav.portfolio' | translate }}
         </a>
+        <a routerLink="/portfolio/experience" routerLinkActive="active" mat-button class="nav-link">
+          {{ 'nav.experience' | translate }}
+        </a>
         <a routerLink="/portfolio/projects" routerLinkActive="active" mat-button class="nav-link">
           {{ 'nav.projects' | translate }}
         </a>
