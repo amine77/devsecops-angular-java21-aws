@@ -1,14 +1,21 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
+import gsap from 'gsap';
 
 import { LoadingSpinnerComponent } from '@shared/components/loading-spinner/loading-spinner.component';
 import { ScrollRevealDirective } from '@shared/directives/scroll-reveal.directive';
+import { ScrollAnimationService } from '@core/animation/scroll-animation.service';
 import { SkillService } from '@core/services/skill.service';
 import {
   Skill,
@@ -35,8 +42,8 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
         @if (isLoading()) {
           <app-loading-spinner [message]="'skills.loading' | translate" />
         } @else {
-          @for (group of skillGroups(); track group.category; let gi = $index) {
-            <div class="skill-group" appScrollReveal [revealDelay]="gi * 80" revealDirection="left">
+          @for (group of skillGroups(); track group.category) {
+            <div class="skill-group">
               <h2 class="skill-group__title">
                 <span class="skill-group__icon" aria-hidden="true">{{
                   categoryIcon(group.category)
@@ -44,8 +51,8 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                 {{ categoryLabel(group.category) | translate }}
               </h2>
               <div class="grid-skills">
-                @for (skill of group.skills; track skill.id; let si = $index) {
-                  <div class="skill-card card" appScrollReveal [revealDelay]="gi * 80 + si * 60">
+                @for (skill of group.skills; track skill.id) {
+                  <div class="skill-card card">
                     <span class="skill-card__name">{{ skill.name }}</span>
                     <span
                       class="skill-card__level"
@@ -128,11 +135,16 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
     `,
   ],
 })
-export class SkillsComponent implements OnInit {
+export class SkillsComponent implements OnInit, OnDestroy {
   private readonly skillService = inject(SkillService);
+  private readonly scrollAnim = inject(ScrollAnimationService);
+  private readonly ngZone = inject(NgZone);
+  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
 
   private readonly skills = signal<Skill[]>([]);
   protected readonly isLoading = signal(true);
+
+  private groupsTl?: gsap.core.Timeline;
 
   protected readonly skillGroups = computed(() => {
     const grouped = new Map<SkillCategory, Skill[]>();
@@ -144,6 +156,45 @@ export class SkillsComponent implements OnInit {
     return Array.from(grouped.entries()).map(([category, s]) => ({ category, skills: s }));
   });
 
+  constructor() {
+    // Les groupes/cartes sont insérés après le chargement HTTP asynchrone : ScrollTrigger
+    // ne se déclenche pas pour un élément déjà présent dans le viewport à ce moment-là,
+    // on les anime donc directement (même pattern que ProjectListComponent/ExperienceComponent).
+    effect(() => {
+      const loading = this.isLoading();
+      const groups = this.skillGroups();
+      if (loading || groups.length === 0 || this.scrollAnim.reducedMotion) return;
+
+      untracked(() => {
+        this.ngZone.runOutsideAngular(() => {
+          setTimeout(() => {
+            this.groupsTl?.kill();
+            const nativeEl = this.el.nativeElement;
+            const skillGroupEls = Array.from(
+              nativeEl.querySelectorAll<HTMLElement>('.skill-group')
+            );
+            const skillCardEls = Array.from(nativeEl.querySelectorAll<HTMLElement>('.skill-card'));
+            if (!skillGroupEls.length) return;
+            this.groupsTl = gsap.timeline();
+            this.groupsTl.fromTo(
+              skillGroupEls,
+              { opacity: 0, x: -32 },
+              { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', stagger: 0.08 }
+            );
+            if (skillCardEls.length) {
+              this.groupsTl.fromTo(
+                skillCardEls,
+                { opacity: 0, y: 16 },
+                { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', stagger: 0.03 },
+                '<0.1'
+              );
+            }
+          }, 0);
+        });
+      });
+    });
+  }
+
   ngOnInit(): void {
     this.skillService.getAllSkills().subscribe({
       next: (data) => {
@@ -152,6 +203,10 @@ export class SkillsComponent implements OnInit {
       },
       error: () => this.isLoading.set(false),
     });
+  }
+
+  ngOnDestroy(): void {
+    this.groupsTl?.kill();
   }
 
   protected categoryLabel(cat: SkillCategory): string {
