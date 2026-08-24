@@ -20,7 +20,7 @@
 # ===========================================================================
 # maven:3.9-eclipse-temurin-21-alpine = JDK 21 + Maven 3.9 (Alpine)
 # eclipse-temurin:21-jdk-alpine ne contient PAS Maven → mvn: not found
-FROM maven:3.9-eclipse-temurin-21-alpine AS builder
+FROM maven:3-eclipse-temurin-24-alpine AS builder
 
 # Répertoire de travail dans le container
 WORKDIR /build
