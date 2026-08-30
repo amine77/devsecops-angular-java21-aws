@@ -65,8 +65,8 @@ describe('NavbarComponent', () => {
     expect(mockAuthService.logout).toHaveBeenCalled();
   });
 
-  it('should have 3 language options', () => {
-    expect(component['languages']).toHaveLength(3);
-    expect(component['languages'].map((l) => l.code)).toEqual(['fr', 'en', 'de']);
+  it('should have 2 language options (German removed from the selector)', () => {
+    expect(component['languages']).toHaveLength(2);
+    expect(component['languages'].map((l) => l.code)).toEqual(['fr', 'en']);
   });
 });

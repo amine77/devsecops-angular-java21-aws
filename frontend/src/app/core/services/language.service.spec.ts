@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 
-import { LanguageService } from './language.service';
+import { LANGUAGES, LanguageService } from './language.service';
 
 describe('LanguageService', () => {
   let service: LanguageService;
@@ -47,9 +47,9 @@ describe('LanguageService', () => {
   });
 
   it('should persist language in localStorage', () => {
-    service.setLanguage('de');
-    expect(localStorage.getItem('lang')).toBe('de');
-    const req = httpMock.expectOne('/assets/i18n/de.json');
+    service.setLanguage('en');
+    expect(localStorage.getItem('lang')).toBe('en');
+    const req = httpMock.expectOne('/assets/i18n/en.json');
     req.flush({});
   });
 
@@ -60,7 +60,11 @@ describe('LanguageService', () => {
     expect(service.translate('nav.portfolio')).toBe('nav.portfolio');
   });
 
-  it('should restore a previously saved language from localStorage on init', () => {
+  it('should have removed German from the selectable languages', () => {
+    expect(LANGUAGES.map((l) => l.code)).toEqual(['fr', 'en']);
+  });
+
+  it('should fall back to English for a stale "de" language saved before German was removed', () => {
     localStorage.setItem('lang', 'de');
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ imports: [HttpClientTestingModule] });
@@ -68,7 +72,20 @@ describe('LanguageService', () => {
     const freshService = TestBed.inject(LanguageService);
     const freshHttpMock = TestBed.inject(HttpTestingController);
 
-    expect(freshService.current()).toBe('de');
-    freshHttpMock.expectOne('/assets/i18n/de.json').flush({});
+    expect(freshService.current()).toBe('en');
+    freshHttpMock.expectOne('/assets/i18n/en.json').flush({});
+  });
+
+  it('should fall back to English (not French) for a browser configured in German with no saved preference', () => {
+    const navLangSpy = jest.spyOn(window.navigator, 'language', 'get').mockReturnValue('de-DE');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ imports: [HttpClientTestingModule] });
+
+    const freshService = TestBed.inject(LanguageService);
+    const freshHttpMock = TestBed.inject(HttpTestingController);
+
+    expect(freshService.current()).toBe('en');
+    freshHttpMock.expectOne('/assets/i18n/en.json').flush({});
+    navLangSpy.mockRestore();
   });
 });

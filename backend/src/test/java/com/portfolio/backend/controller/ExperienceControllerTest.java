@@ -65,9 +65,9 @@ class ExperienceControllerTest {
     private AppMetrics appMetrics;
 
     private final ExperienceResponse sampleExperience = new ExperienceResponse(
-        1L, "Allianz France", "Tech Lead", "Groupe d'assurance international",
-        LocalDate.of(2020, 6, 1), null, true, "Description",
-        List.of("Réalisation 1"), List.of("Java 21"), 1, null, null
+        1L, "Allianz France", "Tech Lead", null, "Groupe d'assurance international", null,
+        LocalDate.of(2020, 6, 1), null, true, "Description", null,
+        List.of("Réalisation 1"), List.of(), List.of("Java 21"), 1, null, null
     );
 
     @Nested

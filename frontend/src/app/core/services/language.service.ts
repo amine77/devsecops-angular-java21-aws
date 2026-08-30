@@ -9,10 +9,11 @@ export interface LanguageOption {
   flagSrc: string;
 }
 
+// 'de' reste un Language valide (fichier assets/i18n/de.json conservé, relecture
+// désactivée) mais n'est plus proposé dans le sélecteur : voir getSavedLang().
 export const LANGUAGES: LanguageOption[] = [
   { code: 'fr', label: 'Français', flagSrc: 'assets/flags/fr.svg' },
   { code: 'en', label: 'English', flagSrc: 'assets/flags/en.svg' },
-  { code: 'de', label: 'Deutsch', flagSrc: 'assets/flags/de.svg' },
 ];
 
 @Injectable({ providedIn: 'root' })
@@ -49,7 +50,21 @@ export class LanguageService {
   }
 
   private getSavedLang(): Language {
-    const saved = localStorage.getItem('lang') as Language;
-    return LANGUAGES.some((l) => l.code === saved) ? saved : 'fr';
+    const saved = localStorage.getItem('lang');
+    if (saved && LANGUAGES.some((l) => l.code === saved)) {
+      return saved as Language;
+    }
+    // Ancienne préférence 'de' persistée avant le retrait de l'allemand du
+    // sélecteur, ou navigateur configuré en allemand : on bascule sur l'anglais
+    // plutôt que le français par défaut.
+    if (saved === 'de' || this.prefersGerman()) {
+      return 'en';
+    }
+    return 'fr';
+  }
+
+  private prefersGerman(): boolean {
+    const navLang = typeof navigator !== 'undefined' ? navigator.language : '';
+    return (navLang ?? '').toLowerCase().startsWith('de');
   }
 }

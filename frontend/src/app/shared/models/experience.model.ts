@@ -6,12 +6,16 @@ export interface Experience {
   readonly id: number;
   readonly entreprise: string;
   readonly poste: string;
+  readonly posteEn?: string;
   readonly contexte?: string;
+  readonly contexteEn?: string;
   readonly dateDebut: string;
   readonly dateFin?: string;
   readonly current: boolean;
   readonly description: string;
+  readonly descriptionEn?: string;
   readonly realisations: string[];
+  readonly realisationsEn?: string[];
   readonly stack: string[];
   readonly ordreAffichage: number;
   readonly createdAt: string;

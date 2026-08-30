@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 
 import { ExperienceComponent } from './experience.component';
 import { ExperienceService } from '@core/services/experience.service';
+import { LanguageService } from '@core/services/language.service';
 import { Experience } from '@shared/models/experience.model';
 
 describe('ExperienceComponent', () => {
@@ -16,12 +17,16 @@ describe('ExperienceComponent', () => {
       id: 1,
       entreprise: 'Allianz France',
       poste: 'Tech Lead',
+      posteEn: 'Tech Lead (EN)',
       contexte: "Groupe d'assurance international",
+      contexteEn: 'International insurance group',
       dateDebut: '2020-06-01',
       dateFin: undefined,
       current: true,
       description: 'Lead hands-on',
+      descriptionEn: 'Hands-on lead',
       realisations: ['Réalisation 1'],
+      realisationsEn: ['Achievement 1'],
       stack: ['Java 21'],
       ordreAffichage: 1,
       createdAt: '',
@@ -112,5 +117,45 @@ describe('ExperienceComponent', () => {
     fixture.destroy();
 
     expect(document.getElementById('experience-jsonld')).toBeFalsy();
+  });
+
+  describe('English translations', () => {
+    it('should display the French fields when the active language is French', () => {
+      mockExperienceService.getExperiences.mockReturnValue(of(mockExperiences));
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('Tech Lead');
+      expect(compiled.textContent).not.toContain('Tech Lead (EN)');
+      expect(compiled.textContent).toContain('Lead hands-on');
+      expect(compiled.textContent).toContain('Réalisation 1');
+    });
+
+    it('should display the English fields when the active language is English', () => {
+      const languageService = TestBed.inject(LanguageService);
+      languageService.setLanguage('en');
+
+      mockExperienceService.getExperiences.mockReturnValue(of(mockExperiences));
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('Tech Lead (EN)');
+      expect(compiled.textContent).toContain('International insurance group');
+      expect(compiled.textContent).toContain('Hands-on lead');
+      expect(compiled.textContent).toContain('Achievement 1');
+    });
+
+    it('should fall back to French when an English variant is missing, even in English mode', () => {
+      const languageService = TestBed.inject(LanguageService);
+      languageService.setLanguage('en');
+
+      mockExperienceService.getExperiences.mockReturnValue(of(mockExperiences));
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('Ingénieur Java');
+      expect(compiled.textContent).toContain('Développement backend');
+      expect(compiled.textContent).toContain('Réalisation A');
+    });
   });
 });

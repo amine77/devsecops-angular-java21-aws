@@ -58,7 +58,7 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                 <div class="timeline-item__header">
                   <div>
                     <h2 class="timeline-item__company">{{ exp.entreprise }}</h2>
-                    <p class="timeline-item__role">{{ exp.poste }}</p>
+                    <p class="timeline-item__role">{{ posteFor(exp) }}</p>
                   </div>
                   <div class="timeline-item__period">
                     <span>{{ periodLabel(exp) }}</span>
@@ -68,15 +68,15 @@ import { TranslatePipe } from '@core/pipes/translate.pipe';
                   </div>
                 </div>
 
-                @if (exp.contexte) {
-                  <p class="timeline-item__context">{{ exp.contexte }}</p>
+                @if (contexteFor(exp)) {
+                  <p class="timeline-item__context">{{ contexteFor(exp) }}</p>
                 }
 
-                <p class="timeline-item__description">{{ exp.description }}</p>
+                <p class="timeline-item__description">{{ descriptionFor(exp) }}</p>
 
-                @if (exp.realisations.length > 0) {
+                @if (realisationsFor(exp).length > 0) {
                   <ul class="timeline-item__achievements">
-                    @for (item of exp.realisations; track item) {
+                    @for (item of realisationsFor(exp); track item) {
                       <li>{{ item }}</li>
                     }
                   </ul>
@@ -254,6 +254,28 @@ export class ExperienceComponent implements OnInit, OnDestroy {
       this.lang.current(),
       this.lang.translate('experience.today')
     );
+  }
+
+  protected posteFor(exp: Experience): string {
+    return this.pickText(exp.poste, exp.posteEn);
+  }
+
+  protected contexteFor(exp: Experience): string | undefined {
+    return this.pickText(exp.contexte, exp.contexteEn);
+  }
+
+  protected descriptionFor(exp: Experience): string {
+    return this.pickText(exp.description, exp.descriptionEn);
+  }
+
+  protected realisationsFor(exp: Experience): string[] {
+    return this.lang.current() === 'en' && exp.realisationsEn && exp.realisationsEn.length > 0
+      ? exp.realisationsEn
+      : exp.realisations;
+  }
+
+  private pickText<T extends string | undefined>(fr: T, en?: string): T | string {
+    return this.lang.current() === 'en' && en && en.trim() ? en : fr;
   }
 
   private updateSeo(): void {

@@ -42,8 +42,14 @@ public class Experience {
     @Column(nullable = false, length = 200)
     private String poste;
 
+    @Column(name = "poste_en", length = 200)
+    private String posteEn;
+
     @Column(length = 500)
     private String contexte;
+
+    @Column(name = "contexte_en", length = 500)
+    private String contexteEn;
 
     @Column(name = "date_debut", nullable = false)
     private LocalDate dateDebut;
@@ -55,12 +61,22 @@ public class Experience {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "description_en", columnDefinition = "TEXT")
+    private String descriptionEn;
+
     @ElementCollection
     @CollectionTable(name = "experience_realisations", joinColumns = @JoinColumn(name = "experience_id"))
     @OrderColumn(name = "position")
     @Column(name = "realisation", columnDefinition = "TEXT")
     @Builder.Default
     private List<String> realisations = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "experience_realisations_en", joinColumns = @JoinColumn(name = "experience_id"))
+    @OrderColumn(name = "position")
+    @Column(name = "realisation", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> realisationsEn = new ArrayList<>();
 
     @ElementCollection
     @CollectionTable(name = "experience_stack", joinColumns = @JoinColumn(name = "experience_id"))
