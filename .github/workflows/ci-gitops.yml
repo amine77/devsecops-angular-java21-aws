@@ -104,7 +104,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -171,7 +171,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -236,7 +236,7 @@ jobs:
 
     steps:
       - name: Checkout (avec GITOPS_TOKEN pour permettre le push)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # GITOPS_TOKEN : PAT avec repo:write
           # GITHUB_TOKEN ne peut pas déclencher d'autres workflows (protection GitHub)
