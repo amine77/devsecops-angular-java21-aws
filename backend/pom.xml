@@ -40,7 +40,7 @@
              CVE-2026-56817/CVE-2026-56820 (CVSS >= 9.0, bloquants pour OWASP
              Dependency Check), fixées en amont en 4.1.136.Final. -->
         <netty.version>4.1.136.Final</netty.version>
-        <jjwt.version>0.12.6</jjwt.version>
+        <jjwt.version>0.13.0</jjwt.version>
         <springdoc.version>2.8.6</springdoc.version>
         <testcontainers.version>1.21.3</testcontainers.version>
         <mapstruct.version>1.6.3</mapstruct.version>
