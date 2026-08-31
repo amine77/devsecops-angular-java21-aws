@@ -47,10 +47,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -75,7 +75,7 @@ jobs:
           cp backend/target/bom.xml  sbom-backend-cyclonedx.xml
 
       - name: Upload SBOM backend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-backend-${{ github.sha }}
           path: |
@@ -101,10 +101,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'npm'
@@ -125,7 +125,7 @@ jobs:
             --ignore-npm-errors
 
       - name: Upload SBOM frontend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-frontend-${{ github.sha }}
           path: sbom-frontend-cyclonedx.json
@@ -147,10 +147,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
@@ -168,7 +168,7 @@ jobs:
           output: 'sbom-lambdas-cyclonedx.json'
 
       - name: Upload SBOM lambdas
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-lambdas-${{ github.sha }}
           path: sbom-lambdas-cyclonedx.json
@@ -186,7 +186,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -254,7 +254,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
