@@ -194,10 +194,10 @@ jobs:
           cosign-release: 'v2.4.0'
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build backend image (pour signature)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         id: build-backend
         with:
           context: ./backend
@@ -206,7 +206,7 @@ jobs:
           tags: portfolio-backend:${{ github.sha }}
 
       - name: Build frontend image (pour signature)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         id: build-frontend
         with:
           context: ./frontend
