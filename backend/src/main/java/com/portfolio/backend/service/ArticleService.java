@@ -43,7 +43,7 @@ public class ArticleService {
         Page<Article> page = (tag == null || tag.isBlank())
             ? articleRepository.findByStatusOrderByPublishedAtDesc(ArticleStatus.PUBLISHED, pageable)
             : articleRepository.findByStatusAndTag(ArticleStatus.PUBLISHED, tag, pageable);
-        return PageResponse.from(page.map(articleMapper::toResponse));
+        return PageResponse.from(page.map(articleMapper::toListItem));
     }
 
     @Transactional(readOnly = true)

@@ -251,7 +251,7 @@ class ArticleServiceTest {
             Page<Article> page = new PageImpl<>(List.of(testArticle));
             given(articleRepository.findByStatusAndTag(eq(ArticleStatus.PUBLISHED), eq("kubernetes"), any()))
                 .willReturn(page);
-            given(articleMapper.toResponse(testArticle)).willReturn(testArticleResponse);
+            given(articleMapper.toListItem(testArticle)).willReturn(testArticleResponse);
 
             articleService.getPublished(pageable, "kubernetes");
 
@@ -266,7 +266,7 @@ class ArticleServiceTest {
             Page<Article> page = new PageImpl<>(List.of(testArticle));
             given(articleRepository.findByStatusOrderByPublishedAtDesc(ArticleStatus.PUBLISHED, pageable))
                 .willReturn(page);
-            given(articleMapper.toResponse(testArticle)).willReturn(testArticleResponse);
+            given(articleMapper.toListItem(testArticle)).willReturn(testArticleResponse);
 
             articleService.getPublished(pageable, null);
 
